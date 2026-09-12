@@ -6,8 +6,14 @@ cualquier punto intermedio.
 
 ## Estado actual
 
-**Fase actual: 0 (esqueleto) recién completada. Próximo paso: Fase 1 (modelo de datos +
-migraciones).** Ver checklist completo en `README.md`.
+**Fase actual: 1 (modelo de datos + migraciones) recién completada. Próximo paso: Fase 2
+(CRUD base vía API).** Ver checklist completo en `README.md`.
+
+Modelos en `app/models.py` (SQLAlchemy 2.0, estilo `Mapped`/`mapped_column`): `Club`,
+`Athlete`, `Tournament`, `Category`, `Registration`, `Bracket`, `Match`, `RoundScore`.
+Migración inicial en `alembic/versions/10c0a6918c73_initial_schema.py`. `alembic/env.py` lee
+`DATABASE_URL` desde `app.database` (no desde `alembic.ini`, que queda con un valor dummy sin
+usar).
 
 ## Entorno
 

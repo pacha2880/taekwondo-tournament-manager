@@ -42,7 +42,7 @@ pytest -v
 ## Estado del proyecto
 
 - [x] Fase 0 — Esqueleto (git, estructura, docs)
-- [ ] Fase 1 — Modelo de datos + migraciones
+- [x] Fase 1 — Modelo de datos + migraciones
 - [ ] Fase 2 — CRUD base vía API
 - [ ] Fase 3 — Generación de llaves
 - [ ] Fase 4 — Carga de resultados y propagación de ganador
