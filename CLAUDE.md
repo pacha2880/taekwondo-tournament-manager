@@ -6,14 +6,26 @@ cualquier punto intermedio.
 
 ## Estado actual
 
-**Fase actual: 1 (modelo de datos + migraciones) recién completada. Próximo paso: Fase 2
-(CRUD base vía API).** Ver checklist completo en `README.md`.
+**Fase actual: 2 (CRUD base vía API) recién completada. Próximo paso: Fase 3 (generación de
+llaves).** Ver checklist completo en `README.md`.
 
 Modelos en `app/models.py` (SQLAlchemy 2.0, estilo `Mapped`/`mapped_column`): `Club`,
 `Athlete`, `Tournament`, `Category`, `Registration`, `Bracket`, `Match`, `RoundScore`.
 Migración inicial en `alembic/versions/10c0a6918c73_initial_schema.py`. `alembic/env.py` lee
 `DATABASE_URL` desde `app.database` (no desde `alembic.ini`, que queda con un valor dummy sin
 usar).
+
+API REST en `app/api/` (un router por entidad: `clubs`, `athletes`, `tournaments`,
+`categories`, `registrations`), montada en `app/main.py` bajo `/api/v1/...`. Validaciones de
+negocio ya implementadas en `registrations.py`: género del atleta debe coincidir con el de la
+categoría (422), no se permite inscripción duplicada del mismo atleta en la misma categoría
+(409). Tests en `tests/` usan SQLite en memoria (`StaticPool`, ver `tests/conftest.py`) — no
+tocan `dev.db`. 15 tests pasando (`pytest -v`).
+
+Nota de Python: en `app/schemas.py` se usa `import datetime` + `datetime.date` en vez de
+`from datetime import date`, porque un campo Pydantic llamado `date` con un tipo también
+llamado `date` y valor por defecto se pisa a sí mismo (la asignación ocurre antes que la
+evaluación de la anotación) — ver el commit de fase 2 si hace falta el detalle.
 
 ## Entorno
 

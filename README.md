@@ -43,7 +43,7 @@ pytest -v
 
 - [x] Fase 0 — Esqueleto (git, estructura, docs)
 - [x] Fase 1 — Modelo de datos + migraciones
-- [ ] Fase 2 — CRUD base vía API
+- [x] Fase 2 — CRUD base vía API
 - [ ] Fase 3 — Generación de llaves
 - [ ] Fase 4 — Carga de resultados y propagación de ganador
 - [ ] Fase 5 — Pantalla pública

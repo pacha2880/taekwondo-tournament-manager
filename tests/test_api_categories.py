@@ -1,0 +1,24 @@
+def test_create_category_requires_existing_tournament(client):
+    resp = client.post(
+        "/api/v1/categories",
+        json={
+            "tournament_id": 999,
+            "gender": "male",
+            "age_label": "Junior",
+            "min_age": 15,
+            "max_age": 17,
+            "belt_group": "color",
+            "weight_label": "Hasta 55kg",
+        },
+    )
+    assert resp.status_code == 404
+
+
+def test_create_category_defaults_discipline_to_sparring(client, category):
+    assert category["discipline"] == "sparring"
+
+
+def test_list_categories_filtered_by_tournament(client, category, tournament):
+    resp = client.get("/api/v1/categories", params={"tournament_id": tournament["id"]})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
