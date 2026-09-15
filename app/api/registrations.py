@@ -21,6 +21,14 @@ def create_registration(payload: RegistrationCreate, db: Session = Depends(get_d
         raise HTTPException(
             status_code=422, detail="El género del atleta no coincide con el de la categoría"
         )
+    if category.min_weight is not None and athlete.weight_kg < category.min_weight:
+        raise HTTPException(
+            status_code=422, detail="El peso del atleta es menor al mínimo de la categoría"
+        )
+    if category.max_weight is not None and athlete.weight_kg > category.max_weight:
+        raise HTTPException(
+            status_code=422, detail="El peso del atleta es mayor al máximo de la categoría"
+        )
     existing = db.scalar(
         select(Registration).where(
             Registration.athlete_id == payload.athlete_id,
@@ -29,6 +37,18 @@ def create_registration(payload: RegistrationCreate, db: Session = Depends(get_d
     )
     if existing:
         raise HTTPException(status_code=409, detail="El atleta ya está inscrito en esta categoría")
+    other_tournament_registration = db.scalar(
+        select(Registration)
+        .join(Category, Registration.category_id == Category.id)
+        .where(
+            Registration.athlete_id == payload.athlete_id,
+            Category.tournament_id == category.tournament_id,
+        )
+    )
+    if other_tournament_registration:
+        raise HTTPException(
+            status_code=409, detail="El atleta ya está inscrito en otra categoría de este torneo"
+        )
 
     registration = Registration(**payload.model_dump())
     db.add(registration)

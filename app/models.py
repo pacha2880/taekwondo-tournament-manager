@@ -90,6 +90,8 @@ class Category(Base):
     max_age: Mapped[int | None] = mapped_column(Integer, nullable=True)
     belt_group: Mapped[BeltGroup] = mapped_column(Enum(BeltGroup), nullable=False)
     weight_label: Mapped[str] = mapped_column(String(60), nullable=False)
+    min_weight: Mapped[float | None] = mapped_column(Float, nullable=True)
+    max_weight: Mapped[float | None] = mapped_column(Float, nullable=True)
     rounds_to_win: Mapped[int] = mapped_column(Integer, nullable=False, default=2)
 
     tournament: Mapped["Tournament"] = relationship(back_populates="categories")

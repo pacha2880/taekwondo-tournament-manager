@@ -1,6 +1,6 @@
 import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from app.models import BeltGroup, Discipline, Gender, TournamentStatus
 
@@ -72,7 +72,25 @@ class CategoryBase(BaseModel):
     max_age: int | None = None
     belt_group: BeltGroup
     weight_label: str
+    min_weight: float | None = None
+    max_weight: float | None = None
     rounds_to_win: int = 2
+
+    @model_validator(mode="after")
+    def check_weight_range(self) -> "CategoryBase":
+        if (
+            self.min_weight is not None
+            and self.max_weight is not None
+            and self.min_weight > self.max_weight
+        ):
+            raise ValueError("min_weight no puede ser mayor que max_weight")
+        return self
+
+    @model_validator(mode="after")
+    def check_age_range(self) -> "CategoryBase":
+        if self.max_age is not None and self.min_age > self.max_age:
+            raise ValueError("min_age no puede ser mayor que max_age")
+        return self
 
 
 class CategoryCreate(CategoryBase):

@@ -58,6 +58,8 @@ def category(client, tournament):
             "max_age": 14,
             "belt_group": "color",
             "weight_label": "Hasta 45kg",
+            "min_weight": None,
+            "max_weight": 45,
         },
     )
     return resp.json()
