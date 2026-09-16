@@ -1,0 +1,128 @@
+@baseUrl = http://localhost:8000/api/v1
+
+### Dependencias: club + atleta
+# nombre con {{$guid}} para no chocar con el UniqueConstraint de Club.name
+# al re-correr este archivo o al reabrir el editor
+# @name createClub
+POST {{baseUrl}}/clubs
+Content-Type: application/json
+
+{
+  "name": "Dojang Central {{$guid}}"
+}
+
+###
+# @name createAthlete
+POST {{baseUrl}}/athletes
+Content-Type: application/json
+
+{
+  "name": "Juan Perez",
+  "birth_date": "2012-05-01",
+  "gender": "male",
+  "belt_rank": "verde",
+  "weight_kg": 40.5,
+  "club_id": {{createClub.response.body.$.id}}
+}
+
+### Dependencias: torneo + categoria (peso y genero compatibles con el atleta de arriba)
+# @name createTournament
+POST {{baseUrl}}/tournaments
+Content-Type: application/json
+
+{
+  "name": "Copa Nacional",
+  "date": "2026-11-15",
+  "location": "San Salvador"
+}
+
+###
+# @name createCategory
+POST {{baseUrl}}/categories
+Content-Type: application/json
+
+{
+  "tournament_id": {{createTournament.response.body.$.id}},
+  "gender": "male",
+  "age_label": "Cadete",
+  "min_age": 12,
+  "max_age": 14,
+  "belt_group": "color",
+  "weight_label": "Hasta 45kg",
+  "min_weight": null,
+  "max_weight": 45
+}
+
+### Crear inscripcion
+# @name createRegistration
+POST {{baseUrl}}/registrations
+Content-Type: application/json
+
+{
+  "athlete_id": {{createAthlete.response.body.$.id}},
+  "category_id": {{createCategory.response.body.$.id}}
+}
+
+### Listar inscripciones
+GET {{baseUrl}}/registrations
+
+### Listar inscripciones filtradas por categoria
+GET {{baseUrl}}/registrations?category_id={{createCategory.response.body.$.id}}
+
+### Inscripcion duplicada (mismo atleta + categoria) -> 409
+POST {{baseUrl}}/registrations
+Content-Type: application/json
+
+{
+  "athlete_id": {{createAthlete.response.body.$.id}},
+  "category_id": {{createCategory.response.body.$.id}}
+}
+
+### Genero del atleta no coincide con la categoria -> 422
+# @name createFemaleCategory
+POST {{baseUrl}}/categories
+Content-Type: application/json
+
+{
+  "tournament_id": {{createTournament.response.body.$.id}},
+  "gender": "female",
+  "age_label": "Cadete",
+  "min_age": 12,
+  "max_age": 14,
+  "belt_group": "color",
+  "weight_label": "Hasta 45kg"
+}
+
+###
+POST {{baseUrl}}/registrations
+Content-Type: application/json
+
+{
+  "athlete_id": {{createAthlete.response.body.$.id}},
+  "category_id": {{createFemaleCategory.response.body.$.id}}
+}
+
+### Peso del atleta fuera del rango de la categoria -> 422
+# @name createLightCategory
+POST {{baseUrl}}/categories
+Content-Type: application/json
+
+{
+  "tournament_id": {{createTournament.response.body.$.id}},
+  "gender": "male",
+  "age_label": "Cadete",
+  "min_age": 12,
+  "max_age": 14,
+  "belt_group": "color",
+  "weight_label": "Hasta 30kg",
+  "max_weight": 30
+}
+
+###
+POST {{baseUrl}}/registrations
+Content-Type: application/json
+
+{
+  "athlete_id": {{createAthlete.response.body.$.id}},
+  "category_id": {{createLightCategory.response.body.$.id}}
+}

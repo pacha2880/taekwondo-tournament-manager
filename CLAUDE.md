@@ -60,5 +60,22 @@ Render+Neon en vez de Railway/Fly.io, desarrollo dentro de WSL, y las reglas de 
 
 - `pytest -v` pasa.
 - Se puede levantar el server y probar manualmente vía `/docs` (Swagger) o navegador.
+- Los archivos `.http` en `http/` (ver más abajo) siguen funcionando de punta a punta.
 - No romper lo verificado en fases anteriores (correr toda la suite, no solo los tests
   nuevos).
+
+## Archivos `.http` para pruebas manuales
+
+`http/` tiene un archivo por router (`clubs.http`, `athletes.http`, `tournaments.http`,
+`categories.http`, `registrations.http`), pensado para la extensión **REST Client** de
+VS Code con el servidor (`uvicorn app.main:app --reload`) corriendo en local. Cada archivo es
+autocontenido: crea sus propias dependencias (por ejemplo `athletes.http` crea su propio club
+antes del atleta) usando el encadenado de variables de REST Client
+(`# @name` + `{{nombre.response.body.$.campo}}`), igual que las fixtures de
+`tests/conftest.py` encadenan `club → athlete` y `tournament → category`. No reemplazan a
+`pytest` — son para "ir probando a mano" mientras se desarrolla, con algunos casos de error
+representativos (404/409/422) además del camino feliz.
+
+Al agregar funcionalidad nueva (fase 3 en adelante: brackets, matches, round_scores), sumar
+el archivo `.http` correspondiente siguiendo el mismo patrón, en vez de dejar que estos
+archivos queden desactualizados.

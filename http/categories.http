@@ -1,0 +1,85 @@
+@baseUrl = http://localhost:8000/api/v1
+
+### Dependencia: torneo al que pertenece la categoria
+# @name createTournament
+POST {{baseUrl}}/tournaments
+Content-Type: application/json
+
+{
+  "name": "Copa Nacional",
+  "date": "2026-11-15",
+  "location": "San Salvador"
+}
+
+### Crear categoria
+# @name createCategory
+POST {{baseUrl}}/categories
+Content-Type: application/json
+
+{
+  "tournament_id": {{createTournament.response.body.$.id}},
+  "gender": "male",
+  "age_label": "Cadete",
+  "min_age": 12,
+  "max_age": 14,
+  "belt_group": "color",
+  "weight_label": "Hasta 45kg",
+  "min_weight": null,
+  "max_weight": 45
+}
+
+### Listar categorias
+GET {{baseUrl}}/categories
+
+### Listar categorias filtradas por torneo
+GET {{baseUrl}}/categories?tournament_id={{createTournament.response.body.$.id}}
+
+### Obtener categoria por id
+GET {{baseUrl}}/categories/{{createCategory.response.body.$.id}}
+
+### Categoria inexistente -> 404
+GET {{baseUrl}}/categories/999999
+
+### Torneo inexistente al crear categoria -> 404
+POST {{baseUrl}}/categories
+Content-Type: application/json
+
+{
+  "tournament_id": 999999,
+  "gender": "male",
+  "age_label": "Junior",
+  "min_age": 15,
+  "max_age": 17,
+  "belt_group": "color",
+  "weight_label": "Hasta 55kg"
+}
+
+### min_weight > max_weight -> 422 (validacion en schemas.py)
+POST {{baseUrl}}/categories
+Content-Type: application/json
+
+{
+  "tournament_id": {{createTournament.response.body.$.id}},
+  "gender": "male",
+  "age_label": "Junior",
+  "min_age": 15,
+  "max_age": 17,
+  "belt_group": "color",
+  "weight_label": "Hasta 55kg",
+  "min_weight": 60,
+  "max_weight": 55
+}
+
+### min_age > max_age -> 422 (validacion en schemas.py)
+POST {{baseUrl}}/categories
+Content-Type: application/json
+
+{
+  "tournament_id": {{createTournament.response.body.$.id}},
+  "gender": "male",
+  "age_label": "Junior",
+  "min_age": 17,
+  "max_age": 15,
+  "belt_group": "color",
+  "weight_label": "Hasta 55kg"
+}

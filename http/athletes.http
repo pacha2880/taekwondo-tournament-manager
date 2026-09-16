@@ -1,0 +1,48 @@
+@baseUrl = http://localhost:8000/api/v1
+
+### Dependencia: club al que pertenece el atleta
+# nombre con {{$guid}} para no chocar con el UniqueConstraint de Club.name
+# al re-correr este archivo o al reabrir el editor
+# @name createClub
+POST {{baseUrl}}/clubs
+Content-Type: application/json
+
+{
+  "name": "Dojang Central {{$guid}}"
+}
+
+### Crear atleta
+# @name createAthlete
+POST {{baseUrl}}/athletes
+Content-Type: application/json
+
+{
+  "name": "Juan Perez",
+  "birth_date": "2012-05-01",
+  "gender": "male",
+  "belt_rank": "verde",
+  "weight_kg": 40.5,
+  "club_id": {{createClub.response.body.$.id}}
+}
+
+### Listar atletas
+GET {{baseUrl}}/athletes
+
+### Obtener atleta por id
+GET {{baseUrl}}/athletes/{{createAthlete.response.body.$.id}}
+
+### Atleta inexistente -> 404
+GET {{baseUrl}}/athletes/999999
+
+### Club inexistente al crear atleta -> 404
+POST {{baseUrl}}/athletes
+Content-Type: application/json
+
+{
+  "name": "Sin Club",
+  "birth_date": "2010-01-01",
+  "gender": "female",
+  "belt_rank": "amarillo",
+  "weight_kg": 35,
+  "club_id": 999999
+}

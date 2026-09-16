@@ -1,0 +1,32 @@
+@baseUrl = http://localhost:8000/api/v1
+
+### Crear club
+# nombre con {{$guid}} para que cada corrida (o reapertura del editor) cree un
+# club nuevo en vez de chocar con el UniqueConstraint de Club.name
+# @name createClub
+POST {{baseUrl}}/clubs
+Content-Type: application/json
+
+{
+  "name": "Dojang Central {{$guid}}"
+}
+
+### Listar clubes
+GET {{baseUrl}}/clubs
+
+### Obtener club por id (usa el id creado arriba)
+GET {{baseUrl}}/clubs/{{createClub.response.body.$.id}}
+
+### Club inexistente -> 404
+GET {{baseUrl}}/clubs/999999
+
+### Nombre duplicado -> 409
+# nombre fijo a proposito: la primera vez crea el club (o ya existe de una
+# corrida anterior -> 409 tambien), la segunda siempre da 409
+# @name createDuplicateClub
+POST {{baseUrl}}/clubs
+Content-Type: application/json
+
+{
+  "name": "Dojang Duplicado"
+}

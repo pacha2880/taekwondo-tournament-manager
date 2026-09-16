@@ -39,6 +39,19 @@ La API queda en `http://localhost:8000` y la documentación interactiva en
 pytest -v
 ```
 
+## Probar la API manualmente
+
+Con el servidor corriendo (`uvicorn app.main:app --reload`), hay dos formas de probar los
+endpoints a mano, además de los tests automáticos:
+
+- **Swagger** en `http://localhost:8000/docs`.
+- **Archivos `.http`** en [`http/`](http/) (uno por entidad: `clubs.http`, `athletes.http`,
+  `tournaments.http`, `categories.http`, `registrations.http`), pensados para la extensión
+  [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) de
+  VS Code — abrí el archivo y hacé click en "Send Request" arriba de cada petición. Cada
+  archivo crea sus propias dependencias (club, torneo, etc.) antes de la petición principal,
+  así que se pueden correr de punta a punta sin copiar IDs a mano.
+
 ## Estado del proyecto
 
 - [x] Fase 0 — Esqueleto (git, estructura, docs)

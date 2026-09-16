@@ -1,0 +1,29 @@
+@baseUrl = http://localhost:8000/api/v1
+
+### Crear torneo
+# @name createTournament
+POST {{baseUrl}}/tournaments
+Content-Type: application/json
+
+{
+  "name": "Copa Nacional",
+  "date": "2026-11-15",
+  "location": "San Salvador"
+}
+
+### Listar torneos (ordenados por fecha, mas reciente primero)
+GET {{baseUrl}}/tournaments
+
+### Obtener torneo por id
+GET {{baseUrl}}/tournaments/{{createTournament.response.body.$.id}}
+
+### Torneo inexistente -> 404
+GET {{baseUrl}}/tournaments/999999
+
+### Actualizar estado del torneo (PATCH parcial)
+PATCH {{baseUrl}}/tournaments/{{createTournament.response.body.$.id}}
+Content-Type: application/json
+
+{
+  "status": "in_progress"
+}
