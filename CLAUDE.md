@@ -48,8 +48,22 @@ evaluación de la anotación) — ver el commit de fase 2 si hace falta el detal
 - Python 3.10+ (no asumir 3.12, no está instalado en esta máquina y no hace falta).
 - Docker todavía no está habilitado en esta distro (falta activar la integración WSL de
   Docker Desktop) — no es necesario hasta la fase 7.
-- Un commit por sub-paso verificado, no uno gigante por fase. Mensajes estilo
-  `feat:`/`fix:`/`chore:`.
+- **No hacer `git commit` ni `git push` salvo que el usuario lo pida explícitamente en ese
+  momento.** Implementar y verificar (tests, server manual) y dejar los cambios sin stagear;
+  el usuario revisa antes de decidir si se commitea. Cuando sí lo pida, un commit por
+  sub-paso verificado (no uno gigante por fase), mensajes estilo `feat:`/`fix:`/`chore:`.
+
+## Estilo de código
+
+- Minimizar comentarios: priorizar código autodocumentado (nombres claros de variables y
+  funciones) antes que explicar con un comentario. Solo comentar cuando aporta algo que el
+  código en sí no puede transmitir (el porqué de una decisión no obvia, una referencia a un
+  bug/limitación externa, una propiedad matemática no evidente a simple vista) — no repetir
+  en palabras lo que ya dice el código.
+- Después de implementar algo, hacer una segunda pasada rápida (de pasada, sin analizar a
+  fondo ni frenar el flujo de trabajo) buscando si hay una versión más simple o coherente con
+  el resto del código. No sacrificar velocidad por esto — si no aparece nada obvio en esa
+  pasada rápida, seguir adelante.
 
 ## Reglas de extensibilidad (no romper)
 
