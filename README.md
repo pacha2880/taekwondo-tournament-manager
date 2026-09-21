@@ -57,7 +57,7 @@ endpoints a mano, además de los tests automáticos:
 - [x] Fase 0 — Esqueleto (git, estructura, docs)
 - [x] Fase 1 — Modelo de datos + migraciones
 - [x] Fase 2 — CRUD base vía API
-- [ ] Fase 3 — Generación de llaves
+- [x] Fase 3 — Generación de llaves
 - [ ] Fase 4 — Carga de resultados y propagación de ganador
 - [ ] Fase 5 — Pantalla pública
 - [ ] Fase 6 — Pantalla admin

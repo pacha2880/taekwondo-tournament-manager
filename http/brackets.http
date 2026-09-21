@@ -1,0 +1,182 @@
+@baseUrl = http://localhost:8000/api/v1
+
+### Dependencias: club + torneo + categoria
+# @name createClub
+POST {{baseUrl}}/clubs
+Content-Type: application/json
+
+{
+  "name": "Dojang Brackets {{$guid}}"
+}
+
+###
+# @name createTournament
+POST {{baseUrl}}/tournaments
+Content-Type: application/json
+
+{
+  "name": "Copa de Prueba",
+  "date": "2026-11-15",
+  "location": "San Salvador"
+}
+
+###
+# @name createCategory
+POST {{baseUrl}}/categories
+Content-Type: application/json
+
+{
+  "tournament_id": {{createTournament.response.body.$.id}},
+  "gender": "male",
+  "age_label": "Cadete",
+  "min_age": 12,
+  "max_age": 14,
+  "belt_group": "color",
+  "weight_label": "Hasta 45kg"
+}
+
+### Cinco atletas inscritos (impar, para ver byes en accion: size=8, 3 byes)
+# @name createAthlete1
+POST {{baseUrl}}/athletes
+Content-Type: application/json
+
+{
+  "name": "Atleta Uno",
+  "birth_date": "2012-01-01",
+  "gender": "male",
+  "belt_rank": "verde",
+  "weight_kg": 40,
+  "club_id": {{createClub.response.body.$.id}}
+}
+
+###
+# @name createAthlete2
+POST {{baseUrl}}/athletes
+Content-Type: application/json
+
+{
+  "name": "Atleta Dos",
+  "birth_date": "2012-01-01",
+  "gender": "male",
+  "belt_rank": "verde",
+  "weight_kg": 40,
+  "club_id": {{createClub.response.body.$.id}}
+}
+
+###
+# @name createAthlete3
+POST {{baseUrl}}/athletes
+Content-Type: application/json
+
+{
+  "name": "Atleta Tres",
+  "birth_date": "2012-01-01",
+  "gender": "male",
+  "belt_rank": "verde",
+  "weight_kg": 40,
+  "club_id": {{createClub.response.body.$.id}}
+}
+
+###
+# @name createAthlete4
+POST {{baseUrl}}/athletes
+Content-Type: application/json
+
+{
+  "name": "Atleta Cuatro",
+  "birth_date": "2012-01-01",
+  "gender": "male",
+  "belt_rank": "verde",
+  "weight_kg": 40,
+  "club_id": {{createClub.response.body.$.id}}
+}
+
+###
+# @name createAthlete5
+POST {{baseUrl}}/athletes
+Content-Type: application/json
+
+{
+  "name": "Atleta Cinco",
+  "birth_date": "2012-01-01",
+  "gender": "male",
+  "belt_rank": "verde",
+  "weight_kg": 40,
+  "club_id": {{createClub.response.body.$.id}}
+}
+
+### Inscribir a los cinco en la categoria
+POST {{baseUrl}}/registrations
+Content-Type: application/json
+
+{
+  "athlete_id": {{createAthlete1.response.body.$.id}},
+  "category_id": {{createCategory.response.body.$.id}}
+}
+
+###
+POST {{baseUrl}}/registrations
+Content-Type: application/json
+
+{
+  "athlete_id": {{createAthlete2.response.body.$.id}},
+  "category_id": {{createCategory.response.body.$.id}}
+}
+
+###
+POST {{baseUrl}}/registrations
+Content-Type: application/json
+
+{
+  "athlete_id": {{createAthlete3.response.body.$.id}},
+  "category_id": {{createCategory.response.body.$.id}}
+}
+
+###
+POST {{baseUrl}}/registrations
+Content-Type: application/json
+
+{
+  "athlete_id": {{createAthlete4.response.body.$.id}},
+  "category_id": {{createCategory.response.body.$.id}}
+}
+
+###
+POST {{baseUrl}}/registrations
+Content-Type: application/json
+
+{
+  "athlete_id": {{createAthlete5.response.body.$.id}},
+  "category_id": {{createCategory.response.body.$.id}}
+}
+
+### Generar la llave -> size=8, 4 matches en ronda 1 (3 bye + 1 pendiente)
+# @name generateBracket
+POST {{baseUrl}}/categories/{{createCategory.response.body.$.id}}/bracket
+
+### Ver la llave generada
+GET {{baseUrl}}/categories/{{createCategory.response.body.$.id}}/bracket
+
+### Generarla de nuevo -> 409 (ya existe)
+POST {{baseUrl}}/categories/{{createCategory.response.body.$.id}}/bracket
+
+### Categoria sin llave todavia -> 404
+# @name createEmptyCategory
+POST {{baseUrl}}/categories
+Content-Type: application/json
+
+{
+  "tournament_id": {{createTournament.response.body.$.id}},
+  "gender": "female",
+  "age_label": "Cadete",
+  "min_age": 12,
+  "max_age": 14,
+  "belt_group": "color",
+  "weight_label": "Hasta 45kg"
+}
+
+###
+GET {{baseUrl}}/categories/{{createEmptyCategory.response.body.$.id}}/bracket
+
+### Menos de 2 inscritos -> 400
+POST {{baseUrl}}/categories/{{createEmptyCategory.response.body.$.id}}/bracket

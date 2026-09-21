@@ -6,8 +6,9 @@ cualquier punto intermedio.
 
 ## Estado actual
 
-**Fase actual: 2 (CRUD base vía API) recién completada. Próximo paso: Fase 3 (generación de
-llaves).** Ver checklist completo en `README.md`.
+**Fase actual: 3 (generación de llaves) recién completada, pendiente de revisión del
+usuario — no está commiteada. Próximo paso: Fase 4 (carga de resultados y propagación de
+ganador).** Ver checklist completo en `README.md`.
 
 Modelos en `app/models.py` (SQLAlchemy 2.0, estilo `Mapped`/`mapped_column`): `Club`,
 `Athlete`, `Tournament`, `Category`, `Registration`, `Bracket`, `Match`, `RoundScore`.
@@ -18,9 +19,23 @@ usar).
 API REST en `app/api/` (un router por entidad: `clubs`, `athletes`, `tournaments`,
 `categories`, `registrations`), montada en `app/main.py` bajo `/api/v1/...`. Validaciones de
 negocio ya implementadas en `registrations.py`: género del atleta debe coincidir con el de la
-categoría (422), no se permite inscripción duplicada del mismo atleta en la misma categoría
-(409). Tests en `tests/` usan SQLite en memoria (`StaticPool`, ver `tests/conftest.py`) — no
-tocan `dev.db`. 15 tests pasando (`pytest -v`).
+categoría (422), peso del atleta dentro de `min_weight`/`max_weight` de la categoría si están
+definidos (422), no se permite inscripción duplicada del mismo atleta en la misma categoría
+(409) ni en más de una categoría del mismo torneo (409). `Category` tiene además
+`min_weight`/`max_weight` opcionales (float) junto al `weight_label` de texto libre, con
+validación `min_weight <= max_weight` / `min_age <= max_age` en `schemas.py`. Tests en
+`tests/` usan SQLite en memoria (`StaticPool`, ver `tests/conftest.py`) — no tocan `dev.db`.
+19 tests pasando (`pytest -v`).
+
+Generación de llaves en `app/services/brackets.py`, expuesta en `app/api/brackets.py`
+(`POST`/`GET /api/v1/categories/{id}/bracket`). Lógica pura sin DB (`next_power_of_two`,
+`seeding_order`, `build_first_round_slots`) separada de la persistencia
+(`generate_bracket`) para poder testear el algoritmo de byes sin sesión de SQLAlchemy —
+ver `tests/test_brackets.py` (incluye un test parametrizado que verifica, para n=2..19 y 20
+semillas aleatorias por n, que nunca hay dos byes en el mismo cruce de la ronda 1).
+`advance_winner(db, match)` en el mismo módulo propaga el ganador de un match a la
+siguiente ronda; la reutiliza tanto la resolución automática de byes como (en la fase 4) el
+cierre de un combate real. 62 tests pasando en total.
 
 Nota de Python: en `app/schemas.py` se usa `import datetime` + `datetime.date` en vez de
 `from datetime import date`, porque un campo Pydantic llamado `date` con un tipo también

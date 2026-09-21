@@ -2,7 +2,7 @@ import datetime
 
 from pydantic import BaseModel, ConfigDict, model_validator
 
-from app.models import BeltGroup, Discipline, Gender, TournamentStatus
+from app.models import BeltGroup, Discipline, Gender, MatchStatus, TournamentStatus
 
 
 class ClubBase(BaseModel):
@@ -101,6 +101,29 @@ class CategoryRead(CategoryBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+
+
+class MatchRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    round_number: int
+    slot: int
+    athlete_red_id: int | None
+    athlete_blue_id: int | None
+    winner_id: int | None
+    next_match_id: int | None
+    status: MatchStatus
+
+
+class BracketRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    category_id: int
+    size: int
+    generated_at: datetime.datetime
+    matches: list[MatchRead]
 
 
 class RegistrationBase(BaseModel):
