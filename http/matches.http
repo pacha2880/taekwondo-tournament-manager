@@ -1,0 +1,147 @@
+@baseUrl = http://localhost:8000/api/v1
+
+### Dependencias: club + torneo + categoria + dos atletas inscritos (sin byes, size=2)
+# @name createClub
+POST {{baseUrl}}/clubs
+Content-Type: application/json
+
+{
+  "name": "Dojang Matches {{$guid}}"
+}
+
+###
+# @name createTournament
+POST {{baseUrl}}/tournaments
+Content-Type: application/json
+
+{
+  "name": "Copa de Prueba Matches",
+  "date": "2026-11-15",
+  "location": "San Salvador"
+}
+
+###
+# @name createCategory
+POST {{baseUrl}}/categories
+Content-Type: application/json
+
+{
+  "tournament_id": {{createTournament.response.body.$.id}},
+  "gender": "male",
+  "age_label": "Cadete",
+  "min_age": 12,
+  "max_age": 14,
+  "belt_group": "color",
+  "weight_label": "Hasta 45kg"
+}
+
+###
+# @name createAthlete1
+POST {{baseUrl}}/athletes
+Content-Type: application/json
+
+{
+  "name": "Atleta Rojo",
+  "birth_date": "2012-01-01",
+  "gender": "male",
+  "belt_rank": "verde",
+  "weight_kg": 40,
+  "club_id": {{createClub.response.body.$.id}}
+}
+
+###
+# @name createAthlete2
+POST {{baseUrl}}/athletes
+Content-Type: application/json
+
+{
+  "name": "Atleta Azul",
+  "birth_date": "2012-01-01",
+  "gender": "male",
+  "belt_rank": "verde",
+  "weight_kg": 40,
+  "club_id": {{createClub.response.body.$.id}}
+}
+
+###
+POST {{baseUrl}}/registrations
+Content-Type: application/json
+
+{
+  "athlete_id": {{createAthlete1.response.body.$.id}},
+  "category_id": {{createCategory.response.body.$.id}}
+}
+
+###
+POST {{baseUrl}}/registrations
+Content-Type: application/json
+
+{
+  "athlete_id": {{createAthlete2.response.body.$.id}},
+  "category_id": {{createCategory.response.body.$.id}}
+}
+
+### Genera la llave: con 2 atletas es un solo combate, sin byes
+# @name generateBracket
+POST {{baseUrl}}/categories/{{createCategory.response.body.$.id}}/bracket
+
+### Nota: el lado rojo/azul del bracket se asigna al azar al generar la llave,
+### no corresponde al nombre "Rojo"/"Azul" de los atletas de arriba.
+GET {{baseUrl}}/matches/{{generateBracket.response.body.$.matches[0].id}}
+
+### Round 1 -> gana el lado rojo
+# @name round1
+POST {{baseUrl}}/matches/{{generateBracket.response.body.$.matches[0].id}}/rounds
+Content-Type: application/json
+
+{
+  "round_number": 1,
+  "red_points": 12,
+  "blue_points": 5
+}
+
+### Round en empate -> 422
+POST {{baseUrl}}/matches/{{generateBracket.response.body.$.matches[0].id}}/rounds
+Content-Type: application/json
+
+{
+  "round_number": 2,
+  "red_points": 5,
+  "blue_points": 5
+}
+
+### Round 1 otra vez (mismo numero de round) -> 409
+POST {{baseUrl}}/matches/{{generateBracket.response.body.$.matches[0].id}}/rounds
+Content-Type: application/json
+
+{
+  "round_number": 1,
+  "red_points": 3,
+  "blue_points": 9
+}
+
+### Round 2 -> gana el lado rojo de nuevo, cierra el combate (2 de 2)
+POST {{baseUrl}}/matches/{{generateBracket.response.body.$.matches[0].id}}/rounds
+Content-Type: application/json
+
+{
+  "round_number": 2,
+  "red_points": 9,
+  "blue_points": 3
+}
+
+### Ver el combate finalizado, con sus rounds
+GET {{baseUrl}}/matches/{{generateBracket.response.body.$.matches[0].id}}
+
+### Cargar otro round sobre un combate ya finalizado -> 409
+POST {{baseUrl}}/matches/{{generateBracket.response.body.$.matches[0].id}}/rounds
+Content-Type: application/json
+
+{
+  "round_number": 3,
+  "red_points": 1,
+  "blue_points": 9
+}
+
+### Combate inexistente -> 404
+GET {{baseUrl}}/matches/999999

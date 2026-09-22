@@ -6,9 +6,9 @@ cualquier punto intermedio.
 
 ## Estado actual
 
-**Fase actual: 3 (generación de llaves) recién completada, pendiente de revisión del
-usuario — no está commiteada. Próximo paso: Fase 4 (carga de resultados y propagación de
-ganador).** Ver checklist completo en `README.md`.
+**Fase actual: 4 (carga de resultados y propagación de ganador) recién completada,
+pendiente de revisión del usuario — no está commiteada. Próximo paso: Fase 5 (pantalla
+pública con Jinja2).** Ver checklist completo en `README.md`.
 
 Modelos en `app/models.py` (SQLAlchemy 2.0, estilo `Mapped`/`mapped_column`): `Club`,
 `Athlete`, `Tournament`, `Category`, `Registration`, `Bracket`, `Match`, `RoundScore`.
@@ -34,8 +34,20 @@ Generación de llaves en `app/services/brackets.py`, expuesta en `app/api/bracke
 ver `tests/test_brackets.py` (incluye un test parametrizado que verifica, para n=2..19 y 20
 semillas aleatorias por n, que nunca hay dos byes en el mismo cruce de la ronda 1).
 `advance_winner(db, match)` en el mismo módulo propaga el ganador de un match a la
-siguiente ronda; la reutiliza tanto la resolución automática de byes como (en la fase 4) el
-cierre de un combate real. 62 tests pasando en total.
+siguiente ronda; la reutiliza tanto la resolución automática de byes como el cierre de un
+combate real en `app/services/scoring.py`.
+
+Carga de resultados en `app/services/scoring.py` (`record_round`), expuesta en
+`app/api/matches.py` (`GET /api/v1/matches/{id}`, `POST /api/v1/matches/{id}/rounds`). Un
+round no puede terminar en empate (422); no se puede cargar un round si el combate no tiene
+ambos atletas definidos todavía (400, pasa con matches de ronda 2+ que esperan otro combate)
+ni si ya está `FINISHED` (409); número de round duplicado también es 409. El combate se
+marca `FINISHED` y dispara `advance_winner` en cuanto un atleta llega a
+`category.rounds_to_win` rounds ganados — no antes, así que un empate 1-1 en un "mejor de 3"
+deja el combate `pending` esperando el round de desempate. `register_n_athletes` en
+`tests/conftest.py` es un fixture-factory compartido entre `test_api_brackets.py` y
+`test_api_matches.py` para no duplicar el helper de inscribir N atletas. 70 tests pasando en
+total.
 
 Nota de Python: en `app/schemas.py` se usa `import datetime` + `datetime.date` en vez de
 `from datetime import date`, porque un campo Pydantic llamado `date` con un tipo también

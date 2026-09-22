@@ -79,3 +79,29 @@ def athlete(client, club):
         },
     )
     return resp.json()
+
+
+@pytest.fixture()
+def register_n_athletes():
+    def _register(client, club, category, n, weight_kg=40):
+        registrations = []
+        for i in range(n):
+            athlete = client.post(
+                "/api/v1/athletes",
+                json={
+                    "name": f"Atleta {i}",
+                    "birth_date": "2012-01-01",
+                    "gender": "male",
+                    "belt_rank": "verde",
+                    "weight_kg": weight_kg,
+                    "club_id": club["id"],
+                },
+            ).json()
+            resp = client.post(
+                "/api/v1/registrations",
+                json={"athlete_id": athlete["id"], "category_id": category["id"]},
+            )
+            registrations.append(resp.json())
+        return registrations
+
+    return _register

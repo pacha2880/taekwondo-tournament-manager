@@ -58,7 +58,7 @@ endpoints a mano, además de los tests automáticos:
 - [x] Fase 1 — Modelo de datos + migraciones
 - [x] Fase 2 — CRUD base vía API
 - [x] Fase 3 — Generación de llaves
-- [ ] Fase 4 — Carga de resultados y propagación de ganador
+- [x] Fase 4 — Carga de resultados y propagación de ganador
 - [ ] Fase 5 — Pantalla pública
 - [ ] Fase 6 — Pantalla admin
 - [ ] Fase 7 — Docker + docker-compose (Postgres local)

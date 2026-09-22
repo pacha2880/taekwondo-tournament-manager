@@ -103,6 +103,20 @@ class CategoryRead(CategoryBase):
     id: int
 
 
+class RoundScoreCreate(BaseModel):
+    round_number: int
+    red_points: int
+    blue_points: int
+
+
+class RoundScoreRead(RoundScoreCreate):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    match_id: int
+    round_winner_id: int | None
+
+
 class MatchRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -114,6 +128,7 @@ class MatchRead(BaseModel):
     winner_id: int | None
     next_match_id: int | None
     status: MatchStatus
+    round_scores: list[RoundScoreRead]
 
 
 class BracketRead(BaseModel):
