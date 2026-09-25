@@ -59,9 +59,18 @@ endpoints a mano, además de los tests automáticos:
 - [x] Fase 2 — CRUD base vía API
 - [x] Fase 3 — Generación de llaves
 - [x] Fase 4 — Carga de resultados y propagación de ganador
-- [ ] Fase 5 — Pantalla pública
+- [x] Fase 5 — Pantalla pública
 - [ ] Fase 6 — Pantalla admin
 - [ ] Fase 7 — Docker + docker-compose (Postgres local)
 - [ ] Fase 8 — Despliegue (Neon + Render)
+- [ ] Fase 9 — Mejoras post-deploy (backlog abierto, ver más abajo)
 
 Detalle de cada fase en el plan original y en [`CLAUDE.md`](CLAUDE.md).
+
+### Fase 9 — backlog de mejoras (después del deploy)
+
+Cosas que se nos van ocurriendo pero que deliberadamente no bloquean llegar a producción.
+Se implementan después de la Fase 8, priorizadas según convenga en ese momento:
+
+- Auto-refresh en vivo de la pantalla pública (polling con htmx), en vez de recargar manual.
+- (agregar acá cualquier otra idea que surja durante el desarrollo)

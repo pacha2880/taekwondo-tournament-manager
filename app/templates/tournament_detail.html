@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ tournament.name }}{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/">Torneos</a></li>
+    <li class="breadcrumb-item active">{{ tournament.name }}</li>
+  </ol>
+</nav>
+
+<h1>{{ tournament.name }}</h1>
+<p class="text-muted">{{ tournament.location }} &middot; {{ tournament.date }}</p>
+
+<h2 class="h4 mt-4">Categorías</h2>
+{% if categories %}
+<div class="list-group">
+  {% for c in categories %}
+  <a href="/categorias/{{ c.id }}" class="list-group-item list-group-item-action">
+    {{ c.age_label }} &middot; {{ c.gender.value }} &middot; {{ c.belt_group.value }} &middot;
+    {{ c.weight_label }}
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<p class="text-muted">Este torneo todavía no tiene categorías.</p>
+{% endif %}
+{% endblock %}

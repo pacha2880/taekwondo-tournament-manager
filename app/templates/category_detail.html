@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ category.age_label }}{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/">Torneos</a></li>
+    <li class="breadcrumb-item"><a href="/torneos/{{ tournament.id }}">{{ tournament.name }}</a></li>
+    <li class="breadcrumb-item active">{{ category.age_label }}</li>
+  </ol>
+</nav>
+
+<h1>{{ category.age_label }}</h1>
+<p class="text-muted">
+  {{ category.gender.value }} &middot; {{ category.belt_group.value }} &middot;
+  {{ category.weight_label }}
+</p>
+
+{% if not bracket %}
+<p class="text-muted">La llave para esta categoría todavía no ha sido generada.</p>
+{% else %}
+{% for round_number, round_matches in rounds %}
+<h2 class="h5 mt-4">Ronda {{ round_number }}</h2>
+<ul class="list-group mb-3">
+  {% for m in round_matches %}
+  <li class="list-group-item">
+    <div class="d-flex justify-content-between align-items-center">
+      <span>
+        {{ athletes.get(m.athlete_red_id, "—") }}
+        <span class="text-muted">vs</span>
+        {{ athletes.get(m.athlete_blue_id, "—") }}
+      </span>
+      <span class="badge {{ {'finished': 'bg-success', 'bye': 'bg-secondary', 'pending': 'bg-warning text-dark'}[m.status.value] }}">
+        {{ m.status.value }}
+      </span>
+    </div>
+    {% if m.winner_id %}
+    <div class="small mt-1">Ganador: <strong>{{ athletes.get(m.winner_id) }}</strong></div>
+    {% endif %}
+    {% if m.round_scores %}
+    <div class="small text-muted">
+      {% for rs in m.round_scores %}Round {{ rs.round_number }}: {{ rs.red_points }}-{{ rs.blue_points }}{% if not loop.last %}, {% endif %}{% endfor %}
+    </div>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endfor %}
+{% endif %}
+{% endblock %}

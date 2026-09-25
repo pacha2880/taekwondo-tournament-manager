@@ -56,3 +56,29 @@ problemas con file-watchers). Esto evita divergencias entre "funciona en mi máq
 y "falla en el contenedor" (Linux). Se verificó Python 3.10.12 disponible (no 3.12; ninguna
 feature del plan lo requiere) y que Docker todavía no tiene la integración WSL activada en
 esta máquina — pendiente antes de la fase 7, no bloqueante ahora.
+
+## 2026-09-22 — Fase 5: diseño propio y minimalista, no clonar sitios de marketing
+
+Se consideró usar como referencia visual el sitio de una escuela de taekwondo real
+(marketing/institucional, con tienda y noticias), pero se descartó: es un tipo de producto
+distinto (vender clases, no mostrar datos de un torneo en vivo). Se optó por un diseño propio
+y lo más simple posible — la parte visual queda deliberadamente básica, para que decisiones
+de diseño "de verdad" se puedan tomar después (por alguien más, o más adelante) sin tocar
+lógica de negocio, ya que las plantillas Jinja2 están separadas de `app/services`/`app/api`.
+
+Decisiones concretas de la Fase 5:
+- **CSS**: Bootstrap 5 vía CDN (un `<link>`, sin build step) — consistente con "tecnología
+  simple", da componentes listos (navbar, list-group, badges) sin escribir CSS a mano.
+  Paleta: sin personalización por ahora (Bootstrap por defecto); si se quiere un esquema
+  rojo/azul (colores reales de protectores, y ya son los nombres que usa el modelo de datos
+  — `athlete_red_id`/`athlete_blue_id`) queda como mejora visual posterior, no bloqueante.
+- **Navegación**: tres niveles siguiendo la jerarquía de datos — `/` (lista de torneos) →
+  `/torneos/{id}` (categorías de ese torneo) → `/categorias/{id}` (llave + resultados de esa
+  categoría). Sin buscador ni filtros.
+- **Vista de la llave**: lista de texto agrupada por ronda (no un árbol visual con líneas
+  conectoras). Cada combate muestra los dos atletas, su estado (`pending`/`bye`/`finished`),
+  el ganador si ya lo hay, y el puntaje de cada round si el combate ya se jugó.
+- **Sin auto-refresh todavía**: la página se recarga manualmente. El auto-refresh en vivo
+  (polling con htmx) queda anotado como el primer ítem de la Fase 9 (mejoras post-deploy),
+  junto con cualquier otra mejora que se nos ocurra en el camino — deliberadamente no se
+  implementa antes de tener el sistema desplegado y funcionando de punta a punta.

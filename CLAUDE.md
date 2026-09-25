@@ -6,9 +6,9 @@ cualquier punto intermedio.
 
 ## Estado actual
 
-**Fase actual: 4 (carga de resultados y propagación de ganador) recién completada,
-pendiente de revisión del usuario — no está commiteada. Próximo paso: Fase 5 (pantalla
-pública con Jinja2).** Ver checklist completo en `README.md`.
+**Fase actual: 5 (pantalla pública con Jinja2) recién completada, pendiente de revisión del
+usuario — no está commiteada. Próximo paso: Fase 6 (pantalla admin).** Ver checklist
+completo en `README.md`.
 
 Modelos en `app/models.py` (SQLAlchemy 2.0, estilo `Mapped`/`mapped_column`): `Club`,
 `Athlete`, `Tournament`, `Category`, `Registration`, `Bracket`, `Match`, `RoundScore`.
@@ -46,8 +46,18 @@ marca `FINISHED` y dispara `advance_winner` en cuanto un atleta llega a
 `category.rounds_to_win` rounds ganados — no antes, así que un empate 1-1 en un "mejor de 3"
 deja el combate `pending` esperando el round de desempate. `register_n_athletes` en
 `tests/conftest.py` es un fixture-factory compartido entre `test_api_brackets.py` y
-`test_api_matches.py` para no duplicar el helper de inscribir N atletas. 70 tests pasando en
-total.
+`test_api_matches.py` para no duplicar el helper de inscribir N atletas.
+
+Pantalla pública en `app/web/public.py` (Jinja2, templates en `app/templates/`, Bootstrap 5
+vía CDN en `base.html`, sin build step). Tres rutas siguiendo la jerarquía de datos: `/`
+(lista de torneos), `/torneos/{id}` (categorías), `/categorias/{id}` (llave agrupada por
+ronda + resultados). El bracket se muestra como lista de texto por ronda, no como árbol
+visual — ver `docs/DECISIONS.md` (entrada 2026-09-22) para el porqué de cada decisión de
+esta fase, incluyendo que el auto-refresh en vivo queda anotado como backlog en la Fase 9
+(post-deploy), no implementado todavía. Los nombres de atletas se resuelven en la vista
+(`app/web/public.py`) con una sola consulta a `Athlete` por los ids referenciados en el
+bracket — `MatchRead` de la API sigue exponiendo solo ids, eso no cambió. 78 tests pasando en
+total (agregado `tests/test_web_public.py`).
 
 Nota de Python: en `app/schemas.py` se usa `import datetime` + `datetime.date` en vez de
 `from datetime import date`, porque un campo Pydantic llamado `date` con un tipo también

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Torneos{% endblock %}
+{% block content %}
+<h1 class="mb-4">Torneos</h1>
+{% if tournaments %}
+<div class="list-group">
+  {% for t in tournaments %}
+  <a href="/torneos/{{ t.id }}"
+     class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+    <div>
+      <div class="fw-bold">{{ t.name }}</div>
+      <div class="text-muted small">{{ t.location }} &middot; {{ t.date }}</div>
+    </div>
+    <span class="badge bg-secondary">{{ t.status.value }}</span>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<p class="text-muted">Todavía no hay torneos creados.</p>
+{% endif %}
+{% endblock %}
