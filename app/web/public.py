@@ -7,9 +7,12 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Athlete, Bracket, Category, Tournament
+from app.web.labels import es_label, match_status_badge_class
 
 router = APIRouter(tags=["public"])
 templates = Jinja2Templates(directory="app/templates")
+templates.env.filters["es_label"] = es_label
+templates.env.filters["match_status_badge_class"] = match_status_badge_class
 
 
 @router.get("/")

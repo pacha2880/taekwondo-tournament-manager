@@ -6,9 +6,9 @@ cualquier punto intermedio.
 
 ## Estado actual
 
-**Fase actual: 5 (pantalla pública con Jinja2) recién completada, pendiente de revisión del
-usuario — no está commiteada. Próximo paso: Fase 6 (pantalla admin).** Ver checklist
-completo en `README.md`.
+**Fase actual: 5.5 (traducción de enums + guardrail de idioma) recién completada, pendiente
+de revisión del usuario — no está commiteada. Próximo paso: Fase 6 (pantalla admin).** Ver
+checklist completo en `README.md`.
 
 Modelos en `app/models.py` (SQLAlchemy 2.0, estilo `Mapped`/`mapped_column`): `Club`,
 `Athlete`, `Tournament`, `Category`, `Registration`, `Bracket`, `Match`, `RoundScore`.
@@ -56,8 +56,13 @@ visual — ver `docs/DECISIONS.md` (entrada 2026-09-22) para el porqué de cada 
 esta fase, incluyendo que el auto-refresh en vivo queda anotado como backlog en la Fase 9
 (post-deploy), no implementado todavía. Los nombres de atletas se resuelven en la vista
 (`app/web/public.py`) con una sola consulta a `Athlete` por los ids referenciados en el
-bracket — `MatchRead` de la API sigue exponiendo solo ids, eso no cambió. 78 tests pasando en
-total (agregado `tests/test_web_public.py`).
+bracket — `MatchRead` de la API sigue exponiendo solo ids, eso no cambió.
+
+Fase 5.5: las plantillas usaban `.value` directo de los enums, mostrando texto en inglés
+("draft", "male", "bye"...). Se centralizó la traducción en `app/web/labels.py`
+(`es_label` y `match_status_badge_class`, registrados como filtros Jinja en
+`app/web/public.py`) — ver la sección **Idioma** más arriba para la regla completa y el
+guardrail de test. 83 tests pasando en total.
 
 Nota de Python: en `app/schemas.py` se usa `import datetime` + `datetime.date` en vez de
 `from datetime import date`, porque un campo Pydantic llamado `date` con un tipo también
@@ -86,6 +91,19 @@ evaluación de la anotación) — ver el commit de fase 2 si hace falta el detal
   fondo ni frenar el flujo de trabajo) buscando si hay una versión más simple o coherente con
   el resto del código. No sacrificar velocidad por esto — si no aparece nada obvio en esa
   pasada rápida, seguir adelante.
+
+## Idioma
+
+- **Todo texto visible para el usuario va en español** (páginas públicas, futura pantalla
+  admin, mensajes de error de la API vía `HTTPException`). Los enums de `app/models.py`
+  (`TournamentStatus`, `Discipline`, `Gender`, `BeltGroup`, `MatchStatus`) se guardan en
+  inglés a propósito — son identificadores internos — pero se traducen siempre con el filtro
+  Jinja `|es_label` (definido en `app/web/labels.py`). **Nunca usar `.value` directo en una
+  plantilla** — `tests/test_templates_language.py::test_no_raw_enum_value_in_templates`
+  falla si aparece, sin importar en qué plantilla ni qué enum sea (incluida la fase 6).
+- Fuera de este alcance, y está bien que queden en inglés: Swagger (`/docs`), los `tags` de
+  los routers en la API, comentarios de código, mensajes de commit — son herramientas de
+  desarrollo, no la interfaz del producto.
 
 ## Reglas de extensibilidad (no romper)
 

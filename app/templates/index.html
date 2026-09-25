@@ -11,7 +11,7 @@
       <div class="fw-bold">{{ t.name }}</div>
       <div class="text-muted small">{{ t.location }} &middot; {{ t.date }}</div>
     </div>
-    <span class="badge bg-secondary">{{ t.status.value }}</span>
+    <span class="badge bg-secondary">{{ t.status|es_label }}</span>
   </a>
   {% endfor %}
 </div>

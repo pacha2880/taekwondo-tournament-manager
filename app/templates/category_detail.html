@@ -11,7 +11,7 @@
 
 <h1>{{ category.age_label }}</h1>
 <p class="text-muted">
-  {{ category.gender.value }} &middot; {{ category.belt_group.value }} &middot;
+  {{ category.gender|es_label }} &middot; {{ category.belt_group|es_label }} &middot;
   {{ category.weight_label }}
 </p>
 
@@ -29,8 +29,8 @@
         <span class="text-muted">vs</span>
         {{ athletes.get(m.athlete_blue_id, "—") }}
       </span>
-      <span class="badge {{ {'finished': 'bg-success', 'bye': 'bg-secondary', 'pending': 'bg-warning text-dark'}[m.status.value] }}">
-        {{ m.status.value }}
+      <span class="badge {{ m.status|match_status_badge_class }}">
+        {{ m.status|es_label }}
       </span>
     </div>
     {% if m.winner_id %}

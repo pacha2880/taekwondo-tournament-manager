@@ -16,7 +16,7 @@
 <div class="list-group">
   {% for c in categories %}
   <a href="/categorias/{{ c.id }}" class="list-group-item list-group-item-action">
-    {{ c.age_label }} &middot; {{ c.gender.value }} &middot; {{ c.belt_group.value }} &middot;
+    {{ c.age_label }} &middot; {{ c.gender|es_label }} &middot; {{ c.belt_group|es_label }} &middot;
     {{ c.weight_label }}
   </a>
   {% endfor %}

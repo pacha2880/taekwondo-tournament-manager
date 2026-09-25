@@ -82,3 +82,20 @@ Decisiones concretas de la Fase 5:
   (polling con htmx) queda anotado como el primer ítem de la Fase 9 (mejoras post-deploy),
   junto con cualquier otra mejora que se nos ocurra en el camino — deliberadamente no se
   implementa antes de tener el sistema desplegado y funcionando de punta a punta.
+
+## 2026-09-25 — Fase 5.5: centralizar la traducción de enums, no traducirlos ad-hoc
+
+Las plantillas de la Fase 5 imprimían `.value` de los enums del modelo directo, mostrando
+"draft", "male", "bye" en la página pública — los enums se guardan en inglés a propósito
+(identificadores internos, ver `app/models.py`), pero nadie los estaba traduciendo antes de
+mostrarlos. Se centralizó la traducción en `app/web/labels.py` en vez de traducir en cada
+plantilla, por dos razones: (1) un solo lugar para mantener las traducciones, y (2) permite
+un guardrail automático simple — un test que falla si cualquier plantilla (actual o futura,
+incluida la Fase 6) usa `.value` directo, sin necesidad de saber de antemano qué enum es.
+
+Detalle técnico: los enums de este proyecto heredan de `(str, enum.Enum)`, lo que los hace
+comparables e hasheables como strings — por eso `_LABELS` en `labels.py` es un diccionario
+anidado por clase de enum (`{TournamentStatus: {...}, MatchStatus: {...}}`) en vez de uno
+plano: dos enums distintos pueden compartir el mismo valor string (`TournamentStatus.FINISHED`
+y `MatchStatus.FINISHED` son ambos `"finished"`), y un diccionario plano los trataría como la
+misma clave.

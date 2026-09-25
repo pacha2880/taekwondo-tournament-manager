@@ -60,6 +60,7 @@ endpoints a mano, además de los tests automáticos:
 - [x] Fase 3 — Generación de llaves
 - [x] Fase 4 — Carga de resultados y propagación de ganador
 - [x] Fase 5 — Pantalla pública
+- [x] Fase 5.5 — Traducción de enums al español + guardrail para futuras plantillas
 - [ ] Fase 6 — Pantalla admin
 - [ ] Fase 7 — Docker + docker-compose (Postgres local)
 - [ ] Fase 8 — Despliegue (Neon + Render)
