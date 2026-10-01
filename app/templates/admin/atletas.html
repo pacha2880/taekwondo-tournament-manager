@@ -1,0 +1,65 @@
+{% extends "admin/base.html" %}
+{% block title %}Atletas{% endblock %}
+{% block content %}
+<h1 class="mb-4">Atletas</h1>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+<div class="row">
+  <div class="col-md-6">
+    <ul class="list-group mb-4">
+      {% for a in athletes %}
+      <li class="list-group-item">
+        {{ a.name }}
+        <span class="text-muted small">
+          &middot; {{ a.club.name }} &middot; {{ a.gender|es_label }} &middot; {{ a.weight_kg }}kg
+          &middot; {{ a.belt_rank }}
+        </span>
+      </li>
+      {% else %}
+      <li class="list-group-item text-muted">Todavía no hay atletas.</li>
+      {% endfor %}
+    </ul>
+  </div>
+  <div class="col-md-6">
+    <h2 class="h5">Crear atleta</h2>
+    {% if not clubs %}
+    <p class="text-muted">Primero tenés que crear un club.</p>
+    {% else %}
+    <form method="post" action="/admin/atletas">
+      <div class="mb-2">
+        <label class="form-label">Nombre</label>
+        <input type="text" name="name" class="form-control" required>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">Fecha de nacimiento</label>
+        <input type="date" name="birth_date" class="form-control" required>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">Género</label>
+        <select name="gender" class="form-select" required>
+          <option value="male">Masculino</option>
+          <option value="female">Femenino</option>
+        </select>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">Cinturón</label>
+        <input type="text" name="belt_rank" class="form-control" required
+               placeholder="ej. verde, negro 1er dan">
+      </div>
+      <div class="mb-2">
+        <label class="form-label">Peso (kg)</label>
+        <input type="number" step="0.1" name="weight_kg" class="form-control" required>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">Club</label>
+        <select name="club_id" class="form-select" required>
+          {% for c in clubs %}
+          <option value="{{ c.id }}">{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary">Crear</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

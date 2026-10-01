@@ -99,3 +99,45 @@ anidado por clase de enum (`{TournamentStatus: {...}, MatchStatus: {...}}`) en v
 plano: dos enums distintos pueden compartir el mismo valor string (`TournamentStatus.FINISHED`
 y `MatchStatus.FINISHED` son ambos `"finished"`), y un diccionario plano los trataría como la
 misma clave.
+
+## 2026-09-26 — Fase 6: el admin llama directo a las funciones de la API, no las reimplementa
+
+La pantalla admin necesita las mismas reglas de negocio que ya existen en `app/api/*.py`
+(género debe coincidir, peso en rango, no doble inscripción, etc.). En vez de reescribir esas
+validaciones para los formularios HTML, `app/web/admin.py` importa y llama directo a las
+funciones de los routers de la API (ej. `create_registration` de `app/api/registrations.py`)
+como funciones Python normales, pasándoles una sesión de DB explícita. Esto es seguro porque
+`Depends(get_db)` es solo un valor por defecto de FastAPI que no se usa cuando el llamador
+pasa `db` explícitamente. El admin atrapa `HTTPException`/`ValidationError` y re-renderiza la
+página con el error en vez de dejarlo pasar como JSON crudo.
+
+Login: sesión simple con `SessionMiddleware` (cookie firmada con `SECRET_KEY`) contra un único
+usuario definido en `ADMIN_USERNAME`/`ADMIN_PASSWORD` — no hay tabla de usuarios ni roles,
+suficiente para un solo administrador por torneo. Una dependencia (`require_admin`) protege
+cada ruta; en vez de devolver un 401 plano, lanza una excepción custom (`NotAuthenticated`)
+capturada por un exception handler global que redirige a `/admin/login` — mejor experiencia
+para un flujo pensado para navegador, no para consumo por API.
+
+## 2026-09-29 — Revertir "MatchRead solo ids": agregar nombres de atletas a la API
+
+En la Fase 5 se decidió que `MatchRead` expusiera solo ids de atletas (no nombres), para no
+acoplar el contrato JSON a una necesidad de presentación. En la práctica, los tres
+consumidores que existen hoy (pantalla pública, pantalla admin, y cualquier llamada directa a
+la API) necesitan los nombres siempre — nadie quiere ids solos. Mantener la API "pura" estaba
+protegiendo un caso de uso hipotético (un consumidor futuro que sí quisiera solo ids) a costa
+de un problema real y actual: la misma lógica de resolución de nombres (batch query para
+evitar N+1) estaba duplicada en `app/web/public.py` y `app/web/admin.py` (hoy
+`app/web/admin/category_workspace.py`).
+
+Se agregó `athlete_red_name`/`athlete_blue_name`/`winner_name` a `MatchRead`
+(`app/schemas.py`), y se centralizó la resolución en `resolve_athlete_names(db, matches)`
+(`app/services/brackets.py`) — la única función que hace esa consulta batch. La reusan
+`app/api/brackets.py`, `app/api/matches.py`, `app/web/public.py` y
+`app/web/admin/category_workspace.py`; ninguno vuelve a escribirla por su cuenta.
+
+Detalle de implementación: como `Match` (el modelo ORM) no tiene atributos `*_name`, no se
+puede confiar en la conversión automática `from_attributes=True` para esos tres campos.
+`app/api/brackets.py`/`app/api/matches.py` construyen `MatchRead`/`BracketRead` con
+`model_validate` y después les asignan los nombres resueltos por atributo (los modelos de
+Pydantic v2 son mutables salvo que se marquen `frozen=True`) — no hace falta reconstruir el
+objeto con `model_copy`.

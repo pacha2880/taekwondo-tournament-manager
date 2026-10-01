@@ -10,7 +10,7 @@ import random
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Bracket, Category, Match, MatchStatus, Registration
+from app.models import Athlete, Bracket, Category, Match, MatchStatus, Registration
 
 
 class BracketAlreadyExists(Exception):
@@ -71,6 +71,20 @@ def build_first_round_slots(
         for seed in range(1, size + 1)
     }
     return [seed_to_athlete[seed] for seed in order]
+
+
+def resolve_athlete_names(db: Session, matches: list[Match]) -> dict[int, str]:
+    """Nombres de los atletas referenciados (rojo/azul/ganador) en `matches`, en una sola
+    consulta batch -- evita N+1 queries al mostrar una llave o un combate."""
+    athlete_ids = {
+        athlete_id
+        for match in matches
+        for athlete_id in (match.athlete_red_id, match.athlete_blue_id, match.winner_id)
+        if athlete_id is not None
+    }
+    if not athlete_ids:
+        return {}
+    return {a.id: a.name for a in db.scalars(select(Athlete).where(Athlete.id.in_(athlete_ids)))}
 
 
 def advance_winner(db: Session, match: Match) -> None:

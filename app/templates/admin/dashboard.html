@@ -1,0 +1,39 @@
+{% extends "admin/base.html" %}
+{% block title %}Admin{% endblock %}
+{% block content %}
+<h1 class="mb-4">Torneos</h1>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+<div class="row">
+  <div class="col-md-6">
+    <div class="list-group mb-4">
+      {% for t in tournaments %}
+      <a href="/admin/torneos/{{ t.id }}"
+         class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+        <span>{{ t.name }}</span>
+        <span class="badge bg-secondary">{{ t.status|es_label }}</span>
+      </a>
+      {% else %}
+      <p class="text-muted">Todavía no hay torneos.</p>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="col-md-6">
+    <h2 class="h5">Crear torneo</h2>
+    <form method="post" action="/admin/torneos">
+      <div class="mb-2">
+        <label class="form-label">Nombre</label>
+        <input type="text" name="name" class="form-control" required>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">Fecha</label>
+        <input type="date" name="date" class="form-control" required>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">Lugar</label>
+        <input type="text" name="location" class="form-control" required>
+      </div>
+      <button type="submit" class="btn btn-primary">Crear</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

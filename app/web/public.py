@@ -6,7 +6,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Athlete, Bracket, Category, Tournament
+from app.models import Bracket, Category, Tournament
+from app.services.brackets import resolve_athlete_names
 from app.web.labels import es_label, match_status_badge_class
 
 router = APIRouter(tags=["public"])
@@ -42,16 +43,7 @@ def category_detail(category_id: int, request: Request, db: Session = Depends(ge
     rounds = []
     athletes: dict[int, str] = {}
     if bracket:
-        athlete_ids = {
-            athlete_id
-            for match in bracket.matches
-            for athlete_id in (match.athlete_red_id, match.athlete_blue_id, match.winner_id)
-            if athlete_id is not None
-        }
-        if athlete_ids:
-            athletes = {
-                a.id: a.name for a in db.scalars(select(Athlete).where(Athlete.id.in_(athlete_ids)))
-            }
+        athletes = resolve_athlete_names(db, bracket.matches)
 
         matches_by_round = defaultdict(list)
         for match in bracket.matches:

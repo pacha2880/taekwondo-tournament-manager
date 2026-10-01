@@ -124,8 +124,11 @@ class MatchRead(BaseModel):
     round_number: int
     slot: int
     athlete_red_id: int | None
+    athlete_red_name: str | None = None
     athlete_blue_id: int | None
+    athlete_blue_name: str | None = None
     winner_id: int | None
+    winner_name: str | None = None
     next_match_id: int | None
     status: MatchStatus
     round_scores: list[RoundScoreRead]

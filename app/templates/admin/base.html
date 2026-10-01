@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block nav %}
+<nav class="navbar navbar-dark bg-dark mb-4">
+  <div class="container">
+    <a class="navbar-brand" href="/admin">Admin &middot; Torneos de Taekwondo</a>
+    <div class="d-flex">
+      <a class="btn btn-outline-light btn-sm me-2" href="/admin/clubes">Clubes</a>
+      <a class="btn btn-outline-light btn-sm me-2" href="/admin/atletas">Atletas</a>
+      <form method="post" action="/admin/logout" class="d-inline">
+        <button class="btn btn-outline-light btn-sm" type="submit">Salir</button>
+      </form>
+    </div>
+  </div>
+</nav>
+{% endblock %}

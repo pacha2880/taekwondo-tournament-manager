@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Match
 from app.schemas import MatchRead, RoundScoreCreate, RoundScoreRead
+from app.services.brackets import resolve_athlete_names
 from app.services.scoring import (
     DuplicateRound,
     MatchAlreadyFinished,
@@ -20,7 +21,12 @@ def get_match(match_id: int, db: Session = Depends(get_db)):
     match = db.get(Match, match_id)
     if not match:
         raise HTTPException(status_code=404, detail="Combate no encontrado")
-    return match
+    match_read = MatchRead.model_validate(match)
+    names = resolve_athlete_names(db, [match])
+    match_read.athlete_red_name = names.get(match_read.athlete_red_id)
+    match_read.athlete_blue_name = names.get(match_read.athlete_blue_id)
+    match_read.winner_name = names.get(match_read.winner_id)
+    return match_read
 
 
 @router.post("/{match_id}/rounds", response_model=RoundScoreRead, status_code=201)

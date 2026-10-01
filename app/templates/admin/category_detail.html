@@ -1,0 +1,109 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ category.age_label }}{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/admin">Torneos</a></li>
+    <li class="breadcrumb-item"><a href="/admin/torneos/{{ tournament.id }}">{{ tournament.name }}</a></li>
+    <li class="breadcrumb-item active">{{ category.age_label }}</li>
+  </ol>
+</nav>
+
+<h1>{{ category.age_label }}</h1>
+<p class="text-muted">
+  {{ category.gender|es_label }} &middot; {{ category.belt_group|es_label }} &middot;
+  {{ category.weight_label }}
+</p>
+
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+<div class="row">
+  <div class="col-md-6">
+    <h2 class="h5">Inscritos</h2>
+    <ul class="list-group mb-3">
+      {% for r in registrations %}
+      <li class="list-group-item">
+        {{ r.athlete.name }} <span class="text-muted small">&middot; {{ r.athlete.club.name }}</span>
+      </li>
+      {% else %}
+      <li class="list-group-item text-muted">Todavía no hay atletas inscritos.</li>
+      {% endfor %}
+    </ul>
+
+    {% if not bracket %}
+    <h2 class="h5">Inscribir atleta</h2>
+    <form method="post" action="/admin/categorias/{{ category.id }}/inscripciones" class="mb-4">
+      <div class="mb-2 d-flex gap-2">
+        <select name="athlete_id" class="form-select" required>
+          {% for a in all_athletes %}
+          <option value="{{ a.id }}">{{ a.name }} ({{ a.club.name }})</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary text-nowrap">Inscribir</button>
+      </div>
+    </form>
+
+    <form method="post" action="/admin/categorias/{{ category.id }}/llave">
+      <button type="submit" class="btn btn-success" {% if registrations|length < 2 %}disabled{% endif %}>
+        Generar llave
+      </button>
+      {% if registrations|length < 2 %}
+      <span class="text-muted small">(hacen falta al menos 2 inscritos)</span>
+      {% endif %}
+    </form>
+    {% endif %}
+  </div>
+
+  <div class="col-md-6">
+    {% if bracket %}
+    <h2 class="h5">Llave</h2>
+    {% for round_number, round_matches in rounds %}
+    <h3 class="h6 mt-3">Ronda {{ round_number }}</h3>
+    <ul class="list-group mb-3">
+      {% for m in round_matches %}
+      <li class="list-group-item">
+        <div class="d-flex justify-content-between align-items-center">
+          <span>
+            {{ athletes.get(m.athlete_red_id, "—") }}
+            <span class="text-muted">vs</span>
+            {{ athletes.get(m.athlete_blue_id, "—") }}
+          </span>
+          <span class="badge {{ m.status|match_status_badge_class }}">{{ m.status|es_label }}</span>
+        </div>
+        {% if m.winner_id %}
+        <div class="small mt-1">Ganador: <strong>{{ athletes.get(m.winner_id) }}</strong></div>
+        {% endif %}
+        {% if m.round_scores %}
+        <div class="small text-muted">
+          {% for rs in m.round_scores %}Round {{ rs.round_number }}: {{ rs.red_points }}-{{ rs.blue_points }}{% if not loop.last %}, {% endif %}{% endfor %}
+        </div>
+        {% endif %}
+        {% if m.status == "pending" and m.athlete_red_id and m.athlete_blue_id %}
+        <form method="post" action="/admin/combates/{{ m.id }}/rounds" class="row g-1 mt-2">
+          <div class="col-3">
+            <input type="number" name="round_number" class="form-control form-control-sm"
+                   placeholder="Round" required min="1">
+          </div>
+          <div class="col-3">
+            <input type="number" name="red_points" class="form-control form-control-sm"
+                   placeholder="Rojo" required min="0">
+          </div>
+          <div class="col-3">
+            <input type="number" name="blue_points" class="form-control form-control-sm"
+                   placeholder="Azul" required min="0">
+          </div>
+          <div class="col-3">
+            <button type="submit" class="btn btn-sm btn-primary w-100">Cargar</button>
+          </div>
+        </form>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endfor %}
+    {% else %}
+    <p class="text-muted">Todavía no se ha generado la llave.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

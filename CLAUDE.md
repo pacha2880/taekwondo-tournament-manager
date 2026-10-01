@@ -6,9 +6,9 @@ cualquier punto intermedio.
 
 ## Estado actual
 
-**Fase actual: 5.5 (traducción de enums + guardrail de idioma) recién completada, pendiente
-de revisión del usuario — no está commiteada. Próximo paso: Fase 6 (pantalla admin).** Ver
-checklist completo en `README.md`.
+**Fase actual: 6 (pantalla admin) recién completada, pendiente de revisión del usuario — no
+está commiteada. Próximo paso: Fase 7 (Docker + docker-compose).** Ver checklist completo en
+`README.md`.
 
 Modelos en `app/models.py` (SQLAlchemy 2.0, estilo `Mapped`/`mapped_column`): `Club`,
 `Athlete`, `Tournament`, `Category`, `Registration`, `Bracket`, `Match`, `RoundScore`.
@@ -54,15 +54,50 @@ vía CDN en `base.html`, sin build step). Tres rutas siguiendo la jerarquía de 
 ronda + resultados). El bracket se muestra como lista de texto por ronda, no como árbol
 visual — ver `docs/DECISIONS.md` (entrada 2026-09-22) para el porqué de cada decisión de
 esta fase, incluyendo que el auto-refresh en vivo queda anotado como backlog en la Fase 9
-(post-deploy), no implementado todavía. Los nombres de atletas se resuelven en la vista
-(`app/web/public.py`) con una sola consulta a `Athlete` por los ids referenciados en el
-bracket — `MatchRead` de la API sigue exponiendo solo ids, eso no cambió.
+(post-deploy), no implementado todavía.
+
+**Decisión revisada**: `MatchRead` (`app/schemas.py`) ya no expone solo ids —
+`athlete_red_name`/`athlete_blue_name`/`winner_name` se agregaron porque, en la práctica, el
+100% de los consumidores (pantalla pública, admin, y la propia API) necesitaban resolver esos
+nombres por su cuenta. La resolución batch (evita N+1 queries) vive en una sola función,
+`resolve_athlete_names(db, matches)` en `app/services/brackets.py`, reusada por
+`app/api/brackets.py`, `app/api/matches.py`, `app/web/public.py` y
+`app/web/admin/category_workspace.py` — ninguno de los 4 vuelve a resolver nombres por su
+cuenta.
 
 Fase 5.5: las plantillas usaban `.value` directo de los enums, mostrando texto en inglés
 ("draft", "male", "bye"...). Se centralizó la traducción en `app/web/labels.py`
 (`es_label` y `match_status_badge_class`, registrados como filtros Jinja en
 `app/web/public.py`) — ver la sección **Idioma** más arriba para la regla completa y el
-guardrail de test. 83 tests pasando en total.
+guardrail de test.
+
+Pantalla admin en `app/web/admin.py` (prefijo `/admin`), templates en
+`app/templates/admin/`. Login por sesión (`SessionMiddleware` de Starlette, cookie firmada
+con `SECRET_KEY`) contra `ADMIN_USERNAME`/`ADMIN_PASSWORD` de variables de entorno — un solo
+usuario, sin roles. `require_admin` (dependencia de FastAPI) protege cada ruta; si no hay
+sesión, lanza `NotAuthenticated`, capturada por un `@app.exception_handler` en `main.py` que
+redirige a `/admin/login` (no devuelve un 401 plano).
+
+Decisión clave de esta fase: **los handlers de `app/web/admin.py` llaman directo a las
+funciones de `app/api/*.py`** (ej. `create_club_api = create_club` importado de
+`app/api/clubs.py`) en vez de reimplementar la validación de negocio en el admin. Son
+funciones Python normales — `Depends(get_db)` es solo un default que se ignora al pasar `db`
+explícito — así que se puede invocar `create_club_api(ClubCreate(...), db)` directo, sin pasar
+por HTTP. Esto evita duplicar reglas como "no inscripción duplicada" o "el peso debe estar en
+rango" entre la API JSON y los formularios del admin. Cada handler de admin atrapa
+`HTTPException`/`ValidationError` y re-renderiza la misma página con el mensaje de error
+(ya en español, viene de la API) en vez de dejar que se propague como una respuesta JSON
+cruda.
+
+Cuidado al escribir templates de admin: las comparaciones de estado (ej. "¿este combate está
+pendiente?") deben hacerse con `==` contra el string plano (`m.status == "pending"`) — funciona
+porque los enums heredan de `(str, Enum)` — **nunca** con `.value` (lo bloquea el guardrail de
+`test_templates_language.py`) y tampoco asumir que `{{ status }}` imprime el valor plano: por
+la forma en que `Enum` define `__str__`, `str(TournamentStatus.DRAFT)` da
+`"TournamentStatus.DRAFT"`, no `"draft"` (aunque la comparación `==` y el filtro `|es_label`
+sí funcionan bien, porque no dependen de `__str__`).
+
+91 tests pasando en total.
 
 Nota de Python: en `app/schemas.py` se usa `import datetime` + `datetime.date` en vez de
 `from datetime import date`, porque un campo Pydantic llamado `date` con un tipo también
