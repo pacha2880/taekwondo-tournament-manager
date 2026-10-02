@@ -141,3 +141,42 @@ puede confiar en la conversión automática `from_attributes=True` para esos tre
 `model_validate` y después les asignan los nombres resueltos por atributo (los modelos de
 Pydantic v2 son mutables salvo que se marquen `frozen=True`) — no hace falta reconstruir el
 objeto con `model_copy`.
+
+## 2026-10-01 — Fase 7: `psycopg` (v3) en vez de `psycopg2`, migraciones en el entrypoint
+
+Driver de Postgres elegido: `psycopg[binary]` (psycopg 3), no `psycopg2-binary`. Psycopg 3 es
+el sucesor activamente mantenido, con soporte oficial de SQLAlchemy 2.0 vía el dialecto
+`postgresql+psycopg://`, y no hay ninguna razón para arrancar un proyecto nuevo en 2026 sobre
+la versión vieja.
+
+Las migraciones de Alembic corren automático al arrancar el contenedor (`docker-entrypoint.sh`
+hace `alembic upgrade head` antes de `exec "$@"`), no como un paso manual separado. Para una
+sola instancia (que es lo que hay acá, y lo que habrá en Render en la fase 8) esto es seguro y
+más simple que coordinar un paso de migración aparte — si en algún momento hubiera múltiples
+instancias arrancando en paralelo, correr la migración en el entrypoint de cada una dejaría de
+ser seguro (dos procesos compitiendo por aplicar la misma migración) y habría que moverla a un
+paso de release separado.
+
+**Corrección post-commit (2026-10-02)**: la primera vez que se afirmó haber corrido la suite
+contra Postgres, esa verificación era falsa — `tests/conftest.py` tenía `"sqlite:///:memory:"`
+hardcodeado en la fixture `client`, así que `DATABASE_URL=postgresql+psycopg://... pytest` no
+tenía ningún efecto; los tests seguían corriendo contra SQLite sin importar la variable de
+entorno. Se detectó al reproducir la verificación de punta a punta antes de un commit. Fix: la
+fixture ahora lee `DATABASE_URL` (default `sqlite:///:memory:` si no está seteada) y arma el
+engine según corresponda — `StaticPool`/`check_same_thread` solo para SQLite, que son
+irrelevantes (y `check_same_thread` ni siquiera válido) para Postgres. Como Postgres es un
+servidor persistente y no una base nueva por test como `:memory:`, hace falta
+`Base.metadata.drop_all(bind=engine)` antes de `create_all` en cada test para mantener el
+mismo aislamiento entre tests que ya daba SQLite gratis.
+
+Con el fix, se confirmó la paridad SQLite/Postgres que esta fase existía para probar: se
+corrió toda la suite de pytest apuntando al Postgres real de Docker (no solo a SQLite en
+memoria) y los 92 tests pasaron igual, incluyendo las columnas `Enum` (que SQLAlchemy mapea a
+un tipo `ENUM` nativo con validación en Postgres, y a un simple `VARCHAR` sin validar en
+SQLite) — 24.6s contra Postgres vs. 4.1s contra SQLite, tiempos consistentes con que esta vez
+sí viajó por red de verdad.
+
+Nota de entorno (no de diseño): instalar Docker en esta WSL rompió la resolución DNS de la
+distro (dejó `generateResolvConf = false` en `/etc/wsl.conf` sin nada que generara
+`/etc/resolv.conf`). Se arregló escribiendo un `nameserver` fijo a mano — ver la sección
+Entorno de `CLAUDE.md` si vuelve a pasar.

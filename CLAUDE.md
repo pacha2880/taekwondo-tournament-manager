@@ -6,9 +6,9 @@ cualquier punto intermedio.
 
 ## Estado actual
 
-**Fase actual: 6 (pantalla admin) recién completada, pendiente de revisión del usuario — no
-está commiteada. Próximo paso: Fase 7 (Docker + docker-compose).** Ver checklist completo en
-`README.md`.
+**Fase actual: 7 (Docker + docker-compose) recién completada, pendiente de revisión del
+usuario — no está commiteada. Próximo paso: Fase 8 (despliegue en Neon + Render).** Ver
+checklist completo en `README.md`.
 
 Modelos en `app/models.py` (SQLAlchemy 2.0, estilo `Mapped`/`mapped_column`): `Club`,
 `Athlete`, `Tournament`, `Category`, `Registration`, `Bracket`, `Match`, `RoundScore`.
@@ -97,7 +97,24 @@ la forma en que `Enum` define `__str__`, `str(TournamentStatus.DRAFT)` da
 `"TournamentStatus.DRAFT"`, no `"draft"` (aunque la comparación `==` y el filtro `|es_label`
 sí funcionan bien, porque no dependen de `__str__`).
 
-91 tests pasando en total.
+92 tests pasando en total.
+
+Fase 7: `Dockerfile` (`python:3.10-slim`, sin `--reload`) + `docker-entrypoint.sh` (corre
+`alembic upgrade head` antes de `exec`-ear el comando de arranque, así las migraciones ya
+están aplicadas cuando el contenedor empieza a servir) + `docker-compose.yml` (`db` = Postgres
+16 alpine con volumen nombrado `pgdata`, `app` = build local, espera a que `db` esté
+`healthy`). Driver de Postgres: `psycopg[binary]` (psycopg 3, no psycopg2), URL
+`postgresql+psycopg://...`. `tests/conftest.py` (fixture `client`) lee `DATABASE_URL` —
+default `sqlite:///:memory:` si no está seteada, Postgres si lo está (con
+`Base.metadata.drop_all` antes de `create_all` en cada test, porque Postgres es un servidor
+persistente y no una base nueva por test como `:memory:`). Verificación real: con los
+contenedores arriba, se corrió **toda** la suite de pytest apuntando al Postgres de Docker
+(`DATABASE_URL=postgresql+psycopg://... pytest`) y los 92 tests pasaron igual que contra
+SQLite — sin sorpresas con el `Enum` nativo de Postgres (que en SQLite es solo un `VARCHAR`
+sin validar). Ver `docs/DECISIONS.md` (entrada 2026-10-02) sobre un primer intento de esta
+verificación que resultó falso — el fixture tenía SQLite hardcodeado y la variable de entorno
+no hacía nada. `.dockerignore` excluye `tests/`, `http/`, `docs/` de la imagen — son
+herramientas de desarrollo, no hace falta que viajen a producción.
 
 Nota de Python: en `app/schemas.py` se usa `import datetime` + `datetime.date` en vez de
 `from datetime import date`, porque un campo Pydantic llamado `date` con un tipo también
@@ -108,8 +125,11 @@ evaluación de la anotación) — ver el commit de fase 2 si hace falta el detal
 
 - Se desarrolla dentro de **WSL (Ubuntu-22.04)**, nunca en Windows nativo ni en `/mnt/c/...`.
 - Python 3.10+ (no asumir 3.12, no está instalado en esta máquina y no hace falta).
-- Docker todavía no está habilitado en esta distro (falta activar la integración WSL de
-  Docker Desktop) — no es necesario hasta la fase 7.
+- Docker instalado y funcionando en esta distro desde la fase 7 (`docker compose` — nota la
+  nueva sintaxis sin guion, no `docker-compose`). Nota de entorno: instalar Docker rompió la
+  resolución DNS de la distro (`generateResolvConf = false` en `/etc/wsl.conf` sin nada que lo
+  reemplace); se arregló con `sudo bash -c 'echo "nameserver 8.8.8.8" > /etc/resolv.conf'` — si
+  vuelve a pasar (ej. después de un `wsl --shutdown`), ese es el fix.
 - **No hacer `git commit` ni `git push` salvo que el usuario lo pida explícitamente en ese
   momento.** Implementar y verificar (tests, server manual) y dejar los cambios sin stagear;
   el usuario revisa antes de decidir si se commitea. Cuando sí lo pida, un commit por

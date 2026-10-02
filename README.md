@@ -31,7 +31,28 @@ uvicorn app.main:app --reload
 ```
 
 La API queda en `http://localhost:8000` y la documentación interactiva en
-`http://localhost:8000/docs`.
+`http://localhost:8000/docs`. Esto usa SQLite (`dev.db`) — para correr contra Postgres en
+local, ver la sección Docker más abajo.
+
+## Docker (Postgres local, paridad con producción)
+
+```bash
+docker compose up --build
+```
+
+Levanta dos servicios: `db` (Postgres 16) y `app` (la API/web, corriendo las migraciones de
+Alembic automáticamente al arrancar — ver `docker-entrypoint.sh`). Queda en
+`http://localhost:8000`, igual que en local. Credenciales de ejemplo en `docker-compose.yml`
+(`taekwondo`/`taekwondo` para la DB, `admin`/`admin` para el panel admin) — son solo para
+desarrollo local, no usar en producción.
+
+Para correr los tests contra esta Postgres en vez de SQLite (con los contenedores arriba):
+
+```bash
+DATABASE_URL="postgresql+psycopg://taekwondo:taekwondo@localhost:5432/taekwondo" pytest -v
+```
+
+`docker compose down` para parar (el volumen `pgdata` persiste los datos entre reinicios).
 
 ## Pantallas
 
@@ -70,7 +91,7 @@ endpoints a mano, además de los tests automáticos:
 - [x] Fase 5 — Pantalla pública
 - [x] Fase 5.5 — Traducción de enums al español + guardrail para futuras plantillas
 - [x] Fase 6 — Pantalla admin
-- [ ] Fase 7 — Docker + docker-compose (Postgres local)
+- [x] Fase 7 — Docker + docker-compose (Postgres local)
 - [ ] Fase 8 — Despliegue (Neon + Render)
 - [ ] Fase 9 — Mejoras post-deploy (backlog abierto en [`docs/BACKLOG.md`](docs/BACKLOG.md))
 

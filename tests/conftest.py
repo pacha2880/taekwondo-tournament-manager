@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -10,12 +12,21 @@ from app.main import app
 
 @pytest.fixture()
 def client():
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
+    database_url = os.environ.get("DATABASE_URL", "sqlite:///:memory:")
+    is_sqlite = database_url.startswith("sqlite")
+
+    if is_sqlite:
+        engine = create_engine(
+            database_url, connect_args={"check_same_thread": False}, poolclass=StaticPool
+        )
+    else:
+        engine = create_engine(database_url)
+
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    if not is_sqlite:
+        # Postgres es un servidor persistente, no una base nueva por test como :memory: --
+        # hay que limpiarla a mano para mantener el mismo aislamiento entre tests.
+        Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
     def override_get_db():
