@@ -19,6 +19,14 @@ Se implementan después de la Fase 8, priorizadas según convenga en ese momento
   - [ ] Solo permitir crear categorías (`create_category` en `app/api/categories.py`) mientras
         el torneo está en `DRAFT` — no "bloqueado en en curso", sino "solo permitido en
         DRAFT", para cubrir también el caso de un torneo ya `FINISHED`.
+  - [ ] Solo permitir generar la llave de una categoría (`create_bracket`/`generate_bracket`)
+        una vez el torneo está `IN_PROGRESS`, no en `DRAFT`. Motivo: que el sorteo sea un
+        evento público — no algo que ya pasó en secreto antes de que el torneo apareciera en
+        la pantalla pública (recordá que `DRAFT` se oculta de la lista). De paso resuelve la
+        duda de "generar todas las llaves automático al activar": no hace falta, porque el
+        admin sigue generando cada llave a mano, categoría por categoría, pero recién puede
+        hacerlo después de pasar a `en curso` — el orden queda forzado por esta regla, sin
+        necesidad de automatizar nada.
   - [ ] `FINISHED` es inmutable una vez alcanzado — ningún otro cambio de estado permitido
         después (ni volver a `DRAFT`/`IN_PROGRESS`, ni ningún otro campo del torneo). En el
         admin, el form que pasa el torneo a `FINISHED` necesita un popup de confirmación
@@ -33,6 +41,22 @@ Se implementan después de la Fase 8, priorizadas según convenga en ese momento
   - [ ] Estas validaciones viven del lado de la API (no solo del admin), así que aplican
         también a cualquier consumidor directo de `/api/v1/...`, consistente con el resto del
         proyecto.
+- [ ] Generar llave con un solo atleta inscrito (ganador directo, sin combate) — hoy
+      `build_first_round_slots` exige mínimo 2 (`NotEnoughAthletes`). Tiene sentido de
+      dominio (categoría con un solo competidor, se le otorga el primer lugar sin pelear),
+      pero **requiere una decisión de modelo, no es solo bajar un número**: con `size=1`,
+      `num_rounds = size.bit_length() - 1 = 0`, así que el loop de `generate_bracket` que
+      crea `Match` nunca corre — el bracket quedaría con `matches=[]`, sin ningún lugar donde
+      guardar "quién ganó" (hoy esa info vive siempre en `Match.winner_id`). Hay que decidir
+      entre: (a) un `Match` artificial de un solo lado, ya `FINISHED`, sin combate real, o
+      (b) un campo de "campeón por default" en `Bracket`/`Category` fuera del modelo de
+      `Match`. Se conecta con la misma duda ya abierta arriba sobre categorías sin bracket
+      para el chequeo de `FINISHED` — un bracket de 1 solo atleta tiene el mismo problema (0
+      matches) para saber si "ya terminó".
+- [ ] Mostrar un ícono de corona 👑 junto al nombre del campeón de cada categoría (el ganador
+      del último match del bracket) en la pantalla pública y en el admin — para **cualquier**
+      campeón, no solo el caso de categoría con un solo inscrito (ese caso de arriba también
+      lo mostraría, pero esto aplica en general a toda categoría ya `FINISHED`).
 - [ ] Permitir editar un round ya cargado. No es trivial: si es el round que cerró el combate,
       hay que reabrirlo (volver a `pending`, revertir `winner_id`) y, si el ganador ya se
       propagó a la siguiente ronda (`advance_winner`), también revertir esa propagación —
@@ -49,6 +73,20 @@ Se implementan después de la Fase 8, priorizadas según convenga en ese momento
 - [ ] Editar atleta (hoy solo se puede crear).
 - [ ] Buscar atleta por CI o por nombre en la pantalla admin de atletas.
 - [ ] Editar club (a confirmar si hace falta).
+- [ ] Una vez generado el bracket de una categoría, bloquear nuevas inscripciones a esa
+      categoría (`create_registration` en `app/api/registrations.py`, chequeando si
+      `Category` ya tiene `Bracket` — 409, mismo criterio que `BracketAlreadyExists`). Es una
+      regla a nivel de categoría, independiente del estado del torneo (`TournamentStatus`):
+      dos categorías del mismo torneo pueden estar en momentos distintos (una con llave ya
+      generada, otra todavía recibiendo inscripciones). En el admin, el botón "Generar llave"
+      necesita un popup de confirmación explicando que después de esto no se puede inscribir
+      a nadie más en esa categoría.
+- [ ] Label de `TournamentStatus.DRAFT` — hoy se traduce como "Borrador"
+      (`app/web/labels.py`), pero describe más específicamente el período en que se pueden
+      crear categorías e inscribir atletas. Evaluar cambiar el label a algo como
+      "Inscripciones" o "Inscripciones abiertas" — **solo el texto traducido**, no el
+      identificador interno del enum (`DRAFT` se queda en inglés como está, ver sección
+      Idioma de `CLAUDE.md`).
 - [ ] En el `<select>` de "Inscribir atleta" de la pantalla admin de categoría
       (`app/web/admin/category_workspace.py::_category_detail_context`, variable
       `all_athletes`), filtrar los atletas que ya están inscritos en esa categoría — hoy
