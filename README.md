@@ -54,6 +54,22 @@ DATABASE_URL="postgresql+psycopg://taekwondo:taekwondo@localhost:5432/taekwondo"
 
 `docker compose down` para parar (el volumen `pgdata` persiste los datos entre reinicios).
 
+## Despliegue (Neon + Render)
+
+La base de datos vive en [Neon](https://neon.tech) y la app corre en
+[Render](https://render.com) como Web Service con runtime **Docker** (usa el `Dockerfile` del
+repo; las migraciones corren solas al arrancar). Variables de entorno en Render:
+
+| Variable | Valor |
+|---|---|
+| `DATABASE_URL` | connection string **directo** de Neon (host sin `-pooler`); se acepta con el prefijo `postgresql://` que entrega Neon, la app lo convierte a `postgresql+psycopg://` |
+| `SECRET_KEY` | string largo y aleatorio |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | credenciales del panel admin |
+| `APP_ENV` | `production` — la app se niega a arrancar si `SECRET_KEY` o `ADMIN_PASSWORD` quedaron con el valor por defecto |
+
+Render define `PORT` por su cuenta. Plan gratis: el servicio se duerme tras ~15 min sin tráfico
+y la primera visita siguiente tarda ~30-50 s.
+
 ## Pantallas
 
 - **Pública** (sin login): `http://localhost:8000/` — lista de torneos, categorías y llaves.

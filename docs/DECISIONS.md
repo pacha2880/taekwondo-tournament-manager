@@ -180,3 +180,35 @@ Nota de entorno (no de diseño): instalar Docker en esta WSL rompió la resoluci
 distro (dejó `generateResolvConf = false` en `/etc/wsl.conf` sin nada que generara
 `/etc/resolv.conf`). Se arregló escribiendo un `nameserver` fijo a mano — ver la sección
 Entorno de `CLAUDE.md` si vuelve a pasar.
+
+## 2026-10-03 — Fase 8: preparar la app para Render + Neon
+
+**Render con runtime Docker**, no Python nativo: es la misma imagen que ya se probó contra
+Postgres en la fase 7, así que lo que corre en producción es lo que se verificó.
+
+**Postgres de Neon, no el de Render**: el Postgres gratis de Render expira a los 90 días; el de
+Neon no vence. Región: Ohio (`us-east-2`) en ambos para que las consultas no crucen el país.
+
+**Normalizar el prefijo de `DATABASE_URL`** (`normalize_database_url` en `app/database.py`):
+Neon entrega `postgresql://...` y SQLAlchemy, sin driver explícito, usa `psycopg2` (no
+instalado; el proyecto usa psycopg 3, que se pide con `postgresql+psycopg://`). Se normaliza en
+código para poder pegar el string de Neon sin editarlo — editarlo a mano funcionaba igual, pero
+es un olvido fácil que tira la app al arrancar.
+
+**Bloqueo de credenciales por defecto en producción** (`app/config.py`): sin `SECRET_KEY` o
+`ADMIN_PASSWORD` configurados, el código cae a `dev-secret-key`/`admin`, y en Render eso
+dejaría un panel admin abierto en internet sin ningún aviso. No se puede detectar "estoy en
+producción" mirando `DATABASE_URL` (`docker compose` local también usa Postgres con
+credenciales de desarrollo), así que se usa una variable explícita, `APP_ENV=production`, que
+solo se define en Render. Es un nombre propio del proyecto, no algo que FastAPI lea. Sin
+`APP_ENV` no se revisa nada — por eso es parte de la lista de variables obligatorias de
+Render. `ADMIN_USERNAME` no se valida: que sea `admin` no es el riesgo, la contraseña sí.
+
+**`$PORT` en el `CMD` del `Dockerfile`**: Render asigna el puerto por la variable `PORT`;
+`${PORT:-8000}` mantiene 8000 para local y `docker compose`. Se usa `exec` para que uvicorn
+reciba directamente las señales de apagado.
+
+**Connection string directo de Neon, no el pooled** (host sin `-pooler`): el endpoint con
+pooling pasa por pgbouncer, que puede dar problemas con las migraciones de Alembic y con los
+prepared statements de psycopg 3; el pooling solo aporta cuando hay muchísimas conexiones
+simultáneas, y esta app tendrá muy pocas.

@@ -6,9 +6,11 @@ cualquier punto intermedio.
 
 ## Estado actual
 
-**Fase actual: 7 (Docker + docker-compose) recién completada, pendiente de revisión del
-usuario — no está commiteada. Próximo paso: Fase 8 (despliegue en Neon + Render).** Ver
-checklist completo en `README.md`.
+**Fase actual: 8 (despliegue en Neon + Render) en curso.** Fase 7 ya está commiteada. Hechos
+y sin commitear: los 3 cambios de código previos al deploy (ver más abajo). Pendiente: que el
+usuario los revise, commitee y pushee; recién ahí se cargan las variables de entorno en
+Render y se despliega (el usuario avanza paso a paso en el panel de Render y pidió que no se
+le adelanten pasos). Ver checklist completo en `README.md`.
 
 Modelos en `app/models.py` (SQLAlchemy 2.0, estilo `Mapped`/`mapped_column`): `Club`,
 `Athlete`, `Tournament`, `Category`, `Registration`, `Bracket`, `Match`, `RoundScore`.
@@ -97,7 +99,21 @@ la forma en que `Enum` define `__str__`, `str(TournamentStatus.DRAFT)` da
 `"TournamentStatus.DRAFT"`, no `"draft"` (aunque la comparación `==` y el filtro `|es_label`
 sí funcionan bien, porque no dependen de `__str__`).
 
-92 tests pasando en total.
+101 tests pasando en total.
+
+Fase 8 (preparación del deploy): (1) `normalize_database_url` en `app/database.py` convierte
+`postgres://`/`postgresql://` en `postgresql+psycopg://` — Neon entrega la forma genérica y
+SQLAlchemy usaría `psycopg2`, que no está instalado. `alembic/env.py` lee la URL de ese mismo
+módulo, así que las migraciones también quedan cubiertas. (2) `app/config.py`
+(`check_production_settings`, llamada desde `app/main.py` al importar): si `APP_ENV=production`
+y `SECRET_KEY`/`ADMIN_PASSWORD` siguen con su default (`dev-secret-key`/`admin`) o no están
+definidas, lanza `RuntimeError` y el contenedor no arranca. `APP_ENV` es un nombre propio del
+proyecto, no del framework; se eligió una variable explícita porque "hay Postgres" no distingue
+producción de `docker compose` local (ambos usan Postgres con credenciales de desarrollo). (3)
+El `CMD` del `Dockerfile` usa `${PORT:-8000}` porque Render asigna el puerto por `$PORT`.
+Verificado con contenedores reales (con y sin `PORT`, con `APP_ENV=production` con valores por
+defecto — falla — y con valores propios — arranca). Para `DATABASE_URL` en Render usar el
+connection string **directo** de Neon (host sin `-pooler`), no el pooled.
 
 Fase 7: `Dockerfile` (`python:3.10-slim`, sin `--reload`) + `docker-entrypoint.sh` (corre
 `alembic upgrade head` antes de `exec`-ear el comando de arranque, así las migraciones ya
