@@ -212,3 +212,39 @@ reciba directamente las señales de apagado.
 pooling pasa por pgbouncer, que puede dar problemas con las migraciones de Alembic y con los
 prepared statements de psycopg 3; el pooling solo aporta cuando hay muchísimas conexiones
 simultáneas, y esta app tendrá muy pocas.
+
+## 2026-10-04 — Versionado semántico, empezando en 0.1.0
+
+La app ya está en producción y el backlog trae cambios de comportamiento, así que se adopta
+[SemVer](https://semver.org/lang/es/) para poder volver a versiones anteriores y documentar
+qué trae cada una.
+
+**Empezar en `0.1.0`, no en `0.0.0` ni en `1.0.0`.** `0.0.0` significaría "nada publicado" y ya
+hay producción. `1.0.0` declara una API pública estable, y todavía no lo es: el backlog incluye
+reglas que cambian el comportamiento de `/api/v1/...` (ej. rechazar cargar resultados en un
+torneo en borrador). SemVer permite eso dentro de `0.y.z`, y su FAQ recomienda arrancar en
+`0.1.0` y subir el minor en cada release. `1.0.0` queda para cuando la API se declare estable.
+
+**Una sola fuente de verdad: `app/version.py`.** No se usa `git describe` porque
+`.dockerignore` excluye `.git` y la imagen que construye Render no tiene historial. La versión
+se muestra en la esquina de cada página (texto chico, fijo abajo a la derecha) y en `/health`,
+que permite saber qué versión corre en producción sin abrir el navegador. Exponerla es
+inofensivo en esta app y útil para verificar un deploy.
+
+**Migraciones solo aditivas dentro de `0.x`** (columnas nuevas opcionales; nunca borrar ni
+renombrar). Es lo que hace seguro volver a un tag anterior: el código viejo sigue funcionando
+sobre una base ya migrada. Un cambio destructivo se haría en dos versiones (agregar lo nuevo
+y migrar el código, y recién en una versión posterior borrar lo viejo).
+
+**`CHANGELOG.md`** en formato Keep a Changelog, y un test que falla si su última versión
+publicada no coincide con `app/version.py`, para que no se desincronicen.
+
+**Un único entorno de plantillas** (`app/web/templating.py`): antes, `public.py` y
+`admin/_shared.py` creaban cada uno su `Jinja2Templates` y registraban los mismos filtros por
+duplicado. Para agregar la versión como global sin sumar una tercera copia se unificaron.
+
+**Orden del backlog (tres pasadas de análisis):** 0.2.0 admin más seguro, 0.3.0 datos de
+atletas, 0.4.0 ciclo de vida del torneo, 0.5.0 campeones, 0.6.0 en vivo. La 0.3.0 va antes
+que el ciclo de vida a propósito: tiene la única migración de esquema y es simple, así que
+ensaya el camino commit → push → deploy → migración → rollback antes de los cambios de
+comportamiento. Detalle en `docs/BACKLOG.md`.

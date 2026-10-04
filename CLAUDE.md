@@ -6,11 +6,28 @@ cualquier punto intermedio.
 
 ## Estado actual
 
-**Fase actual: 8 (despliegue en Neon + Render) en curso.** Fase 7 ya está commiteada. Hechos
-y sin commitear: los 3 cambios de código previos al deploy (ver más abajo). Pendiente: que el
-usuario los revise, commitee y pushee; recién ahí se cargan las variables de entorno en
-Render y se despliega (el usuario avanza paso a paso en el panel de Render y pidió que no se
-le adelanten pasos). Ver checklist completo en `README.md`.
+**Fase actual: 8 (despliegue en Neon + Render) completada — la app está en producción en
+https://taekwondo-tournament-manager.onrender.com.** Render con runtime Docker (plan gratis,
+región Ohio), base de datos en Neon (Postgres, endpoint directo, región Ohio). Verificado en
+producción con un flujo completo hecho por el admin: club, 7 atletas, torneo, categoría,
+inscripciones, llave (7 atletas = 1 pase directo), todos los combates hasta la final con
+desempates, torneo pasado a "Finalizado" y la pantalla pública mostrando el resultado. Esos
+datos de demo (club "Club Demo Cochabamba", torneo "Copa Cochabamba DEMO") **siguen en la
+base de producción**; el admin no tiene botón de borrar, así que cualquier limpieza se hace
+con SQL desde el panel de Neon. Próximo paso: Fase 9, el backlog de `docs/BACKLOG.md`, con el
+orden de versiones ya aprobado (0.1.1, 0.2.0 … 0.6.0); quedan dos decisiones pendientes del
+usuario, anotadas al principio de ese archivo. Ver checklist completo en `README.md`.
+
+**Versionado (SemVer).** Versión actual `0.1.0` en `app/version.py` (única fuente de verdad;
+se muestra en la esquina de cada página vía `templates.env.globals["app_version"]` en
+`app/web/templating.py`, y en `/health`). Al liberar una versión: subir `__version__`, mover
+`[Unreleased]` de `CHANGELOG.md` a la sección nueva (`tests/test_version.py` falla si no
+coinciden), y el tag `vX.Y.Z` se crea según las reglas de la sección **Entorno** más abajo
+(workflow de git) — ver también la sección **Versionado** del `README.md`. Regla dentro de `0.x`: las migraciones de Alembic **solo agregan** (columnas
+nuevas opcionales, nunca borrar ni renombrar), para que volver al tag anterior siga
+funcionando sobre una base ya migrada. Hay un único entorno de plantillas compartido,
+`app/web/templating.py` (filtros `es_label`/`match_status_badge_class` y la versión); los
+módulos públicos y de admin lo importan de ahí en vez de crear el suyo.
 
 Modelos en `app/models.py` (SQLAlchemy 2.0, estilo `Mapped`/`mapped_column`): `Club`,
 `Athlete`, `Tournament`, `Category`, `Registration`, `Bracket`, `Match`, `RoundScore`.
@@ -146,10 +163,34 @@ evaluación de la anotación) — ver el commit de fase 2 si hace falta el detal
   resolución DNS de la distro (`generateResolvConf = false` en `/etc/wsl.conf` sin nada que lo
   reemplace); se arregló con `sudo bash -c 'echo "nameserver 8.8.8.8" > /etc/resolv.conf'` — si
   vuelve a pasar (ej. después de un `wsl --shutdown`), ese es el fix.
-- **No hacer `git commit` ni `git push` salvo que el usuario lo pida explícitamente en ese
-  momento.** Implementar y verificar (tests, server manual) y dejar los cambios sin stagear;
-  el usuario revisa antes de decidir si se commitea. Cuando sí lo pida, un commit por
+- Si se maneja el admin con un navegador automatizado (herramientas `mcp__Claude_Browser__*`):
+  tras cada envío de formulario hay que **esperar a que la página termine de recargar y
+  verificarlo** antes de escribir el siguiente — en el plan gratis de Render la respuesta puede
+  tardar más de 2 s, y escribir sobre el formulario viejo cancela el envío en curso (así se
+  perdió un atleta en la prueba de producción). Las referencias (`ref_N`) de `read_page` se
+  invalidan al recargar, y con el filtro `interactive` solo aparecen los elementos dentro del
+  viewport — si el formulario quedó más abajo, usar `find` en vez de `read_page`.
+- **No hacer `git commit`, `git push` ni `git tag` salvo que el usuario lo pida explícitamente
+  en ese momento.** Implementar y verificar (tests, server manual) y dejar los cambios sin
+  stagear; el usuario revisa antes de decidir si se commitea. Cuando sí lo pida, un commit por
   sub-paso verificado (no uno gigante por fase), mensajes estilo `feat:`/`fix:`/`chore:`.
+- **Tags de versión (SemVer).** Cada versión liberada lleva un tag **anotado** `vX.Y.Z`
+  (`git tag -a vX.Y.Z -m "X.Y.Z"`). Reglas:
+  1. El tag va sobre el commit que contiene el cambio de `app/version.py` y de
+     `CHANGELOG.md` de esa versión, con los tests en verde (SQLite y Postgres) — nunca antes.
+  2. Una versión = un tag. **Nunca mover, borrar ni reescribir un tag ya publicado**: si una
+     versión salió mal, se corrige con una versión de parche nueva.
+  3. Al terminar el trabajo de una versión, el asistente **no crea el tag**: deja listo el
+     cambio de versión y el changelog y, en su mensaje final, le da al usuario los dos
+     comandos exactos (en bloques `bash` separados, uno por bloque): `git tag -a vX.Y.Z -m
+     "X.Y.Z"` y `git push origin vX.Y.Z`, avisando que el tag se crea **después** de
+     commitear. Solo crea el tag si el usuario se lo pide explícitamente.
+  4. Después del push, recordarle verificar `/health` (debe mostrar la versión nueva) y una
+     página pública antes de dar la versión por buena.
+  5. Cuando el usuario pida **commit y push**, el asistente evalúa si el cambio cierra una
+     versión (o un hito equivalente, ej. una fase completa desplegada) y, si vale la pena un
+     tag, **pregunta antes de crearlo** — nunca lo crea por iniciativa propia en ese momento.
+     Si no corresponde ninguno, no menciona tags.
 
 ## Estilo de código
 
