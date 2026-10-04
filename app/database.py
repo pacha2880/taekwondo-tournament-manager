@@ -13,7 +13,7 @@ def normalize_database_url(url: str) -> str:
 DATABASE_URL = normalize_database_url(os.environ.get("DATABASE_URL", "sqlite:///./dev.db"))
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
