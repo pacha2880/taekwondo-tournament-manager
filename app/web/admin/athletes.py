@@ -8,7 +8,8 @@ from app.api.athletes import create_athlete as create_athlete_api
 from app.database import get_db
 from app.models import Athlete, Club
 from app.schemas import AthleteCreate
-from app.web.admin._shared import error_message, require_admin, templates
+from app.web.admin._shared import error_message, require_admin
+from app.web.templating import templates
 
 router = APIRouter(dependencies=[Depends(require_admin)])
 

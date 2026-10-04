@@ -3,7 +3,7 @@ import os
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 
-from app.web.admin._shared import templates
+from app.web.templating import templates
 
 router = APIRouter()
 

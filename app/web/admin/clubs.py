@@ -8,7 +8,8 @@ from app.api.clubs import create_club as create_club_api
 from app.database import get_db
 from app.models import Club
 from app.schemas import ClubCreate
-from app.web.admin._shared import error_message, require_admin, templates
+from app.web.admin._shared import error_message, require_admin
+from app.web.templating import templates
 
 router = APIRouter(dependencies=[Depends(require_admin)])
 

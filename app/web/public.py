@@ -1,19 +1,15 @@
 from collections import defaultdict
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Bracket, Category, Tournament
 from app.services.brackets import resolve_athlete_names
-from app.web.labels import es_label, match_status_badge_class
+from app.web.templating import templates
 
 router = APIRouter(tags=["public"])
-templates = Jinja2Templates(directory="app/templates")
-templates.env.filters["es_label"] = es_label
-templates.env.filters["match_status_badge_class"] = match_status_badge_class
 
 
 @router.get("/")

@@ -13,7 +13,8 @@ from app.database import get_db
 from app.models import Athlete, Bracket, Category, Match, Registration
 from app.schemas import RegistrationCreate, RoundScoreCreate
 from app.services.brackets import resolve_athlete_names
-from app.web.admin._shared import error_message, require_admin, templates
+from app.web.admin._shared import error_message, require_admin
+from app.web.templating import templates
 
 router = APIRouter(dependencies=[Depends(require_admin)])
 

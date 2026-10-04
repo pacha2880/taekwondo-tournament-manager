@@ -1,12 +1,5 @@
 from fastapi import HTTPException, Request
-from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
-
-from app.web.labels import es_label, match_status_badge_class
-
-templates = Jinja2Templates(directory="app/templates")
-templates.env.filters["es_label"] = es_label
-templates.env.filters["match_status_badge_class"] = match_status_badge_class
 
 
 class NotAuthenticated(Exception):

@@ -10,7 +10,8 @@ from app.api.tournaments import update_tournament as update_tournament_api
 from app.database import get_db
 from app.models import Category, Tournament, TournamentStatus
 from app.schemas import CategoryCreate, TournamentCreate, TournamentUpdate
-from app.web.admin._shared import error_message, require_admin, templates
+from app.web.admin._shared import error_message, require_admin
+from app.web.templating import templates
 from app.web.labels import es_label
 
 router = APIRouter(dependencies=[Depends(require_admin)])

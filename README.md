@@ -70,6 +70,25 @@ repo; las migraciones corren solas al arrancar). Variables de entorno en Render:
 Render define `PORT` por su cuenta. Plan gratis: el servicio se duerme tras ~15 min sin tráfico
 y la primera visita siguiente tarda ~30-50 s.
 
+## Versionado
+
+Sigue [Semantic Versioning](https://semver.org/lang/es/). La versión vive en
+[`app/version.py`](app/version.py), se muestra en la esquina de cada página y en `/health`
+(sirve para saber qué versión corre en producción), y cada cambio se documenta en
+[`CHANGELOG.md`](CHANGELOG.md). Mientras sea `0.y.z` la API puede cambiar entre versiones minor.
+
+Para publicar una versión nueva:
+
+1. Subir `__version__` en `app/version.py` y mover lo de `[Unreleased]` a una sección nueva
+   en `CHANGELOG.md` (un test verifica que ambos coincidan).
+2. Tests en verde contra SQLite y contra el Postgres de Docker (ver arriba).
+3. Commit, y crear el tag anotado sobre ese commit: `git tag -a v0.2.0 -m "0.2.0"`.
+4. `git push` y `git push origin v0.2.0` — Render despliega solo al recibir el push.
+5. Verificar `/health` (debe mostrar la versión nueva) y una página pública.
+
+Para volver a una versión anterior: `git checkout v0.1.0` (o redeploy de ese commit desde
+Render). Es seguro porque, dentro de `0.x`, las migraciones solo agregan columnas opcionales.
+
 ## Pantallas
 
 - **Pública** (sin login): `http://localhost:8000/` — lista de torneos, categorías y llaves.
@@ -108,7 +127,7 @@ endpoints a mano, además de los tests automáticos:
 - [x] Fase 5.5 — Traducción de enums al español + guardrail para futuras plantillas
 - [x] Fase 6 — Pantalla admin
 - [x] Fase 7 — Docker + docker-compose (Postgres local)
-- [ ] Fase 8 — Despliegue (Neon + Render)
+- [x] Fase 8 — Despliegue (Neon + Render) — en producción: https://taekwondo-tournament-manager.onrender.com
 - [ ] Fase 9 — Mejoras post-deploy (backlog abierto en [`docs/BACKLOG.md`](docs/BACKLOG.md))
 
 Detalle de cada fase en el plan original y en [`CLAUDE.md`](CLAUDE.md).

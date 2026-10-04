@@ -6,6 +6,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.api import athletes, brackets, categories, clubs, matches, registrations, tournaments
 from app.config import check_production_settings
+from app.version import __version__
 from app.web import admin, public
 from app.web.admin import NotAuthenticated
 
@@ -32,4 +33,4 @@ def redirect_to_login(request: Request, exc: NotAuthenticated):
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok"}
+    return {"status": "ok", "version": __version__}
