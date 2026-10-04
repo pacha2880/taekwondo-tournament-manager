@@ -5,8 +5,11 @@ from fastapi.responses import RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.api import athletes, brackets, categories, clubs, matches, registrations, tournaments
+from app.config import check_production_settings
 from app.web import admin, public
 from app.web.admin import NotAuthenticated
+
+check_production_settings()
 
 app = FastAPI(title="Torneos de Taekwondo API")
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SECRET_KEY", "dev-secret-key"))
