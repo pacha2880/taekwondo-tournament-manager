@@ -17,6 +17,11 @@ volver al tag anterior siga funcionando sobre una base ya migrada; tras el deplo
   tiene 0 o 1 (lo resuelve la 0.5.0).
 - **Editar rounds ya cargados (ver "Más adelante").** ¿Hace falta, o alcanza con el número de
   round fijo más la confirmación previa de la 0.2.0?
+- **Asignación de área/cancha por categoría.** Un torneo real corre varias categorías en
+  paralelo en distintas áreas (viene de la planilla física de control, campo "AREA"). Falta
+  decidir: ¿una entidad `Area` propia (nombre/número), o alcanza con que el admin indique
+  cuántas áreas tiene el torneo al crearlo y las asigne por categoría? ¿Asignación manual, o
+  alguna regla automática? Ver ítem en "Más adelante".
 
 ## 0.1.0 — Versionado
 
@@ -138,10 +143,34 @@ existentes).
       del último match del bracket) en la pantalla pública y en el admin — para **cualquier**
       campeón, no solo el caso de categoría con un solo inscrito. Va después del ítem
       anterior porque depende de cómo se defina "campeón".
+- [ ] Ranking de clubes por puntos de medalla en la pantalla pública — oro=7, plata=3,
+      bronce=1, categoría sin pelea=1 (valores reales de la convocatoria de Copa Diamante;
+      dejar configurables por si otro torneo usa otra escala). Depende de los dos ítems
+      anteriores y de algo que hoy no existe: el bracket solo guarda el ganador final
+      (`Match.winner_id` de la final), no 2do/3er lugar — hay que decidir cómo derivarlos
+      (2do = perdedor de la final, 3er = ¿ambos perdedores de semifinal, como es común en
+      taekwondo, o se juega un 3er puesto?).
 
 ## 0.6.0 — En vivo
 
 - [ ] Auto-refresh en vivo de la pantalla pública (polling con htmx), en vez de recargar manual.
+
+## 0.7.0 — Grados de cinturón y estatura (datos ampliados de atleta y categoría)
+
+Dos cambios de modelo que salen directo del pedido real de Abel Bravo (ver
+`confidencial/reporte-analisis.md`, carpeta ignorada por git, no vinculado a ningún commit).
+
+- [ ] Reemplazar `BeltGroup` (hoy un enum fijo `COLOR`/`BLACK`) por un catálogo de **grados**
+      (10mo Kup ... 1er Kup, Danes) editable, y **divisiones** editables que agrupan rangos de
+      esos grados (ej. Principiantes = 10mo-6to Kup, Novatos = 5to-2do Kup, Avanzados = 1er
+      Kup y Danes) — configurables por torneo, no hardcodeadas, mismo principio que ya se usa
+      para `weight_label`. Requiere diseño de modelo, no es una migración simple: `Athlete`
+      necesita un grado individual, `Category` sigue agrupando por división (no por grado
+      suelto), y hay que decidir cómo conviven las divisiones de un torneo viejo (ej. el de
+      producción, ya `FINISHED`) con el catálogo nuevo.
+- [ ] `Athlete.height_cm` (estatura, nullable) + `Category.min_height`/`max_height`
+      (opcionales, mismo patrón que `min_weight`/`max_weight`) — la categoría Festival (hasta
+      9 años) empareja por estatura en vez de peso.
 
 ## Más adelante / sin versión asignada
 
@@ -152,6 +181,26 @@ existentes).
       datos inconsistentes; ver "Decisiones pendientes".
 - [ ] Evitar atletas duplicados por doble clic en "Crear" (hoy no hay restricción de
       unicidad en atletas; el campo CI único de la 0.3.0 lo resuelve de raíz).
+- [ ] Área/cancha asignada a cada categoría o bracket, para torneos que corren varias en
+      paralelo (viene de la planilla física de control). Diseño sin decidir — ver "Decisiones
+      pendientes".
+- [ ] Acta de resultados imprimible por categoría (1er/2do/3er lugar + club, firmas), a partir
+      de una plantilla `.docx` base — refleja el formato de la planilla física de control que
+      ya usan en los torneos. Depende de tener 2do/3er lugar derivados (ver ranking de clubes
+      en la 0.5.0).
+- [ ] Adjuntar documentación (PDF) a una inscripción — el formulario real de Copa Diamante lo
+      pide para ciertas modalidades. Necesita almacenamiento de archivos (hoy no hay ninguno
+      en el proyecto). Baja prioridad hasta confirmar que hace falta en el sistema nuevo, no
+      solo en el formulario viejo.
+- [ ] Fecha de cierre de inscripciones por categoría/torneo, independiente de si ya se generó
+      la llave (hoy la única forma de cerrar inscripciones es generar la llave, ver 0.4.0).
+      Baja prioridad.
+- [ ] Link al sitio del club organizador (ej. `keumgangdelfines.com`, configurable) en un
+      lugar visible de la pantalla pública — pie de página o detalle del torneo.
+- [ ] Integración con el sistema de inscripciones externo del club (hoy un formulario en
+      WordPress): un endpoint que reciba inscripciones desde ahí en vez de cargarlas a mano en
+      el admin. Idea especulativa, sin diseño — evaluar solo si de verdad hace falta
+      reemplazar el formulario actual.
 - [ ] Si algún día se construye un frontend separado (SPA) que consuma solo `/api/v1/...`:
       analizar si hace falta un endpoint agregado para la página de detalle de categoría. Hoy
       `_category_detail_context` (`app/web/admin/category_workspace.py`) junta categoría +
