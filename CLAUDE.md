@@ -15,8 +15,8 @@ desempates, torneo pasado a "Finalizado" y la pantalla pública mostrando el res
 datos de demo (club "Club Demo Cochabamba", torneo "Copa Cochabamba DEMO") **siguen en la
 base de producción**; el admin no tiene botón de borrar, así que cualquier limpieza se hace
 con SQL desde el panel de Neon. Próximo paso: Fase 9, el backlog de `docs/BACKLOG.md`, con el
-orden de versiones ya aprobado (0.1.1, 0.2.0 … 0.6.0); quedan dos decisiones pendientes del
-usuario, anotadas al principio de ese archivo. Ver checklist completo en `README.md`.
+orden de versiones ya aprobado (0.2.0 en adelante); quedan decisiones pendientes del usuario,
+anotadas al principio de ese archivo. Ver checklist completo en `README.md`.
 
 **Versionado (SemVer).** Versión actual `0.1.0` en `app/version.py` (única fuente de verdad;
 se muestra en la esquina de cada página vía `templates.env.globals["app_version"]` en
@@ -174,17 +174,27 @@ evaluación de la anotación) — ver el commit de fase 2 si hace falta el detal
   en ese momento.** Implementar y verificar (tests, server manual) y dejar los cambios sin
   stagear; el usuario revisa antes de decidir si se commitea. Cuando sí lo pida, un commit por
   sub-paso verificado (no uno gigante por fase), mensajes estilo `feat:`/`fix:`/`chore:`.
+- **Flujo de ramas.** El trabajo se hace en la rama **`dev`**, con commits chicos (uno por
+  sub-paso) y probando ahí. A **`main`** solo se llega con un pull request `dev` → `main`, que
+  el usuario abre y mergea (**merge normal**, con merge commit — no squash ni rebase, para
+  conservar los commits por sub-paso) cuando se juntaron suficientes cambios para una versión; Render
+  despliega desde `main`, así que el merge **es** el deploy a producción. El CI de GitHub
+  Actions corre `pytest` en pushes a `main`/`dev` y en PRs a `main`. El asistente trabaja en
+  `dev` y no toca `main`. Cada cambio visible suma una línea en `[Unreleased]` de
+  `CHANGELOG.md` en el mismo commit que lo introduce.
 - **Tags de versión (SemVer).** Cada versión liberada lleva un tag **anotado** `vX.Y.Z`
   (`git tag -a vX.Y.Z -m "X.Y.Z"`). Reglas:
-  1. El tag va sobre el commit que contiene el cambio de `app/version.py` y de
-     `CHANGELOG.md` de esa versión, con los tests en verde (SQLite y Postgres) — nunca antes.
+  1. El tag va sobre **`main`, ya mergeado el PR** (no sobre `dev`), en el commit que contiene
+     el cambio de `app/version.py` y de `CHANGELOG.md` de esa versión, con los tests en verde
+     (SQLite y Postgres) — nunca antes. El cambio de versión es el último commit del PR.
   2. Una versión = un tag. **Nunca mover, borrar ni reescribir un tag ya publicado**: si una
      versión salió mal, se corrige con una versión de parche nueva.
-  3. Al terminar el trabajo de una versión, el asistente **no crea el tag**: deja listo el
-     cambio de versión y el changelog y, en su mensaje final, le da al usuario los dos
-     comandos exactos (en bloques `bash` separados, uno por bloque): `git tag -a vX.Y.Z -m
-     "X.Y.Z"` y `git push origin vX.Y.Z`, avisando que el tag se crea **después** de
-     commitear. Solo crea el tag si el usuario se lo pide explícitamente.
+  3. Al terminar el trabajo de una versión, el asistente **no crea el tag**: deja en `dev` el
+     commit de cambio de versión y changelog y, en su mensaje final, le recuerda al usuario
+     que primero tiene que abrir y mergear el PR `dev` → `main`, y **después** le da los
+     comandos exactos (en bloques `bash` separados, uno por bloque): `git checkout main && git
+     pull`, y `git tag -a vX.Y.Z -m "X.Y.Z"`, y `git push origin vX.Y.Z`. Solo crea el tag si
+     el usuario se lo pide explícitamente.
   4. Después del push, recordarle verificar `/health` (debe mostrar la versión nueva) y una
      página pública antes de dar la versión por buena.
   5. Cuando el usuario pida **commit y push**, el asistente evalúa si el cambio cierra una

@@ -11,11 +11,6 @@ funcionando sobre una base ya migrada.
 
 ## [Unreleased]
 
-### Fixed
-- `pool_pre_ping=True` en la conexión a la base de datos: Neon suspende el cómputo por
-  inactividad y la primera conexión tras un rato inactivo pudo fallar con un error 500.
-  Se publicará como `0.1.1`.
-
 ## [0.1.0] - 2026-10-04
 
 Primera versión etiquetada: el sistema completo de las fases 0 a 8, en producción en
@@ -34,6 +29,10 @@ https://taekwondo-tournament-manager.onrender.com.
 - Bloqueo de arranque en producción (`APP_ENV=production`) si `SECRET_KEY` o `ADMIN_PASSWORD`
   siguen con su valor por defecto.
 - Número de versión visible en la esquina de cada página y en `/health`.
+
+### Fixed
+- `pool_pre_ping=True` en la conexión a la base de datos: Neon suspende el cómputo por
+  inactividad y la primera conexión tras un rato inactivo pudo fallar con un error 500.
 
 [Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/pacha2880/taekwondo-tournament-manager/releases/tag/v0.1.0

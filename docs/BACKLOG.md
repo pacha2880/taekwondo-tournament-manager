@@ -27,11 +27,9 @@ volver al tag anterior siga funcionando sobre una base ya migrada; tras el deplo
 
 - [x] `app/version.py`, número de versión en la esquina de cada página y en `/health`,
       `CHANGELOG.md`.
-
-## 0.1.1 — Parche
-
-- [ ] `pool_pre_ping=True` en `app/database.py` (ya escrito, sin commitear): Neon suspende el
-      cómputo por inactividad y la primera conexión tras un rato puede fallar con un 500.
+- [x] `pool_pre_ping=True` en `app/database.py`: Neon suspende el cómputo por inactividad y la
+      primera conexión tras un rato podía fallar con un 500. Se commiteó antes del commit de
+      versión, así que quedó dentro del tag `v0.1.0` (no hizo falta una `0.1.1`).
 
 ## 0.2.0 — Admin más seguro (sin cambios de API ni de base de datos)
 
