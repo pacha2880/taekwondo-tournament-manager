@@ -11,6 +11,11 @@ funcionando sobre una base ya migrada.
 
 ## [Unreleased]
 
+### Changed
+- Admin: el selector de "Inscribir atleta" ya no ofrece a los atletas inscritos en esa
+  categoría (antes aparecían todos y elegir uno daba un error 409). Si no queda nadie, se
+  muestra un mensaje en vez del formulario.
+
 ## [0.1.0] - 2026-10-04
 
 Primera versión etiquetada: el sistema completo de las fases 0 a 8, en producción en

@@ -173,6 +173,29 @@ def test_full_admin_workflow_creates_bracket_and_scores_a_match(client):
     assert "Ganador:" in category_page.text
 
 
+def test_registration_select_excludes_athletes_already_in_the_category(
+    client, club, category, athlete, register_n_athletes
+):
+    _login(client)
+    register_n_athletes(client, club, category, 2)
+
+    page = client.get(f"/admin/categorias/{category['id']}")
+
+    assert _extract_all_option_values(page.text, 'name="athlete_id"') == [str(athlete["id"])]
+
+
+def test_registration_form_is_replaced_by_a_message_when_everyone_is_registered(
+    client, club, category, register_n_athletes
+):
+    _login(client)
+    register_n_athletes(client, club, category, 2)
+
+    page = client.get(f"/admin/categorias/{category['id']}")
+
+    assert 'name="athlete_id"' not in page.text
+    assert "No quedan atletas para inscribir" in page.text
+
+
 def _extract_first_option_value(html: str, select_marker: str) -> str:
     return _extract_all_option_values(html, select_marker)[0]
 
