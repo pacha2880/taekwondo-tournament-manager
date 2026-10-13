@@ -210,6 +210,33 @@ def test_registration_select_excludes_athletes_already_in_the_category(
     assert _extract_all_option_values(page.text, 'name="athlete_id"') == [str(athlete["id"])]
 
 
+def test_registration_select_excludes_athletes_registered_in_another_category_of_the_tournament(
+    client, club, category, athlete
+):
+    _login(client)
+    other_category = client.post(
+        "/api/v1/categories",
+        json={
+            "tournament_id": category["tournament_id"],
+            "gender": "male",
+            "age_label": "Juvenil",
+            "min_age": 15,
+            "max_age": 17,
+            "belt_group": "color",
+            "weight_label": "Hasta 55kg",
+        },
+    ).json()
+    client.post(
+        f"/admin/categorias/{other_category['id']}/inscripciones",
+        data={"athlete_id": athlete["id"]},
+    )
+
+    page = client.get(f"/admin/categorias/{category['id']}")
+
+    assert 'name="athlete_id"' not in page.text
+    assert "No quedan atletas para inscribir" in page.text
+
+
 def test_registration_form_is_replaced_by_a_message_when_everyone_is_registered(
     client, club, category, register_n_athletes
 ):
