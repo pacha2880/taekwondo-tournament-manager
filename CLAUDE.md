@@ -174,6 +174,15 @@ evaluación de la anotación) — ver el commit de fase 2 si hace falta el detal
   en ese momento.** Implementar y verificar (tests, server manual) y dejar los cambios sin
   stagear; el usuario revisa antes de decidir si se commitea. Cuando sí lo pida, un commit por
   sub-paso verificado (no uno gigante por fase), mensajes estilo `feat:`/`fix:`/`chore:`.
+  **Qué cuenta como pedido de commit:** solo una orden directa y actual ("commiteá",
+  "hacé el commit", "pedime el commit y lo hacés"). Frases que describen cómo estructurar el
+  trabajo — "un commit por cada uno", "con tests", "procedamos con esto" — **no** son un
+  pedido: en ese caso se implementa y se verifica, se deja todo **sin stagear y sin
+  commitear**, y se pregunta antes de commitear. Ante la duda, no commitear y preguntar. (Esta
+  regla existe porque ya se interpretó mal una vez y hubo que deshacer tres commits.)
+  Cuando se pida el commit de cambios que quedaron mezclados en los mismos archivos (por
+  ejemplo `CHANGELOG.md` o un archivo de tests con aportes de varios cambios), separar por
+  hunks para que cada commit lleve solo lo suyo.
 - **Flujo de ramas.** El trabajo se hace en la rama **`dev`**, con commits chicos (uno por
   sub-paso) y probando ahí. A **`main`** solo se llega con un pull request `dev` → `main`, que
   el usuario abre y mergea (**merge normal**, con merge commit — no squash ni rebase, para
