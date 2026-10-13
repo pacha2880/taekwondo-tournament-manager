@@ -173,6 +173,21 @@ def test_full_admin_workflow_creates_bracket_and_scores_a_match(client):
     assert "Ganador:" in category_page.text
 
 
+def test_dashboard_colors_each_tournament_status_badge(client):
+    for name, status in (("T1", "draft"), ("T2", "in_progress"), ("T3", "finished")):
+        created = client.post(
+            "/api/v1/tournaments", json={"name": name, "date": "2026-11-15", "location": "La Paz"}
+        ).json()
+        client.patch(f"/api/v1/tournaments/{created['id']}", json={"status": status})
+    _login(client)
+
+    html = client.get("/admin").text
+
+    assert '<span class="badge bg-secondary">Borrador</span>' in html
+    assert '<span class="badge bg-primary">En curso</span>' in html
+    assert '<span class="badge bg-success">Finalizado</span>' in html
+
+
 def test_admin_navbar_has_torneos_button_before_clubes_and_atletas(client):
     _login(client)
 

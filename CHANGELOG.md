@@ -17,6 +17,8 @@ funcionando sobre una base ya migrada.
   muestra un mensaje en vez del formulario.
 - Admin: botón "Torneos" en la barra de navegación, a la izquierda de "Clubes" y "Atletas"
   (antes solo se llegaba al listado de torneos por el título).
+- El estado del torneo se distingue por color en la lista pública y en el dashboard del
+  admin: "Borrador" gris, "En curso" azul y "Finalizado" verde (antes los tres eran grises).
 
 ## [0.1.0] - 2026-10-04
 

@@ -4,6 +4,20 @@ def test_home_lists_tournaments(client, tournament):
     assert tournament["name"] in resp.text
 
 
+def test_home_colors_each_tournament_status_badge(client):
+    for name, status in (("T1", "draft"), ("T2", "in_progress"), ("T3", "finished")):
+        created = client.post(
+            "/api/v1/tournaments", json={"name": name, "date": "2026-11-15", "location": "La Paz"}
+        ).json()
+        client.patch(f"/api/v1/tournaments/{created['id']}", json={"status": status})
+
+    html = client.get("/").text
+
+    assert '<span class="badge bg-secondary">Borrador</span>' in html
+    assert '<span class="badge bg-primary">En curso</span>' in html
+    assert '<span class="badge bg-success">Finalizado</span>' in html
+
+
 def test_home_shows_empty_state_without_tournaments(client):
     resp = client.get("/")
     assert resp.status_code == 200
