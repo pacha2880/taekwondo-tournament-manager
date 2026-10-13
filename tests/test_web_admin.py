@@ -173,6 +173,17 @@ def test_full_admin_workflow_creates_bracket_and_scores_a_match(client):
     assert "Ganador:" in category_page.text
 
 
+def test_admin_navbar_has_torneos_button_before_clubes_and_atletas(client):
+    _login(client)
+
+    for path in ("/admin", "/admin/clubes", "/admin/atletas"):
+        html = client.get(path).text
+        torneos = html.index('href="/admin">Torneos</a>')
+        clubes = html.index('href="/admin/clubes">Clubes</a>')
+        atletas = html.index('href="/admin/atletas">Atletas</a>')
+        assert torneos < clubes < atletas
+
+
 def test_registration_select_excludes_athletes_already_in_the_category(
     client, club, category, athlete, register_n_athletes
 ):

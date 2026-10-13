@@ -15,6 +15,8 @@ funcionando sobre una base ya migrada.
 - Admin: el selector de "Inscribir atleta" ya no ofrece a los atletas inscritos en esa
   categoría (antes aparecían todos y elegir uno daba un error 409). Si no queda nadie, se
   muestra un mensaje en vez del formulario.
+- Admin: botón "Torneos" en la barra de navegación, a la izquierda de "Clubes" y "Atletas"
+  (antes solo se llegaba al listado de torneos por el título).
 
 ## [0.1.0] - 2026-10-04
 
