@@ -31,6 +31,12 @@ _LABELS: dict[type, dict] = {
     },
 }
 
+_TOURNAMENT_STATUS_BADGE = {
+    TournamentStatus.DRAFT: "bg-secondary",
+    TournamentStatus.IN_PROGRESS: "bg-primary",
+    TournamentStatus.FINISHED: "bg-success",
+}
+
 _MATCH_STATUS_BADGE = {
     MatchStatus.PENDING: "bg-warning text-dark",
     MatchStatus.BYE: "bg-secondary",
@@ -40,6 +46,10 @@ _MATCH_STATUS_BADGE = {
 
 def es_label(value) -> str:
     return _LABELS.get(type(value), {}).get(value, str(value))
+
+
+def tournament_status_badge_class(status: TournamentStatus) -> str:
+    return _TOURNAMENT_STATUS_BADGE.get(status, "bg-light text-dark")
 
 
 def match_status_badge_class(status: MatchStatus) -> str:

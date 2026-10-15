@@ -5,6 +5,12 @@ from pydantic import BaseModel, ConfigDict, model_validator
 from app.models import BeltGroup, Discipline, Gender, MatchStatus, TournamentStatus
 
 
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
+
+
 class ClubBase(BaseModel):
     name: str
 

@@ -11,10 +11,45 @@ funcionando sobre una base ya migrada.
 
 ## [Unreleased]
 
-### Fixed
-- `pool_pre_ping=True` en la conexión a la base de datos: Neon suspende el cómputo por
-  inactividad y la primera conexión tras un rato inactivo pudo fallar con un error 500.
-  Se publicará como `0.1.1`.
+## [0.2.0] - 2026-10-15
+
+La API deja de estar abierta: cualquiera que abriera `/docs` podía crear y modificar datos.
+Incluye también tres mejoras del admin. **Cambio incompatible** para quien escribiera sin token.
+
+### Added
+- `POST /api/v1/auth/login`: inicio de sesión de la API (formulario OAuth2 con el mismo usuario y
+  clave del admin) que devuelve un JWT HS256 de 8 horas. En `/docs` aparece el botón
+  **Authorize**. Nueva dependencia: `PyJWT`.
+- Con `APP_ENV=production`, la app escribe en los logs al arrancar un aviso si `SECRET_KEY` mide
+  menos de 32 bytes (`SECRET_KEY tiene N bytes; se recomiendan 32 o más`). Nunca imprime el valor
+  de la clave y no impide el arranque.
+
+### Security
+- **Cambio incompatible:** todos los `POST` y `PATCH` de `/api/v1` exigen
+  `Authorization: Bearer <token>`; sin token responden `401`. Antes cualquiera que abriera
+  `/docs` podía crear y modificar datos.
+- Privacidad: `GET /api/v1/athletes`, `GET /api/v1/athletes/{id}` y `GET /api/v1/registrations`
+  también exigen token (devuelven fecha de nacimiento y peso, y hay menores). Siguen públicos
+  los torneos, categorías, clubes, llaves y combates.
+- La comparación de credenciales usa tiempo constante (`secrets.compare_digest`) y vive en un
+  solo lugar, compartido por el login de la API y el del admin web. El admin web no cambia.
+- Un test recorre el esquema OpenAPI y falla si un endpoint nuevo queda sin protección sin estar
+  en la lista explícita de endpoints públicos.
+
+### Removed
+- La carpeta `http/` (archivos `.http` de REST Client): `pytest`, Swagger con **Authorize** y la
+  colección que se importa desde `/openapi.json` los reemplazan, y cada endpoint nuevo exigía
+  mantenerlos a mano sin que nada los verificara.
+
+### Changed
+- Admin: el selector de "Inscribir atleta" ya no ofrece a los atletas inscritos en esa
+  categoría, ni a los inscritos en otra categoría del mismo torneo (antes aparecían todos y
+  elegir uno daba un error 409). Si no queda nadie, se muestra un mensaje en vez del
+  formulario.
+- Admin: botón "Torneos" en la barra de navegación, a la izquierda de "Clubes" y "Atletas"
+  (antes solo se llegaba al listado de torneos por el título).
+- El estado del torneo se distingue por color en la lista pública y en el dashboard del
+  admin: "Borrador" gris, "En curso" azul y "Finalizado" verde (antes los tres eran grises).
 
 ## [0.1.0] - 2026-10-04
 
@@ -35,5 +70,10 @@ https://taekwondo-tournament-manager.onrender.com.
   siguen con su valor por defecto.
 - Número de versión visible en la esquina de cada página y en `/health`.
 
-[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.1.0...HEAD
+### Fixed
+- `pool_pre_ping=True` en la conexión a la base de datos: Neon suspende el cómputo por
+  inactividad y la primera conexión tras un rato inactivo pudo fallar con un error 500.
+
+[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/pacha2880/taekwondo-tournament-manager/releases/tag/v0.1.0

@@ -173,6 +173,82 @@ def test_full_admin_workflow_creates_bracket_and_scores_a_match(client):
     assert "Ganador:" in category_page.text
 
 
+def test_dashboard_colors_each_tournament_status_badge(client):
+    for name, status in (("T1", "draft"), ("T2", "in_progress"), ("T3", "finished")):
+        created = client.post(
+            "/api/v1/tournaments", json={"name": name, "date": "2026-11-15", "location": "La Paz"}
+        ).json()
+        client.patch(f"/api/v1/tournaments/{created['id']}", json={"status": status})
+    _login(client)
+
+    html = client.get("/admin").text
+
+    assert '<span class="badge bg-secondary">Borrador</span>' in html
+    assert '<span class="badge bg-primary">En curso</span>' in html
+    assert '<span class="badge bg-success">Finalizado</span>' in html
+
+
+def test_admin_navbar_has_torneos_button_before_clubes_and_atletas(client):
+    _login(client)
+
+    for path in ("/admin", "/admin/clubes", "/admin/atletas"):
+        html = client.get(path).text
+        torneos = html.index('href="/admin">Torneos</a>')
+        clubes = html.index('href="/admin/clubes">Clubes</a>')
+        atletas = html.index('href="/admin/atletas">Atletas</a>')
+        assert torneos < clubes < atletas
+
+
+def test_registration_select_excludes_athletes_already_in_the_category(
+    client, club, category, athlete, register_n_athletes
+):
+    _login(client)
+    register_n_athletes(client, club, category, 2)
+
+    page = client.get(f"/admin/categorias/{category['id']}")
+
+    assert _extract_all_option_values(page.text, 'name="athlete_id"') == [str(athlete["id"])]
+
+
+def test_registration_select_excludes_athletes_registered_in_another_category_of_the_tournament(
+    client, club, category, athlete
+):
+    _login(client)
+    other_category = client.post(
+        "/api/v1/categories",
+        json={
+            "tournament_id": category["tournament_id"],
+            "gender": "male",
+            "age_label": "Juvenil",
+            "min_age": 15,
+            "max_age": 17,
+            "belt_group": "color",
+            "weight_label": "Hasta 55kg",
+        },
+    ).json()
+    client.post(
+        f"/admin/categorias/{other_category['id']}/inscripciones",
+        data={"athlete_id": athlete["id"]},
+    )
+
+    page = client.get(f"/admin/categorias/{category['id']}")
+
+    assert 'name="athlete_id"' not in page.text
+    assert "No quedan atletas para inscribir" in page.text
+
+
+def test_registration_form_is_replaced_by_a_message_when_everyone_is_registered(
+    client, club, category, register_n_athletes
+):
+    _login(client)
+    register_n_athletes(client, club, category, 2)
+
+    page = client.get(f"/admin/categorias/{category['id']}")
+
+    assert 'name="athlete_id"' not in page.text
+    assert "No quedan atletas para inscribir" in page.text
+
+
 def _extract_first_option_value(html: str, select_marker: str) -> str:
     return _extract_all_option_values(html, select_marker)[0]
 

@@ -67,7 +67,9 @@ repo; las migraciones corren solas al arrancar). Variables de entorno en Render:
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | credenciales del panel admin |
 | `APP_ENV` | `production` — la app se niega a arrancar si `SECRET_KEY` o `ADMIN_PASSWORD` quedaron con el valor por defecto |
 
-Render define `PORT` por su cuenta. Plan gratis: el servicio se duerme tras ~15 min sin tráfico
+Render define `PORT` por su cuenta. Si `SECRET_KEY` mide menos de 32 bytes, la app lo avisa en los
+logs al arrancar (nunca imprime el valor); generá una buena con
+`python3 -c "import secrets; print(secrets.token_urlsafe(48))"`. Plan gratis: el servicio se duerme tras ~15 min sin tráfico
 y la primera visita siguiente tarda ~30-50 s.
 
 ## Versionado
@@ -77,14 +79,27 @@ Sigue [Semantic Versioning](https://semver.org/lang/es/). La versión vive en
 (sirve para saber qué versión corre en producción), y cada cambio se documenta en
 [`CHANGELOG.md`](CHANGELOG.md). Mientras sea `0.y.z` la API puede cambiar entre versiones minor.
 
-Para publicar una versión nueva:
+### Flujo de ramas
 
-1. Subir `__version__` en `app/version.py` y mover lo de `[Unreleased]` a una sección nueva
-   en `CHANGELOG.md` (un test verifica que ambos coincidan).
-2. Tests en verde contra SQLite y contra el Postgres de Docker (ver arriba).
-3. Commit, y crear el tag anotado sobre ese commit: `git tag -a v0.2.0 -m "0.2.0"`.
-4. `git push` y `git push origin v0.2.0` — Render despliega solo al recibir el push.
-5. Verificar `/health` (debe mostrar la versión nueva) y una página pública.
+Todo el trabajo se hace en **`dev`**, con commits chicos (uno por sub-paso) y probando ahí.
+Nada llega a producción hasta que se abre un pull request **`dev` → `main`**, lo que se hace
+cuando se juntaron suficientes cambios para una versión. Render despliega desde `main`; el CI
+(GitHub Actions) corre `pytest` en cada push a `main`/`dev` y en cada PR a `main`.
+
+### Para publicar una versión nueva
+
+1. Mientras se trabaja en `dev`, cada cambio visible suma una línea en `[Unreleased]` de
+   `CHANGELOG.md`.
+2. Cuando hay suficientes cambios, un último commit en `dev` sube `__version__` en
+   `app/version.py` y mueve `[Unreleased]` a una sección nueva (un test verifica que ambos
+   coincidan).
+3. Tests en verde contra SQLite y contra el Postgres de Docker (ver arriba), y CI verde en el PR.
+4. Pull request `dev` → `main` y **merge normal** (merge commit, sin squash ni rebase, para
+   conservar los commits chicos por sub-paso y poder volver atrás con granularidad) — Render
+   despliega solo al llegar a `main`.
+5. Crear el tag anotado **sobre `main`, ya mergeado** (no sobre `dev`):
+   `git checkout main && git pull && git tag -a v0.2.0 -m "0.2.0" && git push origin v0.2.0`.
+6. Verificar `/health` (debe mostrar la versión nueva) y una página pública.
 
 Para volver a una versión anterior: `git checkout v0.1.0` (o redeploy de ese commit desde
 Render). Es seguro porque, dentro de `0.x`, las migraciones solo agregan columnas opcionales.
@@ -103,18 +118,31 @@ Render). Es seguro porque, dentro de `0.x`, las migraciones solo agregan columna
 pytest -v
 ```
 
+## Autenticación de la API
+
+Las lecturas de torneos, categorías, clubes, llaves y combates son **públicas**. Todo lo que
+escribe (`POST`/`PATCH`) y las lecturas de **atletas e inscripciones** (llevan fecha de
+nacimiento y peso, y hay menores) exigen un token. Se obtiene con el mismo usuario y clave del
+admin y dura 8 horas, sin renovación automática:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/login -d "username=admin&password=admin"
+```
+
+Responde `{"access_token": "...", "token_type": "bearer", "expires_in": 28800}`. Después se
+manda en cada petición protegida como `Authorization: Bearer <access_token>`. Sin token (o con
+uno inválido o vencido) la API responde `401`. En Swagger (`/docs`) el botón **Authorize**
+hace el login por vos. Si el token se filtra, el "botón de pánico" es cambiar `SECRET_KEY`:
+invalida todos los tokens (y también cierra la sesión del admin web).
+
 ## Probar la API manualmente
 
 Con el servidor corriendo (`uvicorn app.main:app --reload`), hay dos formas de probar los
 endpoints a mano, además de los tests automáticos:
 
-- **Swagger** en `http://localhost:8000/docs`.
-- **Archivos `.http`** en [`http/`](http/) (uno por entidad: `clubs.http`, `athletes.http`,
-  `tournaments.http`, `categories.http`, `registrations.http`), pensados para la extensión
-  [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) de
-  VS Code — abrí el archivo y hacé click en "Send Request" arriba de cada petición. Cada
-  archivo crea sus propias dependencias (club, torneo, etc.) antes de la petición principal,
-  así que se pueden correr de punta a punta sin copiar IDs a mano.
+- **Swagger** en `http://localhost:8000/docs` (con **Authorize** para loguearte).
+- **Postman o Insomnia:** importá `http://localhost:8000/openapi.json` y obtenés una colección
+  completa con todos los endpoints.
 
 ## Estado del proyecto
 

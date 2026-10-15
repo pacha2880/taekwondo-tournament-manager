@@ -15,10 +15,34 @@ desempates, torneo pasado a "Finalizado" y la pantalla pública mostrando el res
 datos de demo (club "Club Demo Cochabamba", torneo "Copa Cochabamba DEMO") **siguen en la
 base de producción**; el admin no tiene botón de borrar, así que cualquier limpieza se hace
 con SQL desde el panel de Neon. Próximo paso: Fase 9, el backlog de `docs/BACKLOG.md`, con el
-orden de versiones ya aprobado (0.1.1, 0.2.0 … 0.6.0); quedan dos decisiones pendientes del
-usuario, anotadas al principio de ese archivo. Ver checklist completo en `README.md`.
+orden de versiones ya aprobado (0.2.0 en adelante); quedan decisiones pendientes del usuario,
+anotadas al principio de ese archivo. Ver checklist completo en `README.md`.
 
-**Versionado (SemVer).** Versión actual `0.1.0` en `app/version.py` (única fuente de verdad;
+**Contexto de prioridades (octubre 2026).** Un amigo del usuario va a construir un **frontend
+separado, en otra tecnología**, contra esta API (primero solo lectura de torneos y llaves, luego
+administración); el usuario también tiene su propio frontend aparte. Por eso la API pasó a ser un
+producto y se priorizó: `0.2.0` API protegida (login + JWT; versión subida en `dev`, pendiente del PR a `main`), `0.3.0` CORS
+y la guía `docs/API.md` para consumidores, y recién después los datos de atletas (editar/CI), que el
+frontend externo necesita. Hay un servicio de **dev** en Render desplegando la rama `dev` contra
+una rama de base de datos `dev` de Neon (para que el amigo pruebe sin tocar producción).
+
+**Autenticación de la API (0.2.0).** `POST /api/v1/auth/login` (formulario OAuth2, mismo usuario y
+clave del admin) devuelve un JWT HS256 de 8 horas (`app/auth.py`; `app/api/auth.py`). Los `POST`/
+`PATCH` y los `GET` de atletas e inscripciones usan `dependencies=ADMIN_ONLY`; el resto de las
+lecturas son públicas. **Regla para todo endpoint nuevo de `/api/v1`:** debe llevar
+`dependencies=ADMIN_ONLY`, salvo que sea una lectura que se decida pública a propósito — en ese caso
+hay que agregarla a `PUBLIC_ENDPOINTS` en `tests/test_api_auth.py`; el test de inventario (lee el
+esquema OpenAPI) falla si no se hace. Los endpoints que devuelvan datos personales de atletas
+(fecha de nacimiento, peso) **no** pueden ser públicos. El admin web no pasa por esta autenticación
+(sigue con cookie de sesión y llama a las funciones de `app/api/*.py` directo). Ver la entrada del
+2026-10-15 de `docs/DECISIONS.md`, que incluye dos lecciones: `app.routes` ya no sirve para
+inventariar rutas en FastAPI 0.141 (los routers incluidos quedan anidados), y los tests de JWT
+necesitan un margen de reloj (`CLOCK_SKEW_LEEWAY`) por el reloj de WSL2. Con `APP_ENV=production`,
+`warn_if_short_secret_key` (`app/config.py`) escribe un aviso en los logs al arrancar si
+`SECRET_KEY` mide menos de 32 bytes — nunca imprime el valor, y no impide el arranque a propósito
+(endurecerlo a un error solo después de que el usuario verifique las claves de dev y producción).
+
+**Versionado (SemVer).** Versión actual `0.2.0` en `app/version.py` (única fuente de verdad;
 se muestra en la esquina de cada página vía `templates.env.globals["app_version"]` en
 `app/web/templating.py`, y en `/health`). Al liberar una versión: subir `__version__`, mover
 `[Unreleased]` de `CHANGELOG.md` a la sección nueva (`tests/test_version.py` falla si no
@@ -116,7 +140,7 @@ la forma en que `Enum` define `__str__`, `str(TournamentStatus.DRAFT)` da
 `"TournamentStatus.DRAFT"`, no `"draft"` (aunque la comparación `==` y el filtro `|es_label`
 sí funcionan bien, porque no dependen de `__str__`).
 
-101 tests pasando en total.
+141 tests pasando en total (SQLite y Postgres).
 
 Fase 8 (preparación del deploy): (1) `normalize_database_url` en `app/database.py` convierte
 `postgres://`/`postgresql://` en `postgresql+psycopg://` — Neon entrega la forma genérica y
@@ -146,7 +170,7 @@ contenedores arriba, se corrió **toda** la suite de pytest apuntando al Postgre
 SQLite — sin sorpresas con el `Enum` nativo de Postgres (que en SQLite es solo un `VARCHAR`
 sin validar). Ver `docs/DECISIONS.md` (entrada 2026-10-02) sobre un primer intento de esta
 verificación que resultó falso — el fixture tenía SQLite hardcodeado y la variable de entorno
-no hacía nada. `.dockerignore` excluye `tests/`, `http/`, `docs/` de la imagen — son
+no hacía nada. `.dockerignore` excluye `tests/`, `docs/` de la imagen — son
 herramientas de desarrollo, no hace falta que viajen a producción.
 
 Nota de Python: en `app/schemas.py` se usa `import datetime` + `datetime.date` en vez de
@@ -174,17 +198,36 @@ evaluación de la anotación) — ver el commit de fase 2 si hace falta el detal
   en ese momento.** Implementar y verificar (tests, server manual) y dejar los cambios sin
   stagear; el usuario revisa antes de decidir si se commitea. Cuando sí lo pida, un commit por
   sub-paso verificado (no uno gigante por fase), mensajes estilo `feat:`/`fix:`/`chore:`.
+  **Qué cuenta como pedido de commit:** solo una orden directa y actual ("commiteá",
+  "hacé el commit", "pedime el commit y lo hacés"). Frases que describen cómo estructurar el
+  trabajo — "un commit por cada uno", "con tests", "procedamos con esto" — **no** son un
+  pedido: en ese caso se implementa y se verifica, se deja todo **sin stagear y sin
+  commitear**, y se pregunta antes de commitear. Ante la duda, no commitear y preguntar. (Esta
+  regla existe porque ya se interpretó mal una vez y hubo que deshacer tres commits.)
+  Cuando se pida el commit de cambios que quedaron mezclados en los mismos archivos (por
+  ejemplo `CHANGELOG.md` o un archivo de tests con aportes de varios cambios), separar por
+  hunks para que cada commit lleve solo lo suyo.
+- **Flujo de ramas.** El trabajo se hace en la rama **`dev`**, con commits chicos (uno por
+  sub-paso) y probando ahí. A **`main`** solo se llega con un pull request `dev` → `main`, que
+  el usuario abre y mergea (**merge normal**, con merge commit — no squash ni rebase, para
+  conservar los commits por sub-paso) cuando se juntaron suficientes cambios para una versión; Render
+  despliega desde `main`, así que el merge **es** el deploy a producción. El CI de GitHub
+  Actions corre `pytest` en pushes a `main`/`dev` y en PRs a `main`. El asistente trabaja en
+  `dev` y no toca `main`. Cada cambio visible suma una línea en `[Unreleased]` de
+  `CHANGELOG.md` en el mismo commit que lo introduce.
 - **Tags de versión (SemVer).** Cada versión liberada lleva un tag **anotado** `vX.Y.Z`
   (`git tag -a vX.Y.Z -m "X.Y.Z"`). Reglas:
-  1. El tag va sobre el commit que contiene el cambio de `app/version.py` y de
-     `CHANGELOG.md` de esa versión, con los tests en verde (SQLite y Postgres) — nunca antes.
+  1. El tag va sobre **`main`, ya mergeado el PR** (no sobre `dev`), en el commit que contiene
+     el cambio de `app/version.py` y de `CHANGELOG.md` de esa versión, con los tests en verde
+     (SQLite y Postgres) — nunca antes. El cambio de versión es el último commit del PR.
   2. Una versión = un tag. **Nunca mover, borrar ni reescribir un tag ya publicado**: si una
      versión salió mal, se corrige con una versión de parche nueva.
-  3. Al terminar el trabajo de una versión, el asistente **no crea el tag**: deja listo el
-     cambio de versión y el changelog y, en su mensaje final, le da al usuario los dos
-     comandos exactos (en bloques `bash` separados, uno por bloque): `git tag -a vX.Y.Z -m
-     "X.Y.Z"` y `git push origin vX.Y.Z`, avisando que el tag se crea **después** de
-     commitear. Solo crea el tag si el usuario se lo pide explícitamente.
+  3. Al terminar el trabajo de una versión, el asistente **no crea el tag**: deja en `dev` el
+     commit de cambio de versión y changelog y, en su mensaje final, le recuerda al usuario
+     que primero tiene que abrir y mergear el PR `dev` → `main`, y **después** le da los
+     comandos exactos (en bloques `bash` separados, uno por bloque): `git checkout main && git
+     pull`, y `git tag -a vX.Y.Z -m "X.Y.Z"`, y `git push origin vX.Y.Z`. Solo crea el tag si
+     el usuario se lo pide explícitamente.
   4. Después del push, recordarle verificar `/health` (debe mostrar la versión nueva) y una
      página pública antes de dar la versión por buena.
   5. Cuando el usuario pida **commit y push**, el asistente evalúa si el cambio cierra una
@@ -241,22 +284,5 @@ Render+Neon en vez de Railway/Fly.io, desarrollo dentro de WSL, y las reglas de 
 
 - `pytest -v` pasa.
 - Se puede levantar el server y probar manualmente vía `/docs` (Swagger) o navegador.
-- Los archivos `.http` en `http/` (ver más abajo) siguen funcionando de punta a punta.
 - No romper lo verificado en fases anteriores (correr toda la suite, no solo los tests
   nuevos).
-
-## Archivos `.http` para pruebas manuales
-
-`http/` tiene un archivo por router (`clubs.http`, `athletes.http`, `tournaments.http`,
-`categories.http`, `registrations.http`), pensado para la extensión **REST Client** de
-VS Code con el servidor (`uvicorn app.main:app --reload`) corriendo en local. Cada archivo es
-autocontenido: crea sus propias dependencias (por ejemplo `athletes.http` crea su propio club
-antes del atleta) usando el encadenado de variables de REST Client
-(`# @name` + `{{nombre.response.body.$.campo}}`), igual que las fixtures de
-`tests/conftest.py` encadenan `club → athlete` y `tournament → category`. No reemplazan a
-`pytest` — son para "ir probando a mano" mientras se desarrolla, con algunos casos de error
-representativos (404/409/422) además del camino feliz.
-
-Al agregar funcionalidad nueva (fase 3 en adelante: brackets, matches, round_scores), sumar
-el archivo `.http` correspondiente siguiendo el mismo patrón, en vez de dejar que estos
-archivos queden desactualizados.

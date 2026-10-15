@@ -27,7 +27,14 @@ def _category_detail_context(db: Session, category_id: int) -> dict:
     registrations = db.scalars(
         select(Registration).where(Registration.category_id == category_id)
     ).all()
-    all_athletes = db.scalars(select(Athlete).order_by(Athlete.name)).all()
+    tournament_registered_ids = db.scalars(
+        select(Registration.athlete_id)
+        .join(Category, Registration.category_id == Category.id)
+        .where(Category.tournament_id == category.tournament_id)
+    ).all()
+    available_athletes = db.scalars(
+        select(Athlete).where(Athlete.id.not_in(tournament_registered_ids)).order_by(Athlete.name)
+    ).all()
 
     bracket = db.scalar(select(Bracket).where(Bracket.category_id == category_id))
     rounds = []
@@ -46,7 +53,7 @@ def _category_detail_context(db: Session, category_id: int) -> dict:
         "category": category,
         "tournament": category.tournament,
         "registrations": registrations,
-        "all_athletes": all_athletes,
+        "available_athletes": available_athletes,
         "bracket": bracket,
         "rounds": rounds,
         "athletes": athletes,

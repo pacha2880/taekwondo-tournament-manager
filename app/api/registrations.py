@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.auth import ADMIN_ONLY
 from app.database import get_db
 from app.models import Athlete, Category, Registration
 from app.schemas import RegistrationCreate, RegistrationRead
@@ -9,7 +10,7 @@ from app.schemas import RegistrationCreate, RegistrationRead
 router = APIRouter(prefix="/api/v1/registrations", tags=["registrations"])
 
 
-@router.post("", response_model=RegistrationRead, status_code=201)
+@router.post("", response_model=RegistrationRead, status_code=201, dependencies=ADMIN_ONLY)
 def create_registration(payload: RegistrationCreate, db: Session = Depends(get_db)):
     athlete = db.get(Athlete, payload.athlete_id)
     if not athlete:
@@ -57,7 +58,7 @@ def create_registration(payload: RegistrationCreate, db: Session = Depends(get_d
     return registration
 
 
-@router.get("", response_model=list[RegistrationRead])
+@router.get("", response_model=list[RegistrationRead], dependencies=ADMIN_ONLY)
 def list_registrations(category_id: int | None = None, db: Session = Depends(get_db)):
     stmt = select(Registration)
     if category_id is not None:
