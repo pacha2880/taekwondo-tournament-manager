@@ -248,3 +248,82 @@ atletas, 0.4.0 ciclo de vida del torneo, 0.5.0 campeones, 0.6.0 en vivo. La 0.3.
 que el ciclo de vida a propósito: tiene la única migración de esquema y es simple, así que
 ensaya el camino commit → push → deploy → migración → rollback antes de los cambios de
 comportamiento. Detalle en `docs/BACKLOG.md`.
+
+## 2026-10-15 — API protegida con login y JWT (0.2.0)
+
+**El problema.** Ningún endpoint de `/api/v1` exigía autenticación: el admin web usa sesión por
+cookie, pero la API quedó abierta, así que cualquiera que abriera `/docs` podía crear y modificar
+datos en producción. Se hizo visible al aparecer un consumidor externo (el frontend de un amigo,
+en otra tecnología), pero el agujero existía desde antes.
+
+**Token en la cabecera, no cookie.** Con un frontend en otro dominio, la cookie cruzada exige
+`SameSite=None`, `credentials` en CORS, la bloquean cada vez más navegadores y abre la puerta a
+CSRF. Un token que el frontend agrega a mano en `Authorization: Bearer` no sufre CSRF (una página
+ajena no puede hacer que el navegador lo adjunte sola). El admin web sigue con cookie de sesión.
+
+**JWT (HS256, PyJWT) y no un token propio de `itsdangerous`.** Para el servidor son equivalentes
+(ambos *stateless*), pero JWT es el estándar: el frontend de otra tecnología puede leer el `exp`,
+Swagger y las librerías lo entienden, y es lo que se espera en el mercado. El costo es una
+dependencia pequeña. Al verificar se fija `algorithms=["HS256"]` (evita el error clásico de
+aceptar `alg: none`; hay un test) y se exigen `exp` y `sub`.
+
+**Login con formulario OAuth2** (`POST /api/v1/auth/login`): es la forma estándar y hace que
+Swagger muestre el botón **Authorize**. Mismo usuario y clave del admin; la comparación es de
+tiempo constante y vive en `app/auth.py`, compartida con el login del admin web. `SECRET_KEY` y las
+credenciales se leen desde `app/config.py` en vez de tres lugares distintos.
+
+**8 horas, sin renovación automática.** El token no se puede revocar antes de vencer (nadie lo
+guarda). Ocho horas cubren una jornada de torneo; un refresh token agregaría almacenamiento,
+rotación y revocación que no se justifican hoy. El "botón de pánico" es cambiar `SECRET_KEY`
+(invalida todos los tokens y también las sesiones del admin web).
+
+**Qué es público y qué no.** Públicos: torneos, categorías, clubes, llaves y combates (solo
+nombres). Con token: todo `POST`/`PATCH`, y `GET` de atletas e inscripciones, porque devuelven fecha
+de nacimiento y peso y hay menores. Si el frontend externo necesita mostrar "quiénes están
+inscritos" antes de que exista la llave, se agregará un endpoint público que devuelva solo nombre
+y club.
+
+**Cómo se aplica.** La constante `ADMIN_ONLY = [Depends(require_api_admin)]` se pasa como
+`dependencies=ADMIN_ONLY` en cada endpoint protegido. El admin web **no** se ve afectado: sus
+handlers llaman a las funciones de `app/api/*.py` directamente (ver la decisión de la Fase 6) y
+las dependencias de FastAPI solo corren cuando la petición entra por HTTP.
+
+**Test de inventario sobre el esquema OpenAPI, no sobre `app.routes`.** La primera versión del
+test recorría `app.routes` buscando `APIRoute`; en FastAPI 0.141 los routers incluidos quedan como
+objetos `_IncludedRouter` anidados, así que el recorrido no veía ninguna ruta y el test **pasaba en
+vacío** sin verificar nada. Se detectó al ver que el conjunto de rutas sin proteger salía vacío. El
+test ahora lee `app.openapi()["paths"]` (donde cada operación protegida declara su `security`, que
+es además lo que ve quien consuma `/docs`), afirma que ve `POST /api/v1/clubs` para no poder pasar
+vacío, y se comprobó con una prueba de mutación (quitar la protección de un endpoint hace fallar el
+test). Un endpoint nuevo sin proteger y fuera de la lista `PUBLIC_ENDPOINTS` rompe el test.
+
+**Margen de 30 s de reloj (`leeway`).** Los tests fallaban de forma intermitente (~1 de cada 50
+corridas) con `401 Token inválido`. Con un registro temporal de la excepción se vio
+`ImmatureSignatureError: The token is not yet valid (iat)`: el `iat` del token recién creado estaba
+~2 s *adelante* de la hora de la verificación, es decir, el reloj de WSL2 retrocedió al
+resincronizarse con Windows entre crear y verificar el token. Es la causa conocida de este síntoma,
+y también ocurre en producción cuando dos instancias tienen relojes levemente distintos. La
+solución estándar es tolerar un margen pequeño al verificar (`leeway`); aplica también al
+vencimiento (un token vence hasta 30 s tarde, sin consecuencias prácticas). Hay un test del margen.
+
+**Fixtures de test.** `client` manda un token válido por defecto (así los tests existentes no
+cambian), `anon_client` comparte la misma base sin token, y un fixture automático fija un
+`SECRET_KEY` de 32 bytes o más para no ensuciar la salida con `InsecureKeyLengthWarning` (PyJWT
+avisa si la clave de HS256 es corta; la de producción la genera Render y es larga, pero **no se
+valida su largo**: si `SECRET_KEY` fuera corta, PyJWT solo advertiría).
+
+## 2026-10-15 — Se quitan los `.http`; la app avisa si `SECRET_KEY` es corta
+
+**Se eliminó la carpeta `http/`** (archivos de REST Client). Con la API protegida, mantenerlos
+exigía loguearse en cada archivo y agregar un archivo por cada endpoint nuevo, sin que nada los
+verificara (y no se pudieron probar con la extensión real). Lo que cubrían ya lo hacen
+`pytest` (comportamiento), Swagger con **Authorize** (exploración a mano) y la colección que se
+importa desde `/openapi.json` en Postman o Insomnia. Siguen en el historial de git.
+
+**Aviso de `SECRET_KEY` corta, no error.** PyJWT solo avisa cuando firma o verifica un token, y
+una sola vez por proceso, así que es fácil no enterarse. La app ahora escribe una línea en los
+logs al arrancar (solo con `APP_ENV=production`, para no molestar en desarrollo) si la clave mide
+menos de 32 bytes, que es el mínimo que recomienda el RFC 7518 para HS256. Es un aviso y no un
+error a propósito: si la clave real fuera corta, un error dejaría la app caída en producción en el
+próximo deploy. Nunca imprime el valor. Se puede endurecer a error cuando se hayan verificado las
+claves de dev y producción.

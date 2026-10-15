@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.auth import ADMIN_ONLY
 from app.database import get_db
 from app.models import Match
 from app.schemas import MatchRead, RoundScoreCreate, RoundScoreRead
@@ -29,7 +30,7 @@ def get_match(match_id: int, db: Session = Depends(get_db)):
     return match_read
 
 
-@router.post("/{match_id}/rounds", response_model=RoundScoreRead, status_code=201)
+@router.post("/{match_id}/rounds", response_model=RoundScoreRead, status_code=201, dependencies=ADMIN_ONLY)
 def create_round_score(match_id: int, payload: RoundScoreCreate, db: Session = Depends(get_db)):
     match = db.get(Match, match_id)
     if not match:

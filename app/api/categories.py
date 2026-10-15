@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.auth import ADMIN_ONLY
 from app.database import get_db
 from app.models import Category, Tournament
 from app.schemas import CategoryCreate, CategoryRead
@@ -9,7 +10,7 @@ from app.schemas import CategoryCreate, CategoryRead
 router = APIRouter(prefix="/api/v1/categories", tags=["categories"])
 
 
-@router.post("", response_model=CategoryRead, status_code=201)
+@router.post("", response_model=CategoryRead, status_code=201, dependencies=ADMIN_ONLY)
 def create_category(payload: CategoryCreate, db: Session = Depends(get_db)):
     if not db.get(Tournament, payload.tournament_id):
         raise HTTPException(status_code=404, detail="Torneo no encontrado")

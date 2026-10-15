@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.auth import ADMIN_ONLY
 from app.database import get_db
 from app.models import Bracket, Category
 from app.schemas import BracketRead
@@ -25,7 +26,7 @@ def _bracket_read(db: Session, bracket: Bracket) -> BracketRead:
     return bracket_read
 
 
-@router.post("/{category_id}/bracket", response_model=BracketRead, status_code=201)
+@router.post("/{category_id}/bracket", response_model=BracketRead, status_code=201, dependencies=ADMIN_ONLY)
 def create_bracket(category_id: int, db: Session = Depends(get_db)):
     category = db.get(Category, category_id)
     if not category:

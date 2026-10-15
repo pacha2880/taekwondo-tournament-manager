@@ -1,14 +1,10 @@
-import os
-
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 
+from app.auth import verify_admin_credentials
 from app.web.templating import templates
 
 router = APIRouter()
-
-ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin")
 
 
 @router.get("/login")
@@ -18,7 +14,7 @@ def login_form(request: Request):
 
 @router.post("/login")
 def login(request: Request, username: str = Form(...), password: str = Form(...)):
-    if username != ADMIN_USERNAME or password != ADMIN_PASSWORD:
+    if not verify_admin_credentials(username, password):
         return templates.TemplateResponse(
             request,
             "admin/login.html",

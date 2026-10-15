@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.auth import ADMIN_ONLY
 from app.database import get_db
 from app.models import Tournament
 from app.schemas import TournamentCreate, TournamentRead, TournamentUpdate
@@ -9,7 +10,7 @@ from app.schemas import TournamentCreate, TournamentRead, TournamentUpdate
 router = APIRouter(prefix="/api/v1/tournaments", tags=["tournaments"])
 
 
-@router.post("", response_model=TournamentRead, status_code=201)
+@router.post("", response_model=TournamentRead, status_code=201, dependencies=ADMIN_ONLY)
 def create_tournament(payload: TournamentCreate, db: Session = Depends(get_db)):
     tournament = Tournament(**payload.model_dump())
     db.add(tournament)
@@ -31,7 +32,7 @@ def get_tournament(tournament_id: int, db: Session = Depends(get_db)):
     return tournament
 
 
-@router.patch("/{tournament_id}", response_model=TournamentRead)
+@router.patch("/{tournament_id}", response_model=TournamentRead, dependencies=ADMIN_ONLY)
 def update_tournament(tournament_id: int, payload: TournamentUpdate, db: Session = Depends(get_db)):
     tournament = db.get(Tournament, tournament_id)
     if not tournament:

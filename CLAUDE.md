@@ -18,6 +18,30 @@ con SQL desde el panel de Neon. Próximo paso: Fase 9, el backlog de `docs/BACKL
 orden de versiones ya aprobado (0.2.0 en adelante); quedan decisiones pendientes del usuario,
 anotadas al principio de ese archivo. Ver checklist completo en `README.md`.
 
+**Contexto de prioridades (octubre 2026).** Un amigo del usuario va a construir un **frontend
+separado, en otra tecnología**, contra esta API (primero solo lectura de torneos y llaves, luego
+administración); el usuario también tiene su propio frontend aparte. Por eso la API pasó a ser un
+producto y se priorizó: `0.2.0` API protegida (login + JWT, ya implementada en `dev`), `0.3.0` CORS
+y la guía `docs/API.md` para consumidores, y recién después los datos de atletas (editar/CI), que el
+frontend externo necesita. Hay un servicio de **dev** en Render desplegando la rama `dev` contra
+una rama de base de datos `dev` de Neon (para que el amigo pruebe sin tocar producción).
+
+**Autenticación de la API (0.2.0).** `POST /api/v1/auth/login` (formulario OAuth2, mismo usuario y
+clave del admin) devuelve un JWT HS256 de 8 horas (`app/auth.py`; `app/api/auth.py`). Los `POST`/
+`PATCH` y los `GET` de atletas e inscripciones usan `dependencies=ADMIN_ONLY`; el resto de las
+lecturas son públicas. **Regla para todo endpoint nuevo de `/api/v1`:** debe llevar
+`dependencies=ADMIN_ONLY`, salvo que sea una lectura que se decida pública a propósito — en ese caso
+hay que agregarla a `PUBLIC_ENDPOINTS` en `tests/test_api_auth.py`; el test de inventario (lee el
+esquema OpenAPI) falla si no se hace. Los endpoints que devuelvan datos personales de atletas
+(fecha de nacimiento, peso) **no** pueden ser públicos. El admin web no pasa por esta autenticación
+(sigue con cookie de sesión y llama a las funciones de `app/api/*.py` directo). Ver la entrada del
+2026-10-15 de `docs/DECISIONS.md`, que incluye dos lecciones: `app.routes` ya no sirve para
+inventariar rutas en FastAPI 0.141 (los routers incluidos quedan anidados), y los tests de JWT
+necesitan un margen de reloj (`CLOCK_SKEW_LEEWAY`) por el reloj de WSL2. Con `APP_ENV=production`,
+`warn_if_short_secret_key` (`app/config.py`) escribe un aviso en los logs al arrancar si
+`SECRET_KEY` mide menos de 32 bytes — nunca imprime el valor, y no impide el arranque a propósito
+(endurecerlo a un error solo después de que el usuario verifique las claves de dev y producción).
+
 **Versionado (SemVer).** Versión actual `0.1.0` en `app/version.py` (única fuente de verdad;
 se muestra en la esquina de cada página vía `templates.env.globals["app_version"]` en
 `app/web/templating.py`, y en `/health`). Al liberar una versión: subir `__version__`, mover
@@ -116,7 +140,7 @@ la forma en que `Enum` define `__str__`, `str(TournamentStatus.DRAFT)` da
 `"TournamentStatus.DRAFT"`, no `"draft"` (aunque la comparación `==` y el filtro `|es_label`
 sí funcionan bien, porque no dependen de `__str__`).
 
-101 tests pasando en total.
+141 tests pasando en total (SQLite y Postgres).
 
 Fase 8 (preparación del deploy): (1) `normalize_database_url` en `app/database.py` convierte
 `postgres://`/`postgresql://` en `postgresql+psycopg://` — Neon entrega la forma genérica y
@@ -146,7 +170,7 @@ contenedores arriba, se corrió **toda** la suite de pytest apuntando al Postgre
 SQLite — sin sorpresas con el `Enum` nativo de Postgres (que en SQLite es solo un `VARCHAR`
 sin validar). Ver `docs/DECISIONS.md` (entrada 2026-10-02) sobre un primer intento de esta
 verificación que resultó falso — el fixture tenía SQLite hardcodeado y la variable de entorno
-no hacía nada. `.dockerignore` excluye `tests/`, `http/`, `docs/` de la imagen — son
+no hacía nada. `.dockerignore` excluye `tests/`, `docs/` de la imagen — son
 herramientas de desarrollo, no hace falta que viajen a producción.
 
 Nota de Python: en `app/schemas.py` se usa `import datetime` + `datetime.date` en vez de
@@ -260,22 +284,5 @@ Render+Neon en vez de Railway/Fly.io, desarrollo dentro de WSL, y las reglas de 
 
 - `pytest -v` pasa.
 - Se puede levantar el server y probar manualmente vía `/docs` (Swagger) o navegador.
-- Los archivos `.http` en `http/` (ver más abajo) siguen funcionando de punta a punta.
 - No romper lo verificado en fases anteriores (correr toda la suite, no solo los tests
   nuevos).
-
-## Archivos `.http` para pruebas manuales
-
-`http/` tiene un archivo por router (`clubs.http`, `athletes.http`, `tournaments.http`,
-`categories.http`, `registrations.http`), pensado para la extensión **REST Client** de
-VS Code con el servidor (`uvicorn app.main:app --reload`) corriendo en local. Cada archivo es
-autocontenido: crea sus propias dependencias (por ejemplo `athletes.http` crea su propio club
-antes del atleta) usando el encadenado de variables de REST Client
-(`# @name` + `{{nombre.response.body.$.campo}}`), igual que las fixtures de
-`tests/conftest.py` encadenan `club → athlete` y `tournament → category`. No reemplazan a
-`pytest` — son para "ir probando a mano" mientras se desarrolla, con algunos casos de error
-representativos (404/409/422) además del camino feliz.
-
-Al agregar funcionalidad nueva (fase 3 en adelante: brackets, matches, round_scores), sumar
-el archivo `.http` correspondiente siguiendo el mismo patrón, en vez de dejar que estos
-archivos queden desactualizados.

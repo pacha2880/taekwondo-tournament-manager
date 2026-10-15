@@ -12,11 +12,17 @@ volver al tag anterior siga funcionando sobre una base ya migrada; tras el deplo
 
 ## Decisiones pendientes
 
+- **Idioma y nombres de los grupos de `/docs`** (decidir antes de que el frontend externo genere
+  un cliente: muchos generadores usan los grupos —`tags`— para nombrar clases, y renombrarlos
+  después rompería ese código). Propuesta: **todo en español** —descripciones y nombres de grupos
+  (Torneos, Categorías, Atletas, Clubes, Inscripciones, Llaves, Combates, Autenticación)—,
+  dejando en inglés los identificadores (rutas, campos, valores de enums). Hay que actualizar la
+  regla de **Idioma** de `CLAUDE.md`, que hoy dice que Swagger puede quedar en inglés.
 - **Categoría sin llave y cierre del torneo.** ¿Una categoría sin llave bloquea pasar el torneo
   a `FINISHED`? Propuesta: sí si tiene 2 o más inscritos (hay combates sin jugar); se ignora si
-  tiene 0 o 1 (lo resuelve la 0.5.0).
+  tiene 0 o 1 (lo resuelve la 0.7.0).
 - **Editar rounds ya cargados (ver "Más adelante").** ¿Hace falta, o alcanza con el número de
-  round fijo más la confirmación previa de la 0.2.0?
+  round fijo más la confirmación previa de la 0.5.0?
 - **Asignación de área/cancha por categoría.** Un torneo real corre varias categorías en
   paralelo en distintas áreas (viene de la planilla física de control, campo "AREA"). Falta
   decidir: ¿una entidad `Area` propia (nombre/número), o alcanza con que el admin indique
@@ -31,33 +37,76 @@ volver al tag anterior siga funcionando sobre una base ya migrada; tras el deplo
       primera conexión tras un rato podía fallar con un 500. Se commiteó antes del commit de
       versión, así que quedó dentro del tag `v0.1.0` (no hizo falta una `0.1.1`).
 
-## 0.2.0 — Admin más seguro (sin cambios de API ni de base de datos)
+## 0.2.0 — API protegida (login con JWT)
 
-- [ ] En el `<select>` de "Inscribir atleta" de la pantalla admin de categoría
-      (`app/web/admin/category_workspace.py::_category_detail_context`, variable
-      `all_athletes`), filtrar los atletas que ya están inscritos en esa categoría — hoy
-      aparecen todos (`select(Athlete).order_by(Athlete.name)`, sin excluir a los de
-      `registrations`), lo que permite intentar inscribir a alguien ya inscrito y chocar con
-      el 409 en vez de no ofrecerlo como opción directamente.
-- [ ] En la navbar del admin, agregar un botón "Torneos" a la izquierda de "Clubes" y
-      "Atletas" (hoy solo se llega al dashboard de torneos por el link del brand).
-- [ ] En el formulario de carga de resultados del admin, no dejar el número de round libre —
-      calcularlo y mostrarlo fijo (rounds ya cargados de ese combate + 1) para que no se pueda
-      cargar un round fuera de orden. Sumar un popup de confirmación antes de guardar,
-      aclarando que hoy no se puede editar después.
-- [ ] De forma más general: cada vez que se crea algo desde el admin (club, atleta, torneo,
-      categoría, inscripción, llave, round), mostrar un popup de confirmación con los datos
-      antes de mandar el form — no necesariamente aclarando que no se puede editar después,
-      solo para que el usuario confirme lo que está a punto de crear.
-- [ ] Colores distintos por estado de torneo (`TournamentStatus`) en los badges — hoy
-      "Borrador"/"En curso"/"Finalizado" se ven todos igual (gris). Mismo patrón que ya existe
-      para `MatchStatus` (`match_status_badge_class` en `app/web/labels.py`): agregar algo
-      como `tournament_status_badge_class`.
+El agujero de seguridad estaba en producción: ningún endpoint de la API exigía autenticación,
+así que cualquiera que abriera `/docs` podía crear y modificar datos. Esta versión lo cierra y
+no toca la base de datos. Rompe a los consumidores que escribían sin token (por diseño).
 
-## 0.3.0 — Datos de atletas y clubes (única migración de esquema, aditiva)
+- [x] `POST /api/v1/auth/login` (formulario OAuth2, mismo usuario y clave del admin) que
+      devuelve un JWT HS256 de 8 horas, sin renovación automática.
+- [x] Todo POST y PATCH de `/api/v1` exige `Authorization: Bearer <token>`.
+- [x] Privacidad: `GET` de atletas e inscripciones también exigen token (devuelven fecha de
+      nacimiento y peso, y hay menores). Siguen públicos: torneos, categorías, clubes, llaves
+      y combates (solo nombres).
+- [x] Un test recorre el esquema OpenAPI y falla si un endpoint nuevo queda sin protección y
+      no está en la lista explícita de endpoints públicos.
+- [x] Incluye tres mejoras de admin que ya estaban hechas: el selector de inscripción excluye a
+      los ya inscritos, botón "Torneos" en la navbar y colores por estado del torneo.
+
+## 0.3.0 — API para frontends externos
+
+Pedido real: un amigo va a construir un frontend separado (otra tecnología) contra esta API;
+primero solo lectura (torneos y llaves) y enseguida administración. Orden de trabajo dentro de la
+versión: primero CORS (es lo que lo bloquea), después la documentación, de menos a más trabajo.
+Nada de esto cambia cómo se comporta la API.
+
+- [x] Aviso en los logs al arrancar si `SECRET_KEY` mide menos de 32 bytes (solo con
+      `APP_ENV=production`; no imprime el valor ni impide arrancar). Más adelante, cuando se hayan
+      verificado las claves de dev y producción, se puede endurecer a que la app se niegue a
+      arrancar con una clave corta.
+- [ ] CORS configurable con la variable `CORS_ORIGINS` (lista separada por comas). Sin definirla
+      no se permite ningún origen. En producción debe negarse a arrancar si contiene `*`. Sin
+      cookies: el token viaja en la cabecera `Authorization`.
+
+### Documentación de `/docs` (Swagger)
+
+Hoy `/docs` muestra nombres técnicos sin explicación, mezcla 19 páginas HTML del admin y de la
+parte pública con la API, y genera `operationId` como `create_club_api_v1_clubs_post` (que acaban
+siendo los nombres de los métodos de un cliente generado). Las descripciones viven junto a cada
+endpoint en el código, así que no se desactualizan respecto de lo que hace. Cinco pasos:
+
+- [ ] **1. Limpiar `/docs`.** Sacar las páginas HTML del esquema (`include_in_schema=False` en
+      los routers `public` y `admin`); `operationId` limpios (`create_club`, `list_tournaments`…)
+      con `generate_unique_id_function` — los nombres de las funciones ya son únicos entre
+      routers; título y versión leídos de `app/version.py` en vez de escritos a mano.
+- [ ] **2. Descripción general** en la cabecera de `/docs` (Markdown, corta): qué es la API,
+      cómo usar el botón **Authorize**, formato de errores (los de negocio vienen como `detail`
+      en español; los 422 de validación, en el formato estándar de Pydantic), que el primer
+      request tarda en el plan gratis, y que en `0.x` algo puede cambiar.
+- [ ] **3. Cada endpoint** con `summary`, descripción corta y `responses` con los errores reales
+      (`401`, `404`, `409`, `422`). Los grupos (`openapi_tags`) con una explicación cada uno.
+- [ ] **4. Los campos que no se explican solos**, con `Field(description=..., examples=[...])`
+      en `schemas.py`, y el significado de cada valor de los enums (`male`/`female`,
+      `pending`/`bye`/`finished`, `draft`/`in_progress`/`finished`…). Son unos 45 campos: el
+      contador del esquema da 125 porque cuenta los repetidos entre `Create`/`Read`, pero las
+      descripciones se escriben una sola vez en las clases `*Base` y se heredan.
+- [ ] **5. Test guardián**, igual que el de autenticación: falla si una operación de `/api/v1`
+      queda sin `summary` o sin `description`, para que la documentación no se pudra cuando
+      alguien agregue un endpoint nuevo.
+- [ ] **Extra, al final: `docs/API.md`**, corto — cómo leer una llave (`round_number`, `slot`,
+      rojo/azul, `next_match_id`, pases directos) y un ejemplo de flujo con `curl`. No duplica lo
+      que ya dice `/docs`; lo enlaza.
+- [ ] Evaluar, con el feedback real del frontend externo, el endpoint agregado para el detalle de
+      categoría (ver el ítem de "Más adelante"): el disparador que lo condicionaba
+      —un frontend separado— ya ocurrió.
+
+## 0.4.0 — Datos de atletas y clubes (única migración de esquema, aditiva)
 
 Va antes del ciclo de vida a propósito: es la migración más simple, y sirve de ensayo del
 camino commit → push → deploy → migración → rollback antes de los cambios de comportamiento.
+También la necesita el frontend externo en su etapa de administración: hoy la API no tiene
+edición de atletas ni de clubes, así que cada ítem de editar se hace **en la API y en el admin**.
 
 - [ ] Campo CI (documento de identidad) único por atleta. Columna **nullable** en la base
       (los atletas ya cargados no tienen CI; en Postgres y SQLite un índice único admite
@@ -67,7 +116,20 @@ camino commit → push → deploy → migración → rollback antes de los cambi
 - [ ] Buscar atleta por CI o por nombre en la pantalla admin de atletas.
 - [ ] Editar club (a confirmar si hace falta).
 
-## 0.4.0 — Ciclo de vida del torneo (cambia el comportamiento de la API)
+## 0.5.0 — Admin más seguro, parte B (sin cambios de API ni de base de datos)
+
+La parte A (selector filtrado, botón "Torneos", colores de estado) salió en la 0.2.0.
+
+- [ ] En el formulario de carga de resultados del admin, no dejar el número de round libre —
+      calcularlo y mostrarlo fijo (rounds ya cargados de ese combate + 1) para que no se pueda
+      cargar un round fuera de orden. Sumar un popup de confirmación antes de guardar,
+      aclarando que hoy no se puede editar después.
+- [ ] De forma más general: cada vez que se crea algo desde el admin (club, atleta, torneo,
+      categoría, inscripción, llave, round), mostrar un popup de confirmación con los datos
+      antes de mandar el form — no necesariamente aclarando que no se puede editar después,
+      solo para que el usuario confirme lo que está a punto de crear.
+
+## 0.6.0 — Ciclo de vida del torneo (cambia el comportamiento de la API)
 
 Es un conjunto de reglas que se apoyan unas en otras; no tienen sentido aplicadas a medias.
 Una regla por commit, cada una con sus tests. Las validaciones viven del lado de la API (no
@@ -123,7 +185,7 @@ Nota de compatibilidad: el torneo de demo que ya está en producción está `FIN
 las reglas nuevas no lo afectan (solo se aplican al intentar una acción, no invalidan datos
 existentes).
 
-## 0.5.0 — Campeones
+## 0.7.0 — Campeones
 
 - [ ] Generar llave con un solo atleta inscrito (ganador directo, sin combate) — hoy
       `build_first_round_slots` exige mínimo 2 (`NotEnoughAthletes`). Tiene sentido de
@@ -149,11 +211,11 @@ existentes).
       (2do = perdedor de la final, 3er = ¿ambos perdedores de semifinal, como es común en
       taekwondo, o se juega un 3er puesto?).
 
-## 0.6.0 — En vivo
+## 0.8.0 — En vivo
 
 - [ ] Auto-refresh en vivo de la pantalla pública (polling con htmx), en vez de recargar manual.
 
-## 0.7.0 — Grados de cinturón y estatura (datos ampliados de atleta y categoría)
+## 0.9.0 — Grados de cinturón y estatura (datos ampliados de atleta y categoría)
 
 Dos cambios de modelo que salen directo del pedido real de Abel Bravo (ver
 `confidencial/reporte-analisis.md`, carpeta ignorada por git, no vinculado a ningún commit).
@@ -178,20 +240,20 @@ Dos cambios de modelo que salen directo del pedido real de Abel Bravo (ver
       puede afectar en cascada otro combate ya en curso. Es el cambio con más riesgo de dejar
       datos inconsistentes; ver "Decisiones pendientes".
 - [ ] Evitar atletas duplicados por doble clic en "Crear" (hoy no hay restricción de
-      unicidad en atletas; el campo CI único de la 0.3.0 lo resuelve de raíz).
+      unicidad en atletas; el campo CI único de la 0.4.0 lo resuelve de raíz).
 - [ ] Área/cancha asignada a cada categoría o bracket, para torneos que corren varias en
       paralelo (viene de la planilla física de control). Diseño sin decidir — ver "Decisiones
       pendientes".
 - [ ] Acta de resultados imprimible por categoría (1er/2do/3er lugar + club, firmas), a partir
       de una plantilla `.docx` base — refleja el formato de la planilla física de control que
       ya usan en los torneos. Depende de tener 2do/3er lugar derivados (ver ranking de clubes
-      en la 0.5.0).
+      en la 0.7.0).
 - [ ] Adjuntar documentación (PDF) a una inscripción — el formulario real de Copa Diamante lo
       pide para ciertas modalidades. Necesita almacenamiento de archivos (hoy no hay ninguno
       en el proyecto). Baja prioridad hasta confirmar que hace falta en el sistema nuevo, no
       solo en el formulario viejo.
 - [ ] Fecha de cierre de inscripciones por categoría/torneo, independiente de si ya se generó
-      la llave (hoy la única forma de cerrar inscripciones es generar la llave, ver 0.4.0).
+      la llave (hoy la única forma de cerrar inscripciones es generar la llave, ver 0.6.0).
       Baja prioridad.
 - [ ] Link al sitio del club organizador (ej. `keumgangdelfines.com`, configurable) en un
       lugar visible de la pantalla pública — pie de página o detalle del torneo.

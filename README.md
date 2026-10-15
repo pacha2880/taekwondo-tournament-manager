@@ -67,7 +67,9 @@ repo; las migraciones corren solas al arrancar). Variables de entorno en Render:
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | credenciales del panel admin |
 | `APP_ENV` | `production` — la app se niega a arrancar si `SECRET_KEY` o `ADMIN_PASSWORD` quedaron con el valor por defecto |
 
-Render define `PORT` por su cuenta. Plan gratis: el servicio se duerme tras ~15 min sin tráfico
+Render define `PORT` por su cuenta. Si `SECRET_KEY` mide menos de 32 bytes, la app lo avisa en los
+logs al arrancar (nunca imprime el valor); generá una buena con
+`python3 -c "import secrets; print(secrets.token_urlsafe(48))"`. Plan gratis: el servicio se duerme tras ~15 min sin tráfico
 y la primera visita siguiente tarda ~30-50 s.
 
 ## Versionado
@@ -116,18 +118,31 @@ Render). Es seguro porque, dentro de `0.x`, las migraciones solo agregan columna
 pytest -v
 ```
 
+## Autenticación de la API
+
+Las lecturas de torneos, categorías, clubes, llaves y combates son **públicas**. Todo lo que
+escribe (`POST`/`PATCH`) y las lecturas de **atletas e inscripciones** (llevan fecha de
+nacimiento y peso, y hay menores) exigen un token. Se obtiene con el mismo usuario y clave del
+admin y dura 8 horas, sin renovación automática:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/login -d "username=admin&password=admin"
+```
+
+Responde `{"access_token": "...", "token_type": "bearer", "expires_in": 28800}`. Después se
+manda en cada petición protegida como `Authorization: Bearer <access_token>`. Sin token (o con
+uno inválido o vencido) la API responde `401`. En Swagger (`/docs`) el botón **Authorize**
+hace el login por vos. Si el token se filtra, el "botón de pánico" es cambiar `SECRET_KEY`:
+invalida todos los tokens (y también cierra la sesión del admin web).
+
 ## Probar la API manualmente
 
 Con el servidor corriendo (`uvicorn app.main:app --reload`), hay dos formas de probar los
 endpoints a mano, además de los tests automáticos:
 
-- **Swagger** en `http://localhost:8000/docs`.
-- **Archivos `.http`** en [`http/`](http/) (uno por entidad: `clubs.http`, `athletes.http`,
-  `tournaments.http`, `categories.http`, `registrations.http`), pensados para la extensión
-  [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) de
-  VS Code — abrí el archivo y hacé click en "Send Request" arriba de cada petición. Cada
-  archivo crea sus propias dependencias (club, torneo, etc.) antes de la petición principal,
-  así que se pueden correr de punta a punta sin copiar IDs a mano.
+- **Swagger** en `http://localhost:8000/docs` (con **Authorize** para loguearte).
+- **Postman o Insomnia:** importá `http://localhost:8000/openapi.json` y obtenés una colección
+  completa con todos los endpoints.
 
 ## Estado del proyecto
 
