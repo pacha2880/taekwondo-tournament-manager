@@ -51,6 +51,10 @@ no toca la base de datos. Rompe a los consumidores que escribían sin token (por
       y combates (solo nombres).
 - [x] Un test recorre el esquema OpenAPI y falla si un endpoint nuevo queda sin protección y
       no está en la lista explícita de endpoints públicos.
+- [x] Aviso en los logs al arrancar si `SECRET_KEY` mide menos de 32 bytes (solo con
+      `APP_ENV=production`; no imprime el valor ni impide arrancar). Más adelante, cuando se hayan
+      verificado las claves de dev y producción, se puede endurecer a que la app se niegue a
+      arrancar con una clave corta.
 - [x] Incluye tres mejoras de admin que ya estaban hechas: el selector de inscripción excluye a
       los ya inscritos, botón "Torneos" en la navbar y colores por estado del torneo.
 
@@ -61,10 +65,6 @@ primero solo lectura (torneos y llaves) y enseguida administración. Orden de tr
 versión: primero CORS (es lo que lo bloquea), después la documentación, de menos a más trabajo.
 Nada de esto cambia cómo se comporta la API.
 
-- [x] Aviso en los logs al arrancar si `SECRET_KEY` mide menos de 32 bytes (solo con
-      `APP_ENV=production`; no imprime el valor ni impide arrancar). Más adelante, cuando se hayan
-      verificado las claves de dev y producción, se puede endurecer a que la app se niegue a
-      arrancar con una clave corta.
 - [ ] CORS configurable con la variable `CORS_ORIGINS` (lista separada por comas). Sin definirla
       no se permite ningún origen. En producción debe negarse a arrancar si contiene `*`. Sin
       cookies: el token viaja en la cabecera `Authorization`.

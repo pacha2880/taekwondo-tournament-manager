@@ -21,7 +21,7 @@ anotadas al principio de ese archivo. Ver checklist completo en `README.md`.
 **Contexto de prioridades (octubre 2026).** Un amigo del usuario va a construir un **frontend
 separado, en otra tecnología**, contra esta API (primero solo lectura de torneos y llaves, luego
 administración); el usuario también tiene su propio frontend aparte. Por eso la API pasó a ser un
-producto y se priorizó: `0.2.0` API protegida (login + JWT, ya implementada en `dev`), `0.3.0` CORS
+producto y se priorizó: `0.2.0` API protegida (login + JWT; versión subida en `dev`, pendiente del PR a `main`), `0.3.0` CORS
 y la guía `docs/API.md` para consumidores, y recién después los datos de atletas (editar/CI), que el
 frontend externo necesita. Hay un servicio de **dev** en Render desplegando la rama `dev` contra
 una rama de base de datos `dev` de Neon (para que el amigo pruebe sin tocar producción).
@@ -42,7 +42,7 @@ necesitan un margen de reloj (`CLOCK_SKEW_LEEWAY`) por el reloj de WSL2. Con `AP
 `SECRET_KEY` mide menos de 32 bytes — nunca imprime el valor, y no impide el arranque a propósito
 (endurecerlo a un error solo después de que el usuario verifique las claves de dev y producción).
 
-**Versionado (SemVer).** Versión actual `0.1.0` en `app/version.py` (única fuente de verdad;
+**Versionado (SemVer).** Versión actual `0.2.0` en `app/version.py` (única fuente de verdad;
 se muestra en la esquina de cada página vía `templates.env.globals["app_version"]` en
 `app/web/templating.py`, y en `/health`). Al liberar una versión: subir `__version__`, mover
 `[Unreleased]` de `CHANGELOG.md` a la sección nueva (`tests/test_version.py` falla si no

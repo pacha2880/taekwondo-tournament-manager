@@ -11,6 +11,11 @@ funcionando sobre una base ya migrada.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-15
+
+La API deja de estar abierta: cualquiera que abriera `/docs` podía crear y modificar datos.
+Incluye también tres mejoras del admin. **Cambio incompatible** para quien escribiera sin token.
+
 ### Added
 - `POST /api/v1/auth/login`: inicio de sesión de la API (formulario OAuth2 con el mismo usuario y
   clave del admin) que devuelve un JWT HS256 de 8 horas. En `/docs` aparece el botón
@@ -69,5 +74,6 @@ https://taekwondo-tournament-manager.onrender.com.
 - `pool_pre_ping=True` en la conexión a la base de datos: Neon suspende el cómputo por
   inactividad y la primera conexión tras un rato inactivo pudo fallar con un error 500.
 
-[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/pacha2880/taekwondo-tournament-manager/releases/tag/v0.1.0
