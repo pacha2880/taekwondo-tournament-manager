@@ -6,12 +6,18 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.auth import create_access_token
 from app.database import Base, get_db
 from app.main import app
 
 
+@pytest.fixture(autouse=True)
+def _long_secret_key(monkeypatch):
+    monkeypatch.setenv("SECRET_KEY", "clave-de-prueba-solo-para-pytest-0123456789")
+
+
 @pytest.fixture()
-def client():
+def _test_db():
     database_url = os.environ.get("DATABASE_URL", "sqlite:///:memory:")
     is_sqlite = database_url.startswith("sqlite")
 
@@ -37,9 +43,21 @@ def client():
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as test_client:
-        yield test_client
+    yield
     app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+def client(_test_db):
+    with TestClient(app) as test_client:
+        test_client.headers["Authorization"] = f"Bearer {create_access_token('admin')}"
+        yield test_client
+
+
+@pytest.fixture()
+def anon_client(_test_db):
+    with TestClient(app) as anonymous:
+        yield anonymous
 
 
 @pytest.fixture()
