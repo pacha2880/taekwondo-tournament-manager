@@ -136,6 +136,14 @@ uno inválido o vencido) la API responde `401`. En Swagger (`/docs`) el botón *
 hace el login por vos. Si el token se filtra, el "botón de pánico" es cambiar `SECRET_KEY`:
 invalida todos los tokens (y también cierra la sesión del admin web).
 
+## Documentación de la API
+
+La referencia está en `/docs` (Swagger, para probar), `/redoc` (más cómoda para leer) y
+`/openapi.json` (el contrato, para generar clientes o importar en Postman), todo en español. Para
+quien la consume desde otro proyecto hay una guía corta en [`docs/API.md`](docs/API.md): cómo leer una
+llave y un flujo completo de ejemplo con `curl`. Un frontend en otro dominio necesita que su origen
+esté en `CORS_ORIGINS` (ver arriba).
+
 ## Probar la API manualmente
 
 Con el servidor corriendo (`uvicorn app.main:app --reload`), hay dos formas de probar los

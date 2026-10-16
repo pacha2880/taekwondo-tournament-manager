@@ -22,6 +22,7 @@ funcionando sobre una base ya migrada.
   (autenticación, errores, advertencias), grupos con su explicación, y para cada endpoint un resumen,
   una descripción y los errores que puede devolver (`401`, `404`, `409`…). Cada campo y cada enum
   explican su significado. Un test falla si una operación o un campo quedan sin documentar.
+- `docs/API.md`: guía para quien consume la API (cómo leer una llave, flujo de ejemplo con `curl`).
 
 ### Changed
 - `/docs` ya no muestra las páginas HTML del admin y de la parte pública: solo la API y `/health`.

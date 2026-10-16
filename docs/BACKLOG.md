@@ -89,7 +89,7 @@ Detalle completo del porqué en `docs/DECISIONS.md` (entrada 2026-10-16). Cinco 
 - [x] **5. Test guardián**, igual que el de autenticación: falla si una operación de `/api/v1`
       queda sin `summary` o sin `description`, para que la documentación no se pudra cuando
       alguien agregue un endpoint nuevo.
-- [ ] **Extra, al final: `docs/API.md`**, corto — cómo leer una llave (`round_number`, `slot`,
+- [x] **Extra, al final: `docs/API.md`**, corto — cómo leer una llave (`round_number`, `slot`,
       rojo/azul, `next_match_id`, pases directos) y un ejemplo de flujo con `curl`. No duplica lo
       que ya dice `/docs`; lo enlaza.
 - [ ] Evaluar, con el feedback real del frontend externo, el endpoint agregado para el detalle de
