@@ -343,3 +343,20 @@ protegido pasa sin token a propósito, porque el navegador nunca manda credencia
 Se separó en `app/cors.py` (`parse_origins` y `add_cors`) para poder probarlo sobre una app mínima sin
 recargar `app.main`. Se quita la `/` final de cada origen al leerlo: un origen con barra final nunca
 coincidiría con el que envía el navegador.
+
+## 2026-10-17 — `APP_ENV=staging`, para que el servicio `dev` pueda aceptar `CORS_ORIGINS=*`
+
+**El problema.** `check_production_settings` solo validaba algo cuando `APP_ENV == "production"`
+exactamente — cualquier otro valor (vacío, `development`, o lo que fuera) se salteaba **tanto** el
+chequeo de credenciales por defecto **como** el de `CORS_ORIGINS=*`. El servicio `dev` de Render está
+desplegado y es público (lo usa el frontend externo del amigo del usuario para probar con distintos
+orígenes sin tener que actualizar una lista a mano), así que quedaba en la misma categoría que
+`docker compose` local: si alguien se olvidaba de configurar `SECRET_KEY`/`ADMIN_PASSWORD` ahí, la app
+arrancaba igual con los valores por defecto, expuestos en internet.
+
+**La solución no es un tercer ambiente más laxo, es separar las dos condiciones.** Se agregó
+`DEPLOYED_ENVIRONMENTS = {"production", "staging"}` en `app/config.py`: ambos exigen credenciales
+propias (ahí `staging` es tan estricto como `production`), pero el rechazo de `CORS_ORIGINS=*` sigue
+siendo exclusivo de `production` — es la única excepción real que necesitaba el servicio `dev`.
+`warn_if_short_secret_key` también pasa a mirar `DEPLOYED_ENVIRONMENTS` en vez de solo `production`,
+por la misma razón: un `staging` público con una clave corta es tan riesgoso como uno en producción.

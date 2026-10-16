@@ -104,3 +104,13 @@ def test_production_accepts_explicit_origins():
 def test_wildcard_is_allowed_outside_production():
     check_production_settings({"CORS_ORIGINS": "*"})
 
+
+def test_staging_also_allows_wildcard_origin():
+    env = {
+        "APP_ENV": "staging",
+        "SECRET_KEY": "clave-larga-aleatoria",
+        "ADMIN_PASSWORD": "otra-clave",
+        "CORS_ORIGINS": "*",
+    }
+
+    check_production_settings(env)

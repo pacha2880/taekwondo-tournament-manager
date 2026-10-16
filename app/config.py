@@ -7,6 +7,11 @@ from app.cors import parse_origins
 INSECURE_DEFAULTS = {"SECRET_KEY": "dev-secret-key", "ADMIN_PASSWORD": "admin"}
 DEFAULT_ADMIN_USERNAME = "admin"
 MIN_SECRET_KEY_BYTES = 32
+# Ambientes desplegados (alcanzables desde internet) y por lo tanto con credenciales propias
+# obligatorias. "staging" es como "production" para esto, pero no para el chequeo de CORS: ahí
+# sí puede querer aceptar cualquier origen (CORS_ORIGINS=*) mientras se prueba un frontend
+# externo sin actualizar la lista a mano.
+DEPLOYED_ENVIRONMENTS = {"production", "staging"}
 
 logger = logging.getLogger(__name__)
 
@@ -27,22 +32,23 @@ def admin_credentials() -> tuple[str, str]:
 
 
 def check_production_settings(env: Mapping[str, str] = os.environ) -> None:
-    if env.get("APP_ENV") != "production":
+    app_env = env.get("APP_ENV")
+    if app_env not in DEPLOYED_ENVIRONMENTS:
         return
     insecure = [name for name, default in INSECURE_DEFAULTS.items() if env.get(name, default) == default]
     if insecure:
         raise RuntimeError(
-            f"APP_ENV=production requiere configurar {', '.join(insecure)} "
+            f"APP_ENV={app_env} requiere configurar {', '.join(insecure)} "
             "(no pueden quedar con el valor por defecto)"
         )
-    if "*" in parse_origins(env.get("CORS_ORIGINS", "")):
+    if app_env == "production" and "*" in parse_origins(env.get("CORS_ORIGINS", "")):
         raise RuntimeError(
             "APP_ENV=production no admite CORS_ORIGINS=*; lista los orígenes permitidos separados por comas"
         )
 
 
 def warn_if_short_secret_key(env: Mapping[str, str] = os.environ) -> None:
-    if env.get("APP_ENV") != "production":
+    if env.get("APP_ENV") not in DEPLOYED_ENVIRONMENTS:
         return
     length = len(env.get("SECRET_KEY", INSECURE_DEFAULTS["SECRET_KEY"]).encode())
     if length < MIN_SECRET_KEY_BYTES:

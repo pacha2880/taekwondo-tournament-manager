@@ -65,7 +65,7 @@ repo; las migraciones corren solas al arrancar). Variables de entorno en Render:
 | `DATABASE_URL` | connection string **directo** de Neon (host sin `-pooler`); se acepta con el prefijo `postgresql://` que entrega Neon, la app lo convierte a `postgresql+psycopg://` |
 | `SECRET_KEY` | string largo y aleatorio |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | credenciales del panel admin |
-| `APP_ENV` | `production` — la app se niega a arrancar si `SECRET_KEY` o `ADMIN_PASSWORD` quedaron con el valor por defecto, o si `CORS_ORIGINS` contiene `*` |
+| `APP_ENV` | `production` — la app se niega a arrancar si `SECRET_KEY` o `ADMIN_PASSWORD` quedaron con el valor por defecto, o si `CORS_ORIGINS` contiene `*`. `staging` exige las mismas credenciales pero sí permite `CORS_ORIGINS=*` (para el servicio `dev`, que prueba contra frontends externos) |
 | `CORS_ORIGINS` | (opcional) orígenes de los frontends autorizados a llamar a la API desde el navegador, separados por comas; sin definir no se permite ninguno |
 
 Render define `PORT` por su cuenta. Si `SECRET_KEY` mide menos de 32 bytes, la app lo avisa en los

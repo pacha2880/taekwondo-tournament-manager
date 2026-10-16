@@ -16,6 +16,8 @@ funcionando sobre una base ya migrada.
   que un frontend en otro dominio lea la API desde el navegador. Sin definirla no se permite ningún
   origen. Con `APP_ENV=production` la app se niega a arrancar si contiene `*`. Sin cookies: el token
   viaja en la cabecera `Authorization`.
+- `APP_ENV=staging`, para el servicio de pruebas (`dev`): exige las mismas credenciales propias que
+  `production`, pero sí permite `CORS_ORIGINS=*`.
 
 ## [0.2.0] - 2026-10-15
 
