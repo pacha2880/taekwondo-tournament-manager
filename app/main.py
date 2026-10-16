@@ -3,7 +3,8 @@ from fastapi.responses import RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.api import athletes, auth, brackets, categories, clubs, matches, registrations, tournaments
-from app.config import check_production_settings, secret_key, warn_if_short_secret_key
+from app.config import check_production_settings, cors_origins, secret_key, warn_if_short_secret_key
+from app.cors import add_cors
 from app.version import __version__
 from app.web import admin, public
 from app.web.admin import NotAuthenticated
@@ -13,6 +14,7 @@ warn_if_short_secret_key()
 
 app = FastAPI(title="Torneos de Taekwondo API")
 app.add_middleware(SessionMiddleware, secret_key=secret_key())
+add_cors(app, cors_origins())
 
 app.include_router(auth.router)
 app.include_router(clubs.router)

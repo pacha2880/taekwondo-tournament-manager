@@ -11,6 +11,12 @@ funcionando sobre una base ya migrada.
 
 ## [Unreleased]
 
+### Added
+- CORS configurable con la variable `CORS_ORIGINS` (lista de orígenes separados por comas): permite
+  que un frontend en otro dominio lea la API desde el navegador. Sin definirla no se permite ningún
+  origen. Con `APP_ENV=production` la app se niega a arrancar si contiene `*`. Sin cookies: el token
+  viaja en la cabecera `Authorization`.
+
 ## [0.2.0] - 2026-10-15
 
 La API deja de estar abierta: cualquiera que abriera `/docs` podía crear y modificar datos.

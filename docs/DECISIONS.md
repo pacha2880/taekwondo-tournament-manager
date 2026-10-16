@@ -327,3 +327,19 @@ menos de 32 bytes, que es el mínimo que recomienda el RFC 7518 para HS256. Es u
 error a propósito: si la clave real fuera corta, un error dejaría la app caída en producción en el
 próximo deploy. Nunca imprime el valor. Se puede endurecer a error cuando se hayan verificado las
 claves de dev y producción.
+
+## 2026-10-16 — API para frontends externos: CORS y documentación (0.3.0)
+
+**CORS con lista explícita y sin cookies.** Un frontend en otro dominio no puede leer las respuestas
+si el servidor no lo autoriza (lo aplican los navegadores; `curl` y Postman lo ignoran, así que CORS
+no protege la API: eso lo hace la autenticación). `CORS_ORIGINS` es una lista separada por comas; sin
+definirla no se permite ningún origen, y con `APP_ENV=production` la app **se niega a arrancar si la
+lista contiene `*`**. Como el token viaja en la cabecera `Authorization` y no hay cookies,
+`allow_credentials=False`: así tampoco hay riesgo de que un origen permitido reutilice la sesión del
+admin web. Se permiten solo `GET`, `POST`, `PATCH` y `OPTIONS`, y las cabeceras `Authorization` y
+`Content-Type`. El middleware de CORS se agrega al final para quedar como el más externo y responder
+los *preflight* (`OPTIONS`) antes de que cualquier otra capa los toque; el preflight de un `POST`
+protegido pasa sin token a propósito, porque el navegador nunca manda credenciales en un preflight.
+Se separó en `app/cors.py` (`parse_origins` y `add_cors`) para poder probarlo sobre una app mínima sin
+recargar `app.main`. Se quita la `/` final de cada origen al leerlo: un origen con barra final nunca
+coincidiría con el que envía el navegador.

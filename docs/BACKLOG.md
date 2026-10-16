@@ -65,7 +65,7 @@ primero solo lectura (torneos y llaves) y enseguida administración. Orden de tr
 versión: primero CORS (es lo que lo bloquea), después la documentación, de menos a más trabajo.
 Nada de esto cambia cómo se comporta la API.
 
-- [ ] CORS configurable con la variable `CORS_ORIGINS` (lista separada por comas). Sin definirla
+- [x] CORS configurable con la variable `CORS_ORIGINS` (lista separada por comas). Sin definirla
       no se permite ningún origen. En producción debe negarse a arrancar si contiene `*`. Sin
       cookies: el token viaja en la cabecera `Authorization`.
 

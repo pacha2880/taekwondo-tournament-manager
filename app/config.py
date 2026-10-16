@@ -2,6 +2,8 @@ import logging
 import os
 from collections.abc import Mapping
 
+from app.cors import parse_origins
+
 INSECURE_DEFAULTS = {"SECRET_KEY": "dev-secret-key", "ADMIN_PASSWORD": "admin"}
 DEFAULT_ADMIN_USERNAME = "admin"
 MIN_SECRET_KEY_BYTES = 32
@@ -11,6 +13,10 @@ logger = logging.getLogger(__name__)
 
 def secret_key() -> str:
     return os.environ.get("SECRET_KEY", INSECURE_DEFAULTS["SECRET_KEY"])
+
+
+def cors_origins() -> list[str]:
+    return parse_origins(os.environ.get("CORS_ORIGINS", ""))
 
 
 def admin_credentials() -> tuple[str, str]:
@@ -28,6 +34,10 @@ def check_production_settings(env: Mapping[str, str] = os.environ) -> None:
         raise RuntimeError(
             f"APP_ENV=production requiere configurar {', '.join(insecure)} "
             "(no pueden quedar con el valor por defecto)"
+        )
+    if "*" in parse_origins(env.get("CORS_ORIGINS", "")):
+        raise RuntimeError(
+            "APP_ENV=production no admite CORS_ORIGINS=*; lista los orígenes permitidos separados por comas"
         )
 
 
