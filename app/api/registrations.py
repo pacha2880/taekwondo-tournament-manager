@@ -2,15 +2,24 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api_docs import TAG_REGISTRATIONS, errors
 from app.auth import ADMIN_ONLY
 from app.database import get_db
 from app.models import Athlete, Category, Registration
 from app.schemas import RegistrationCreate, RegistrationRead
 
-router = APIRouter(prefix="/api/v1/registrations", tags=["registrations"])
+router = APIRouter(prefix="/api/v1/registrations", tags=[TAG_REGISTRATIONS])
 
 
-@router.post("", response_model=RegistrationRead, status_code=201, dependencies=ADMIN_ONLY)
+@router.post(
+    "",
+    response_model=RegistrationRead,
+    status_code=201,
+    dependencies=ADMIN_ONLY,
+    summary="Inscribir un atleta en una categoría",
+    description="Reglas: el género del atleta debe coincidir con el de la categoría (422); su peso debe estar dentro de `min_weight`/`max_weight` si la categoría los define (422); no puede inscribirse dos veces en la misma categoría (409) ni en más de una categoría del mismo torneo (409). Requiere token.",
+    responses=errors({404: "El atleta o la categoría no existe.", 409: "El atleta ya está inscrito en esa categoría o en otra del mismo torneo."}, auth=True),
+)
 def create_registration(payload: RegistrationCreate, db: Session = Depends(get_db)):
     athlete = db.get(Athlete, payload.athlete_id)
     if not athlete:
@@ -58,7 +67,14 @@ def create_registration(payload: RegistrationCreate, db: Session = Depends(get_d
     return registration
 
 
-@router.get("", response_model=list[RegistrationRead], dependencies=ADMIN_ONLY)
+@router.get(
+    "",
+    response_model=list[RegistrationRead],
+    dependencies=ADMIN_ONLY,
+    summary="Listar inscripciones",
+    description="Devuelve las inscripciones con los datos del atleta y de la categoría. Con el parámetro `category_id` devuelve solo las de esa categoría. Incluye fecha de nacimiento y peso de los atletas, por eso requiere token.",
+    responses=errors(auth=True),
+)
 def list_registrations(category_id: int | None = None, db: Session = Depends(get_db)):
     stmt = select(Registration)
     if category_id is not None:

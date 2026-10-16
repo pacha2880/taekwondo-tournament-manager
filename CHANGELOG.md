@@ -18,6 +18,23 @@ funcionando sobre una base ya migrada.
   viaja en la cabecera `Authorization`.
 - `APP_ENV=staging`, para el servicio de pruebas (`dev`): exige las mismas credenciales propias que
   `production`, pero sí permite `CORS_ORIGINS=*`.
+- Documentación de la API en español en `/docs`, `/redoc` y `/openapi.json`: descripción general
+  (autenticación, errores, advertencias), grupos con su explicación, y para cada endpoint un resumen,
+  una descripción y los errores que puede devolver (`401`, `404`, `409`…). Cada campo y cada enum
+  explican su significado. Un test falla si una operación o un campo quedan sin documentar.
+
+### Changed
+- `/docs` ya no muestra las páginas HTML del admin y de la parte pública: solo la API y `/health`.
+- Los grupos (`tags`) pasan a español: Autenticación, Torneos, Categorías, Clubes, Atletas,
+  Inscripciones, Llaves, Combates y Sistema. **Importante para quien genere un cliente:** muchos
+  generadores los usan para nombrar clases.
+- Los `operationId` pasan a ser el nombre de la función (`create_club`, `list_tournaments`…) en vez de
+  `create_club_api_v1_clubs_post`. Quien ya hubiera generado un cliente verá cambiar los nombres de
+  sus métodos.
+- El formulario de `POST /api/v1/auth/login` declara solo `username` y `password` (antes mostraba
+  además `grant_type`, `scope`, `client_id` y `client_secret`, que no se usaban). El botón
+  **Authorize** de Swagger sigue funcionando igual.
+- El título de `/docs` muestra la versión leída de `app/version.py`.
 
 ## [0.2.0] - 2026-10-15
 

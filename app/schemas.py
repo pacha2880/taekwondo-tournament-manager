@@ -1,18 +1,25 @@
+# Se usa "import datetime" (no "from datetime import date") porque un campo Pydantic llamado
+# `date` con tipo `date` y valor por defecto se pisa a sí mismo: la asignación ocurre antes de
+# que se evalúe la anotación.
 import datetime
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.models import BeltGroup, Discipline, Gender, MatchStatus, TournamentStatus
 
 
+class ErrorResponse(BaseModel):
+    detail: str = Field(description="Mensaje del error, en español.", examples=["Club no encontrado"])
+
+
 class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    expires_in: int
+    access_token: str = Field(description="Token JWT para enviar como `Authorization: Bearer <token>`.")
+    token_type: str = Field(default="bearer", description="Siempre `bearer`.")
+    expires_in: int = Field(description="Segundos que faltan para que el token venza (8 horas).", examples=[28800])
 
 
 class ClubBase(BaseModel):
-    name: str
+    name: str = Field(description="Nombre del club. No puede repetirse.", examples=["Dojang Central"])
 
 
 class ClubCreate(ClubBase):
@@ -22,16 +29,18 @@ class ClubCreate(ClubBase):
 class ClubRead(ClubBase):
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
+    id: int = Field(description="Identificador del club.")
 
 
 class AthleteBase(BaseModel):
-    name: str
-    birth_date: datetime.date
-    gender: Gender
-    belt_rank: str
-    weight_kg: float
-    club_id: int
+    name: str = Field(description="Nombre completo del atleta.", examples=["Mateo Quispe Mamani"])
+    birth_date: datetime.date = Field(description="Fecha de nacimiento (`YYYY-MM-DD`).", examples=["2012-03-14"])
+    gender: Gender = Field(description="Género del atleta. Debe coincidir con el de la categoría en que se inscribe.")
+    belt_rank: str = Field(
+        description="Cinturón o grado, en texto libre.", examples=["verde", "negro 1er dan"]
+    )
+    weight_kg: float = Field(description="Peso en kilogramos.", examples=[38.5])
+    club_id: int = Field(description="Id del club al que pertenece. El club debe existir.")
 
 
 class AthleteCreate(AthleteBase):
@@ -41,14 +50,14 @@ class AthleteCreate(AthleteBase):
 class AthleteRead(AthleteBase):
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
-    club: ClubRead
+    id: int = Field(description="Identificador del atleta.")
+    club: ClubRead = Field(description="Club al que pertenece el atleta.")
 
 
 class TournamentBase(BaseModel):
-    name: str
-    date: datetime.date
-    location: str
+    name: str = Field(description="Nombre del torneo.", examples=["Copa Cochabamba"])
+    date: datetime.date = Field(description="Fecha del torneo (`YYYY-MM-DD`).", examples=["2026-11-15"])
+    location: str = Field(description="Lugar donde se realiza.", examples=["Cochabamba, Bolivia"])
 
 
 class TournamentCreate(TournamentBase):
@@ -56,31 +65,49 @@ class TournamentCreate(TournamentBase):
 
 
 class TournamentUpdate(BaseModel):
-    name: str | None = None
-    date: datetime.date | None = None
-    location: str | None = None
-    status: TournamentStatus | None = None
+    name: str | None = Field(default=None, description="Nuevo nombre. Si no se envía, no cambia.")
+    date: datetime.date | None = Field(default=None, description="Nueva fecha (`YYYY-MM-DD`). Si no se envía, no cambia.")
+    location: str | None = Field(default=None, description="Nuevo lugar. Si no se envía, no cambia.")
+    status: TournamentStatus | None = Field(default=None, description="Nuevo estado. Si no se envía, no cambia.")
 
 
 class TournamentRead(TournamentBase):
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
-    status: TournamentStatus
+    id: int = Field(description="Identificador del torneo.")
+    status: TournamentStatus = Field(description="Estado actual del torneo.")
 
 
 class CategoryBase(BaseModel):
-    tournament_id: int
-    discipline: Discipline = Discipline.SPARRING
-    gender: Gender
-    age_label: str
-    min_age: int
-    max_age: int | None = None
-    belt_group: BeltGroup
-    weight_label: str
-    min_weight: float | None = None
-    max_weight: float | None = None
-    rounds_to_win: int = 2
+    tournament_id: int = Field(description="Id del torneo al que pertenece la categoría. El torneo debe existir.")
+    discipline: Discipline = Field(
+        default=Discipline.SPARRING,
+        description="Modalidad. Hoy solo existe `sparring` (combate), que es el valor por defecto.",
+    )
+    gender: Gender = Field(description="Género de la categoría. Solo se inscriben atletas del mismo género.")
+    age_label: str = Field(description="Nombre del rango de edad.", examples=["Cadete"])
+    min_age: int = Field(description="Edad mínima, en años.", examples=[12])
+    max_age: int | None = Field(
+        default=None, description="Edad máxima, en años. Si es nulo, no hay tope.", examples=[14]
+    )
+    belt_group: BeltGroup = Field(description="Grupo de cinturón de la categoría.")
+    weight_label: str = Field(
+        description="Nombre del rango de peso, en texto libre. Es lo que se muestra al público.",
+        examples=["Hasta 45kg"],
+    )
+    min_weight: float | None = Field(
+        default=None,
+        description="Peso mínimo en kg. Si se define, no se inscriben atletas más livianos.",
+    )
+    max_weight: float | None = Field(
+        default=None,
+        description="Peso máximo en kg. Si se define, no se inscriben atletas más pesados.",
+        examples=[45],
+    )
+    rounds_to_win: int = Field(
+        default=2,
+        description="Rounds que hay que ganar para ganar un combate (2 equivale a un combate al mejor de 3).",
+    )
 
     @model_validator(mode="after")
     def check_weight_range(self) -> "CategoryBase":
@@ -106,53 +133,70 @@ class CategoryCreate(CategoryBase):
 class CategoryRead(CategoryBase):
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
+    id: int = Field(description="Identificador de la categoría.")
 
 
 class RoundScoreCreate(BaseModel):
-    round_number: int
-    red_points: int
-    blue_points: int
+    round_number: int = Field(
+        description="Número del round dentro del combate, desde 1. No se puede repetir.", examples=[1]
+    )
+    red_points: int = Field(description="Puntos del lado rojo en este round.", examples=[12])
+    blue_points: int = Field(description="Puntos del lado azul en este round.", examples=[5])
 
 
 class RoundScoreRead(RoundScoreCreate):
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
-    match_id: int
-    round_winner_id: int | None
+    id: int = Field(description="Identificador del resultado del round.")
+    match_id: int = Field(description="Id del combate al que pertenece el round.")
+    round_winner_id: int | None = Field(description="Atleta que ganó el round: el del lado con más puntos.")
 
 
 class MatchRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
-    round_number: int
-    slot: int
-    athlete_red_id: int | None
-    athlete_red_name: str | None = None
-    athlete_blue_id: int | None
-    athlete_blue_name: str | None = None
-    winner_id: int | None
-    winner_name: str | None = None
-    next_match_id: int | None
-    status: MatchStatus
-    round_scores: list[RoundScoreRead]
+    id: int = Field(description="Identificador del combate.")
+    round_number: int = Field(
+        description="Ronda de la llave a la que pertenece el combate: 1 es la primera y la última es la final."
+    )
+    slot: int = Field(description="Posición del combate dentro de su ronda, desde 0, de arriba hacia abajo.")
+    athlete_red_id: int | None = Field(
+        description="Id del atleta del lado rojo. Es nulo si todavía no se definió (espera a un combate anterior) "
+        "o si el combate es un pase directo y este lado queda vacío."
+    )
+    athlete_red_name: str | None = Field(default=None, description="Nombre del atleta del lado rojo.")
+    athlete_blue_id: int | None = Field(
+        description="Id del atleta del lado azul. Es nulo si todavía no se definió o si es un pase directo."
+    )
+    athlete_blue_name: str | None = Field(default=None, description="Nombre del atleta del lado azul.")
+    winner_id: int | None = Field(
+        description="Id del ganador del combate. Es nulo mientras no termine; en un pase directo, es el atleta que pasa."
+    )
+    winner_name: str | None = Field(default=None, description="Nombre del ganador del combate.")
+    next_match_id: int | None = Field(
+        description="Id del combate de la siguiente ronda al que avanza el ganador. Es nulo en la final."
+    )
+    status: MatchStatus = Field(description="Estado del combate.")
+    round_scores: list[RoundScoreRead] = Field(description="Resultado de cada round cargado, en orden.")
 
 
 class BracketRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
-    category_id: int
-    size: int
-    generated_at: datetime.datetime
-    matches: list[MatchRead]
+    id: int = Field(description="Identificador de la llave.")
+    category_id: int = Field(description="Id de la categoría a la que pertenece la llave.")
+    size: int = Field(
+        description="Cantidad de lugares de la llave: la potencia de 2 igual o mayor al número de inscritos. "
+        "Los lugares que sobran se resuelven con pases directos.",
+        examples=[8],
+    )
+    generated_at: datetime.datetime = Field(description="Fecha y hora (UTC) en que se sorteó la llave.")
+    matches: list[MatchRead] = Field(description="Todos los combates de todas las rondas.")
 
 
 class RegistrationBase(BaseModel):
-    athlete_id: int
-    category_id: int
+    athlete_id: int = Field(description="Id del atleta que se inscribe. El atleta debe existir.")
+    category_id: int = Field(description="Id de la categoría en la que se inscribe. La categoría debe existir.")
 
 
 class RegistrationCreate(RegistrationBase):
@@ -162,6 +206,6 @@ class RegistrationCreate(RegistrationBase):
 class RegistrationRead(RegistrationBase):
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
-    athlete: AthleteRead
-    category: CategoryRead
+    id: int = Field(description="Identificador de la inscripción.")
+    athlete: AthleteRead = Field(description="Datos del atleta inscrito.")
+    category: CategoryRead = Field(description="Datos de la categoría.")
