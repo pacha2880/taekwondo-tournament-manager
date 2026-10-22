@@ -11,6 +11,8 @@ funcionando sobre una base ya migrada.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-22
+
 ### Added
 - CORS configurable con la variable `CORS_ORIGINS` (lista de orígenes separados por comas): permite
   que un frontend en otro dominio lea la API desde el navegador. Sin definirla no se permite ningún
@@ -100,6 +102,7 @@ https://taekwondo-tournament-manager.onrender.com.
 - `pool_pre_ping=True` en la conexión a la base de datos: Neon suspende el cómputo por
   inactividad y la primera conexión tras un rato inactivo pudo fallar con un error 500.
 
-[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/pacha2880/taekwondo-tournament-manager/releases/tag/v0.1.0
