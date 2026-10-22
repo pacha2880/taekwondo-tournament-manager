@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.api_docs import TAG_MATCHES, errors
 from app.auth import ADMIN_ONLY
 from app.database import get_db
 from app.models import Match
@@ -14,10 +15,16 @@ from app.services.scoring import (
     record_round,
 )
 
-router = APIRouter(prefix="/api/v1/matches", tags=["matches"])
+router = APIRouter(prefix="/api/v1/matches", tags=[TAG_MATCHES])
 
 
-@router.get("/{match_id}", response_model=MatchRead)
+@router.get(
+    "/{match_id}",
+    response_model=MatchRead,
+    summary="Obtener un combate",
+    description="Devuelve un combate con el resultado de cada round cargado. Es público.",
+    responses=errors({404: "El combate no existe."}),
+)
 def get_match(match_id: int, db: Session = Depends(get_db)):
     match = db.get(Match, match_id)
     if not match:
@@ -30,7 +37,15 @@ def get_match(match_id: int, db: Session = Depends(get_db)):
     return match_read
 
 
-@router.post("/{match_id}/rounds", response_model=RoundScoreRead, status_code=201, dependencies=ADMIN_ONLY)
+@router.post(
+    "/{match_id}/rounds",
+    response_model=RoundScoreRead,
+    status_code=201,
+    dependencies=ADMIN_ONLY,
+    summary="Cargar el resultado de un round",
+    description="Gana el round el lado con más puntos; un round no puede terminar en empate (422). Cuando un atleta llega a `rounds_to_win` rounds ganados, el combate pasa a `finished` y su ganador avanza a la siguiente ronda. Requiere token.",
+    responses=errors({400: "El combate todavía no tiene a sus dos atletas definidos.", 404: "El combate no existe.", 409: "El combate ya terminó, o ese número de round ya está cargado."}, auth=True),
+)
 def create_round_score(match_id: int, payload: RoundScoreCreate, db: Session = Depends(get_db)):
     match = db.get(Match, match_id)
     if not match:

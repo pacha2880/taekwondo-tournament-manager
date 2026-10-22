@@ -31,6 +31,12 @@ def test_production_accepts_custom_values():
     check_production_settings(env)
 
 
+def test_staging_also_rejects_default_values():
+    env = {"APP_ENV": "staging", "SECRET_KEY": "dev-secret-key", "ADMIN_PASSWORD": "admin"}
+    with pytest.raises(RuntimeError, match="SECRET_KEY, ADMIN_PASSWORD"):
+        check_production_settings(env)
+
+
 def test_short_secret_key_is_warned_about_in_production(caplog):
     short_key = "clave-corta-de-20-bs"
     assert len(short_key) == 20
@@ -52,3 +58,9 @@ def test_short_secret_key_is_ignored_outside_production(caplog):
     warn_if_short_secret_key({"APP_ENV": "development", "SECRET_KEY": "corta"})
 
     assert caplog.text == ""
+
+
+def test_short_secret_key_is_also_warned_about_in_staging(caplog):
+    warn_if_short_secret_key({"APP_ENV": "staging", "SECRET_KEY": "clave-corta-de-20-bs"})
+
+    assert "SECRET_KEY tiene 20 bytes; se recomiendan 32 o más" in caplog.text

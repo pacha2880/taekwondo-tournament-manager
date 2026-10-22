@@ -12,12 +12,6 @@ volver al tag anterior siga funcionando sobre una base ya migrada; tras el deplo
 
 ## Decisiones pendientes
 
-- **Idioma y nombres de los grupos de `/docs`** (decidir antes de que el frontend externo genere
-  un cliente: muchos generadores usan los grupos —`tags`— para nombrar clases, y renombrarlos
-  después rompería ese código). Propuesta: **todo en español** —descripciones y nombres de grupos
-  (Torneos, Categorías, Atletas, Clubes, Inscripciones, Llaves, Combates, Autenticación)—,
-  dejando en inglés los identificadores (rutas, campos, valores de enums). Hay que actualizar la
-  regla de **Idioma** de `CLAUDE.md`, que hoy dice que Swagger puede quedar en inglés.
 - **Categoría sin llave y cierre del torneo.** ¿Una categoría sin llave bloquea pasar el torneo
   a `FINISHED`? Propuesta: sí si tiene 2 o más inscritos (hay combates sin jugar); se ignora si
   tiene 0 o 1 (lo resuelve la 0.7.0).
@@ -65,36 +59,37 @@ primero solo lectura (torneos y llaves) y enseguida administración. Orden de tr
 versión: primero CORS (es lo que lo bloquea), después la documentación, de menos a más trabajo.
 Nada de esto cambia cómo se comporta la API.
 
-- [ ] CORS configurable con la variable `CORS_ORIGINS` (lista separada por comas). Sin definirla
+- [x] CORS configurable con la variable `CORS_ORIGINS` (lista separada por comas). Sin definirla
       no se permite ningún origen. En producción debe negarse a arrancar si contiene `*`. Sin
       cookies: el token viaja en la cabecera `Authorization`.
 
 ### Documentación de `/docs` (Swagger)
 
-Hoy `/docs` muestra nombres técnicos sin explicación, mezcla 19 páginas HTML del admin y de la
-parte pública con la API, y genera `operationId` como `create_club_api_v1_clubs_post` (que acaban
-siendo los nombres de los métodos de un cliente generado). Las descripciones viven junto a cada
-endpoint en el código, así que no se desactualizan respecto de lo que hace. Cinco pasos:
+**Decidido:** todo en español —descripciones y nombres de los grupos (`tags`): Torneos,
+Categorías, Atletas, Clubes, Inscripciones, Llaves, Combates, Autenticación, Sistema—, y en inglés
+solo los identificadores (rutas, campos, valores de enums). Los grupos se fijan ahora porque muchos
+generadores de clientes los usan para nombrar clases, y renombrarlos después rompería ese código.
+Detalle completo del porqué en `docs/DECISIONS.md` (entrada 2026-10-16). Cinco pasos:
 
-- [ ] **1. Limpiar `/docs`.** Sacar las páginas HTML del esquema (`include_in_schema=False` en
+- [x] **1. Limpiar `/docs`.** Sacar las páginas HTML del esquema (`include_in_schema=False` en
       los routers `public` y `admin`); `operationId` limpios (`create_club`, `list_tournaments`…)
       con `generate_unique_id_function` — los nombres de las funciones ya son únicos entre
       routers; título y versión leídos de `app/version.py` en vez de escritos a mano.
-- [ ] **2. Descripción general** en la cabecera de `/docs` (Markdown, corta): qué es la API,
+- [x] **2. Descripción general** en la cabecera de `/docs` (Markdown, corta): qué es la API,
       cómo usar el botón **Authorize**, formato de errores (los de negocio vienen como `detail`
       en español; los 422 de validación, en el formato estándar de Pydantic), que el primer
       request tarda en el plan gratis, y que en `0.x` algo puede cambiar.
-- [ ] **3. Cada endpoint** con `summary`, descripción corta y `responses` con los errores reales
+- [x] **3. Cada endpoint** con `summary`, descripción corta y `responses` con los errores reales
       (`401`, `404`, `409`, `422`). Los grupos (`openapi_tags`) con una explicación cada uno.
-- [ ] **4. Los campos que no se explican solos**, con `Field(description=..., examples=[...])`
+- [x] **4. Los campos que no se explican solos**, con `Field(description=..., examples=[...])`
       en `schemas.py`, y el significado de cada valor de los enums (`male`/`female`,
       `pending`/`bye`/`finished`, `draft`/`in_progress`/`finished`…). Son unos 45 campos: el
       contador del esquema da 125 porque cuenta los repetidos entre `Create`/`Read`, pero las
       descripciones se escriben una sola vez en las clases `*Base` y se heredan.
-- [ ] **5. Test guardián**, igual que el de autenticación: falla si una operación de `/api/v1`
+- [x] **5. Test guardián**, igual que el de autenticación: falla si una operación de `/api/v1`
       queda sin `summary` o sin `description`, para que la documentación no se pudra cuando
       alguien agregue un endpoint nuevo.
-- [ ] **Extra, al final: `docs/API.md`**, corto — cómo leer una llave (`round_number`, `slot`,
+- [x] **Extra, al final: `docs/API.md`**, corto — cómo leer una llave (`round_number`, `slot`,
       rojo/azul, `next_match_id`, pases directos) y un ejemplo de flujo con `curl`. No duplica lo
       que ya dice `/docs`; lo enlaza.
 - [ ] Evaluar, con el feedback real del frontend externo, el endpoint agregado para el detalle de

@@ -327,3 +327,73 @@ menos de 32 bytes, que es el mínimo que recomienda el RFC 7518 para HS256. Es u
 error a propósito: si la clave real fuera corta, un error dejaría la app caída en producción en el
 próximo deploy. Nunca imprime el valor. Se puede endurecer a error cuando se hayan verificado las
 claves de dev y producción.
+
+## 2026-10-16 — API para frontends externos: CORS y documentación (0.3.0)
+
+**CORS con lista explícita y sin cookies.** Un frontend en otro dominio no puede leer las respuestas
+si el servidor no lo autoriza (lo aplican los navegadores; `curl` y Postman lo ignoran, así que CORS
+no protege la API: eso lo hace la autenticación). `CORS_ORIGINS` es una lista separada por comas; sin
+definirla no se permite ningún origen, y con `APP_ENV=production` la app **se niega a arrancar si la
+lista contiene `*`**. Como el token viaja en la cabecera `Authorization` y no hay cookies,
+`allow_credentials=False`: así tampoco hay riesgo de que un origen permitido reutilice la sesión del
+admin web. Se permiten solo `GET`, `POST`, `PATCH` y `OPTIONS`, y las cabeceras `Authorization` y
+`Content-Type`. El middleware de CORS se agrega al final para quedar como el más externo y responder
+los *preflight* (`OPTIONS`) antes de que cualquier otra capa los toque; el preflight de un `POST`
+protegido pasa sin token a propósito, porque el navegador nunca manda credenciales en un preflight.
+Se separó en `app/cors.py` (`parse_origins` y `add_cors`) para poder probarlo sobre una app mínima sin
+recargar `app.main`. Se quita la `/` final de cada origen al leerlo: un origen con barra final nunca
+coincidiría con el que envía el navegador.
+
+**Documentación en español, con los identificadores en inglés.** La consume gente ajena al proyecto, así
+que las descripciones, los resúmenes y los nombres de los grupos van en español; rutas, campos y
+valores de enums siguen en inglés (son el contrato). Los grupos (`tags`) quedaron fijados porque los
+generadores de clientes los usan para nombrar clases: renombrarlos después rompería el código de quien
+ya generó el suyo. Las descripciones viven en el código, junto a cada endpoint (`summary`,
+`description`, `responses`) y en `Field(description=...)` de `app/schemas.py`, escritas una sola vez
+en las clases `*Base` y heredadas por `Create`/`Read`; el texto general y los grupos están en
+`app/api_docs.py`. Los enums se explican con su docstring, que Pydantic vuelca al esquema.
+
+**Qué se muestra en `/docs`.** Solo la API y `/health`: las páginas HTML del admin y de la parte pública
+se ocultan con `include_in_schema=False` en `include_router` (en FastAPI 0.141 los routers incluidos
+quedan anidados, así que se pasa ahí y no en cada router). Antes aparecían 19 páginas HTML mezcladas con
+la API, lo que además exponía la estructura del panel de administración.
+
+**`operationId` = nombre de la función** (`generate_unique_id_function=lambda route: route.name`):
+pasa de `create_club_api_v1_clubs_post` a `create_club`. Los nombres de las funciones ya son únicos
+entre routers y un test lo verifica. Es un cambio para quien hubiera generado un cliente, pero todavía
+nadie lo había hecho.
+
+**El 422 no se declara con el helper de errores.** FastAPI ya documenta el 422 de validación de formato;
+los 422 de reglas de negocio (género y peso en inscripciones, empate en un round, rangos inválidos en una
+categoría) se explican en la descripción del endpoint. `errors()` falla si se le pasa un 422 para evitar
+pisar la respuesta estándar sin darse cuenta.
+
+**Login simplificado.** `OAuth2PasswordRequestForm` agregaba al formulario `grant_type`, `scope`,
+`client_id` y `client_secret`, que nunca se usaron y que además no se pueden documentar. Se reemplazó por
+dos campos `Form` (`username`, `password`). El botón **Authorize** de Swagger sigue funcionando porque
+depende del esquema de seguridad (`OAuth2PasswordBearer`) y no de este formulario; los campos extra que
+manda Swagger se ignoran.
+
+**Tests guardianes** (`tests/test_api_docs.py`), en la misma línea que el de autenticación: fallan si una
+operación no tiene resumen propio (no el generado a partir del nombre de la función) ni descripción, si
+no pertenece a exactamente un grupo declarado, si requiere token y no documenta el 401, si tiene un
+parámetro de ruta y no documenta el 404, si algún campo o enum queda sin descripción, si hay `operationId`
+repetidos o con restos de la ruta, o si aparecen páginas HTML en el esquema. Se comprobó con pruebas de
+mutación (quitar la descripción de un campo y de un endpoint hace fallar los tests).
+
+## 2026-10-17 — `APP_ENV=staging`, para que el servicio `dev` pueda aceptar `CORS_ORIGINS=*`
+
+**El problema.** `check_production_settings` solo validaba algo cuando `APP_ENV == "production"`
+exactamente — cualquier otro valor (vacío, `development`, o lo que fuera) se salteaba **tanto** el
+chequeo de credenciales por defecto **como** el de `CORS_ORIGINS=*`. El servicio `dev` de Render está
+desplegado y es público (lo usa el frontend externo del amigo del usuario para probar con distintos
+orígenes sin tener que actualizar una lista a mano), así que quedaba en la misma categoría que
+`docker compose` local: si alguien se olvidaba de configurar `SECRET_KEY`/`ADMIN_PASSWORD` ahí, la app
+arrancaba igual con los valores por defecto, expuestos en internet.
+
+**La solución no es un tercer ambiente más laxo, es separar las dos condiciones.** Se agregó
+`DEPLOYED_ENVIRONMENTS = {"production", "staging"}` en `app/config.py`: ambos exigen credenciales
+propias (ahí `staging` es tan estricto como `production`), pero el rechazo de `CORS_ORIGINS=*` sigue
+siendo exclusivo de `production` — es la única excepción real que necesitaba el servicio `dev`.
+`warn_if_short_secret_key` también pasa a mirar `DEPLOYED_ENVIRONMENTS` en vez de solo `production`,
+por la misma razón: un `staging` público con una clave corta es tan riesgoso como uno en producción.

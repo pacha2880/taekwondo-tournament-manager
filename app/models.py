@@ -8,29 +8,40 @@ from app.database import Base
 
 
 class TournamentStatus(str, enum.Enum):
+    """Estado del torneo: `draft` (borrador, se arman categorías e inscripciones), `in_progress` (en curso)
+    y `finished` (finalizado)."""
+
     DRAFT = "draft"
     IN_PROGRESS = "in_progress"
     FINISHED = "finished"
 
 
+# Solo SPARRING está implementado; FORMS/BREAKING se agregarían acá con su propio modelo de resultado
+# (ver docs/DECISIONS.md). La docstring de abajo es la que ve quien lee /docs.
 class Discipline(str, enum.Enum):
-    """Solo SPARRING está implementado. FORMS/BREAKING se agregarían aquí más
-    adelante con su propio modelo de resultado — ver docs/DECISIONS.md."""
+    """Modalidad de la categoría. Hoy solo existe `sparring` (combate)."""
 
     SPARRING = "sparring"
 
 
 class Gender(str, enum.Enum):
+    """Género: `male` (masculino) o `female` (femenino)."""
+
     MALE = "male"
     FEMALE = "female"
 
 
 class BeltGroup(str, enum.Enum):
+    """Grupo de cinturón: `color` (cinturones de color, desde amarillo) o `black` (cinturón negro)."""
+
     COLOR = "color"
     BLACK = "black"
 
 
 class MatchStatus(str, enum.Enum):
+    """Estado del combate: `pending` (pendiente: por jugar o esperando a sus atletas), `bye` (pase directo:
+    el atleta avanza sin pelear) y `finished` (terminado: ya tiene ganador)."""
+
     PENDING = "pending"
     BYE = "bye"
     FINISHED = "finished"

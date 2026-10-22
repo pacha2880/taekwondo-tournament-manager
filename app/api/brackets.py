@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api_docs import TAG_BRACKETS, errors
 from app.auth import ADMIN_ONLY
 from app.database import get_db
 from app.models import Bracket, Category
@@ -13,7 +14,7 @@ from app.services.brackets import (
     resolve_athlete_names,
 )
 
-router = APIRouter(prefix="/api/v1/categories", tags=["brackets"])
+router = APIRouter(prefix="/api/v1/categories", tags=[TAG_BRACKETS])
 
 
 def _bracket_read(db: Session, bracket: Bracket) -> BracketRead:
@@ -26,7 +27,15 @@ def _bracket_read(db: Session, bracket: Bracket) -> BracketRead:
     return bracket_read
 
 
-@router.post("/{category_id}/bracket", response_model=BracketRead, status_code=201, dependencies=ADMIN_ONLY)
+@router.post(
+    "/{category_id}/bracket",
+    response_model=BracketRead,
+    status_code=201,
+    dependencies=ADMIN_ONLY,
+    summary="Generar la llave de una categoría",
+    description="Sortea al azar a los inscritos en una llave de eliminación simple. Si el número de inscritos no es potencia de 2, se reparten pases directos (`bye`) en la primera ronda. Hacen falta al menos 2 inscritos y solo se puede generar una llave por categoría. Requiere token.",
+    responses=errors({400: "La categoría tiene menos de 2 inscritos.", 404: "La categoría no existe.", 409: "La categoría ya tiene una llave."}, auth=True),
+)
 def create_bracket(category_id: int, db: Session = Depends(get_db)):
     category = db.get(Category, category_id)
     if not category:
@@ -40,7 +49,13 @@ def create_bracket(category_id: int, db: Session = Depends(get_db)):
     return _bracket_read(db, bracket)
 
 
-@router.get("/{category_id}/bracket", response_model=BracketRead)
+@router.get(
+    "/{category_id}/bracket",
+    response_model=BracketRead,
+    summary="Obtener la llave de una categoría",
+    description="Devuelve todos los combates de todas las rondas. Cada combate indica el combate de la siguiente ronda al que avanza su ganador (`next_match_id`). Es público.",
+    responses=errors({404: "La categoría no existe o todavía no tiene llave."}),
+)
 def get_bracket(category_id: int, db: Session = Depends(get_db)):
     if not db.get(Category, category_id):
         raise HTTPException(status_code=404, detail="Categoría no encontrada")
