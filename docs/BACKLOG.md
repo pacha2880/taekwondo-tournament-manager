@@ -92,9 +92,6 @@ Detalle completo del porqué en `docs/DECISIONS.md` (entrada 2026-10-16). Cinco 
 - [x] **Extra, al final: `docs/API.md`**, corto — cómo leer una llave (`round_number`, `slot`,
       rojo/azul, `next_match_id`, pases directos) y un ejemplo de flujo con `curl`. No duplica lo
       que ya dice `/docs`; lo enlaza.
-- [ ] Evaluar, con el feedback real del frontend externo, el endpoint agregado para el detalle de
-      categoría (ver el ítem de "Más adelante"): el disparador que lo condicionaba
-      —un frontend separado— ya ocurrió.
 
 ## 0.4.0 — Datos de atletas y clubes (única migración de esquema, aditiva)
 
