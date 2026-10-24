@@ -2,8 +2,9 @@
 # `date` con tipo `date` y valor por defecto se pisa a sí mismo: la asignación ocurre antes de
 # que se evalúe la anotación.
 import datetime
+import re
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.models import BeltGroup, Discipline, Gender, MatchStatus, TournamentStatus
 
@@ -32,8 +33,21 @@ class ClubRead(ClubBase):
     id: int = Field(description="Identificador del club.")
 
 
+CI_REGEX = r"[0-9]{5,9}(?:-[0-9A-Z]{2})?"
+
+
 class AthleteBase(BaseModel):
     name: str = Field(description="Nombre completo del atleta.", examples=["Mateo Quispe Mamani"])
+    ci: str | None = Field(
+        default=None,
+        description=(
+            "Cédula de identidad, opcional (hay niños que todavía no tienen). Si se informa: de 5 a 9 "
+            "dígitos y, si corresponde, un complemento de 2 caracteres separado por guion; sin lugar de "
+            "expedición. Se guarda sin espacios y en mayúsculas, y no puede repetirse. Si no tiene, se omite, o se envía `null` o texto vacío (la respuesta devuelve `null`)."
+        ),
+        examples=["1234567", "1234567-1A"],
+        json_schema_extra={"pattern": f"^{CI_REGEX}$"},
+    )
     birth_date: datetime.date = Field(description="Fecha de nacimiento (`YYYY-MM-DD`).", examples=["2012-03-14"])
     gender: Gender = Field(description="Género del atleta. Debe coincidir con el de la categoría en que se inscribe.")
     belt_rank: str = Field(
@@ -41,6 +55,18 @@ class AthleteBase(BaseModel):
     )
     weight_kg: float = Field(description="Peso en kilogramos.", examples=[38.5])
     club_id: int = Field(description="Id del club al que pertenece. El club debe existir.")
+
+    @field_validator("ci")
+    @classmethod
+    def normalize_ci(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip().upper()
+        if not value:
+            return None
+        if not re.fullmatch(CI_REGEX, value):
+            raise ValueError("el CI debe tener de 5 a 9 dígitos y, si corresponde, un complemento (ej. 1234567-1A)")
+        return value
 
 
 class AthleteCreate(AthleteBase):

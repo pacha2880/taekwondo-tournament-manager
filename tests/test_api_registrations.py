@@ -19,6 +19,7 @@ def test_gender_mismatch_rejected(client, club, category):
         "/api/v1/athletes",
         json={
             "name": "Maria Lopez",
+            "ci": "7654321",
             "birth_date": "2012-03-01",
             "gender": "female",
             "belt_rank": "verde",
@@ -45,6 +46,7 @@ def test_weight_out_of_range_rejected(client, club, category):
         "/api/v1/athletes",
         json={
             "name": "Pedro Gomez",
+            "ci": "8123456",
             "birth_date": "2012-01-01",
             "gender": "male",
             "belt_rank": "verde",

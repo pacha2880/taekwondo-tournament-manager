@@ -10,7 +10,7 @@
       <li class="list-group-item">
         {{ a.name }}
         <span class="text-muted small">
-          &middot; {{ a.club.name }} &middot; {{ a.gender|es_label }} &middot; {{ a.weight_kg }}kg
+          &middot; {% if a.ci %}CI {{ a.ci }} &middot; {% endif %}{{ a.club.name }} &middot; {{ a.gender|es_label }} &middot; {{ a.weight_kg }}kg
           &middot; {{ a.belt_rank }}
         </span>
       </li>
@@ -28,6 +28,12 @@
       <div class="mb-2">
         <label class="form-label">Nombre</label>
         <input type="text" name="name" class="form-control" required>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">CI</label>
+        <input type="text" name="ci" class="form-control" maxlength="12"
+               placeholder="ej. 1234567 o 1234567-1A">
+        <div class="form-text">Opcional (hay niños sin CI). De 5 a 9 dígitos, con complemento opcional.</div>
       </div>
       <div class="mb-2">
         <label class="form-label">Fecha de nacimiento</label>

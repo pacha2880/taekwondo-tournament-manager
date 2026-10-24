@@ -11,6 +11,14 @@ funcionando sobre una base ya migrada.
 
 ## [Unreleased]
 
+### Added
+- Cada atleta puede tener un **CI** (cédula de identidad), opcional porque hay niños que todavía no
+  tienen. Si se informa es único y de 5 a 9 dígitos con, si corresponde, un complemento de 2 caracteres
+  separado por guion (`1234567` o `1234567-1A`), sin lugar de expedición. Se guarda sin espacios y en
+  mayúsculas. Un CI repetido responde `409`. Está en `POST /api/v1/athletes`, en las respuestas de
+  atletas e inscripciones (`null` si no tiene) y en el formulario del admin. Migración
+  `a4f1c2e8b7d3`: agrega la columna; los atletas ya cargados quedan sin CI.
+
 ## [0.3.0] - 2026-10-22
 
 ### Added

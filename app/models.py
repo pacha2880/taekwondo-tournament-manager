@@ -61,6 +61,7 @@ class Athlete(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
+    ci: Mapped[str | None] = mapped_column(String(12), unique=True, index=True)
     birth_date: Mapped[date] = mapped_column(Date, nullable=False)
     gender: Mapped[Gender] = mapped_column(Enum(Gender), nullable=False)
     belt_rank: Mapped[str] = mapped_column(String(60), nullable=False)

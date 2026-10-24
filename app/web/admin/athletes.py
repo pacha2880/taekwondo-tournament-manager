@@ -36,6 +36,7 @@ def athletes_view(request: Request, db: Session = Depends(get_db)):
 def create_athlete_view(
     request: Request,
     name: str = Form(...),
+    ci: str = Form(""),
     birth_date: str = Form(...),
     gender: str = Form(...),
     belt_rank: str = Form(...),
@@ -46,6 +47,7 @@ def create_athlete_view(
     try:
         payload = AthleteCreate(
             name=name,
+            ci=ci,
             birth_date=birth_date,
             gender=gender,
             belt_rank=belt_rank,

@@ -17,12 +17,17 @@ router = APIRouter(prefix="/api/v1/athletes", tags=[TAG_ATHLETES])
     status_code=201,
     dependencies=ADMIN_ONLY,
     summary="Crear un atleta",
-    description="Crea un atleta asignado a un club que ya existe. Requiere token.",
-    responses=errors({404: "El club no existe."}, auth=True),
+    description=(
+        "Crea un atleta asignado a un club que ya existe. El CI es opcional; si se informa, no puede "
+        "repetirse y, si no cumple el formato, responde 422. Requiere token."
+    ),
+    responses=errors({404: "El club no existe.", 409: "Ya existe un atleta con ese CI."}, auth=True),
 )
 def create_athlete(payload: AthleteCreate, db: Session = Depends(get_db)):
     if not db.get(Club, payload.club_id):
         raise HTTPException(status_code=404, detail="Club no encontrado")
+    if payload.ci and db.scalar(select(Athlete).where(Athlete.ci == payload.ci)):
+        raise HTTPException(status_code=409, detail="Ya existe un atleta con ese CI")
     athlete = Athlete(**payload.model_dump())
     db.add(athlete)
     db.commit()

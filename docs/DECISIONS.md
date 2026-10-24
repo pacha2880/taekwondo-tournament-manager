@@ -397,3 +397,26 @@ propias (ahí `staging` es tan estricto como `production`), pero el rechazo de `
 siendo exclusivo de `production` — es la única excepción real que necesitaba el servicio `dev`.
 `warn_if_short_secret_key` también pasa a mirar `DEPLOYED_ENVIRONMENTS` en vez de solo `production`,
 por la misma razón: un `staging` público con una clave corta es tan riesgoso como uno en producción.
+
+## 2026-10-23 — CI del atleta (0.4.0)
+
+**Opcional y único cuando existe.** Se había planteado obligatorio, pero el cliente confirmó que hay niños
+pequeños sin CI, así que el campo es opcional en la base, en la API y en el admin. Una columna `NULL`able con
+índice único admite varios `NULL` en SQLite y en Postgres, de modo que hay un solo criterio en todas las
+capas y la migración solo agrega. Los atletas ya cargados quedan sin CI (no se inventan valores de relleno,
+que además podrían chocar con un CI real). Omitir el campo, enviar `null` o enviar texto
+vacío o en blanco (`""`) significan lo mismo, "sin CI", en la API y en el admin: lo resuelve el validador de
+`app/schemas.py`, un solo lugar. Las respuestas siempre devuelven `null`.
+
+**Formato: `[0-9]{5,9}(?:-[0-9A-Z]{2})?`.** Se pidió esta expresión y se revisó si alcanza. Cubre el CI
+boliviano (número de 5 a 9 dígitos) y el complemento que se agrega para distinguir a dos personas con el mismo
+número. Dos ajustes: (1) `[0-9]` en lugar de `\d`, porque en Python `\d` acepta dígitos de otros alfabetos
+(por ejemplo árabe-índicos); (2) antes de validar se recortan espacios y se pasa a mayúsculas, así
+`1234567-1a` no se rechaza ni se duplica. La unicidad es sobre el texto completo, porque el mismo número con
+otro complemento es otra persona. **Limitación aceptada:** no admite CI de extranjeros con otros formatos ni
+pasaportes. Si aparece el caso, se relaja la regla en `CI_REGEX` (`app/schemas.py`), que es el único lugar
+donde está definida; el `pattern` se publica en el esquema OpenAPI para que el frontend externo valide igual.
+
+**Mensaje en español sin `Field(pattern=...)`.** Con `pattern`, Pydantic responde en inglés ("String should
+match pattern"); un `field_validator` con `ValueError` da el mensaje en español que ve el admin. El `pattern`
+se publica aparte con `json_schema_extra`, a partir de la misma constante.

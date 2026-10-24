@@ -103,9 +103,9 @@ camino commit → push → deploy → migración → rollback antes de los cambi
 También la necesita el frontend externo en su etapa de administración: hoy la API no tiene
 edición de atletas ni de clubes, así que cada ítem de editar se hace **en la API y en el admin**.
 
-- [ ] Campo CI (documento de identidad) único por atleta. Columna **nullable** en la base
-      (los atletas ya cargados no tienen CI; en Postgres y SQLite un índice único admite
-      varios `NULL`), obligatoria en el formulario de alta.
+- [x] Campo CI (documento de identidad) **opcional** (hay niños sin CI, confirmado con el cliente) y
+      único cuando se informa, con formato `^\d{5,9}(?:-[0-9A-Z]{2})?$` (5 a 9 dígitos y complemento
+      opcional; sin lugar de expedición). Los atletas ya cargados quedan sin CI.
 - [ ] Editar atleta (hoy solo se puede crear; un error de tipeo no se puede corregir sin SQL).
       Permite completar el CI de los atletas existentes.
 - [ ] Buscar atleta por CI o por nombre en la pantalla admin de atletas.

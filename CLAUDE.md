@@ -183,6 +183,8 @@ sección **Versionado** de `README.md`.
 - No hardcodear tablas oficiales de peso por cinturón/edad/género. `Category.weight_label`
   es texto libre que define el admin al crear la categoría — las tablas de peso varían por
   federación y no son parte del problema que este proyecto resuelve.
+- `Athlete.ci` es opcional (hay niños sin CI) y único cuando se informa; el formato vive solo en
+  `CI_REGEX` de `app/schemas.py`.
 - `Club` es una entidad propia (`id`, `name`). `Athlete.club_id` es una FK obligatoria — el
   club es un atributo fijo del atleta, no algo que se elija por torneo/inscripción.
 - `RoundScore` no tiene penalizaciones todavía; si se agregan, es aditivo (columnas nuevas),

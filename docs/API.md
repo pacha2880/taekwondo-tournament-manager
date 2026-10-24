@@ -76,7 +76,7 @@ curl -s -X POST $BASE/api/v1/categories -H "$AUTH" -H "$JSON" \
 
 # 3) Atletas e inscripciones (repetir por cada atleta)
 curl -s -X POST $BASE/api/v1/athletes -H "$AUTH" -H "$JSON" \
-  -d '{"name": "Mateo Quispe", "birth_date": "2012-03-14", "gender": "male",
+  -d '{"name": "Mateo Quispe", "ci": "1234567", "birth_date": "2012-03-14", "gender": "male",
        "belt_rank": "verde", "weight_kg": 38.5, "club_id": 1}'
 curl -s -X POST $BASE/api/v1/registrations -H "$AUTH" -H "$JSON" -d '{"athlete_id": 1, "category_id": 1}'
 
