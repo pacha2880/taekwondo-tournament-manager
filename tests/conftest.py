@@ -45,6 +45,7 @@ def _test_db():
     app.dependency_overrides[get_db] = override_get_db
     yield
     app.dependency_overrides.clear()
+    engine.dispose()
 
 
 @pytest.fixture()
