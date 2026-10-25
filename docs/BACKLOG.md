@@ -106,7 +106,7 @@ edición de atletas ni de clubes, así que cada ítem de editar se hace **en la 
 - [ ] Editar atleta (hoy solo se puede crear; un error de tipeo no se puede corregir sin SQL).
       Permite completar el CI de los atletas existentes.
 - [ ] Buscar atleta por CI o por nombre en la pantalla admin de atletas.
-- [ ] Editar club (a confirmar si hace falta).
+- [x] Editar club (API y admin).
 
 ## 0.5.0 — Admin más seguro, parte B (sin cambios de API ni de base de datos)
 

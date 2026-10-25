@@ -18,6 +18,7 @@ funcionando sobre una base ya migrada.
   mayúsculas. Un CI repetido responde `409`. Está en `POST /api/v1/athletes`, en las respuestas de
   atletas e inscripciones (`null` si no tiene) y en el formulario del admin. Migración
   `a4f1c2e8b7d3`: agrega la columna; los atletas ya cargados quedan sin CI.
+- **Editar clubes**: `PATCH /api/v1/clubs/{id}` y botón "Editar" en el admin (el nombre sigue siendo único).
 
 ## [0.3.0] - 2026-10-22
 

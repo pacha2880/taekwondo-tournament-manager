@@ -296,3 +296,19 @@ def _extract_match_id(category_page_html: str) -> str:
     start = category_page_html.index(marker) + len(marker)
     end = category_page_html.index("/rounds", start)
     return category_page_html[start:end]
+
+
+def test_edit_club_via_admin(client, club):
+    _login(client)
+    client.post("/api/v1/clubs", json={"name": "Dojang Norte"})
+
+    assert f'href="/admin/clubes/{club["id"]}/editar"' in client.get("/admin/clubes").text
+    assert f'value="{club["name"]}"' in client.get(f"/admin/clubes/{club['id']}/editar").text
+
+    saved = client.post(f"/admin/clubes/{club['id']}/editar", data={"name": "Dojang Renovado"}, follow_redirects=False)
+    duplicate = client.post(f"/admin/clubes/{club['id']}/editar", data={"name": "Dojang Norte"})
+
+    assert saved.status_code == 303
+    assert duplicate.status_code == 400
+    assert "Ya existe un club con ese nombre" in duplicate.text
+    assert client.get("/admin/clubes/999/editar").status_code == 404

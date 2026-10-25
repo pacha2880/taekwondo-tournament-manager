@@ -27,6 +27,10 @@ class ClubCreate(ClubBase):
     pass
 
 
+class ClubUpdate(BaseModel):
+    name: str | None = Field(default=None, description="Nuevo nombre. No puede repetirse. Si no se envía, no cambia.")
+
+
 class ClubRead(ClubBase):
     model_config = ConfigDict(from_attributes=True)
 
