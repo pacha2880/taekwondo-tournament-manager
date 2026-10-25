@@ -103,8 +103,9 @@ edición de atletas ni de clubes, así que cada ítem de editar se hace **en la 
 - [x] Campo CI (documento de identidad) **opcional** (hay niños sin CI, confirmado con el cliente) y
       único cuando se informa, con formato `^\d{5,9}(?:-[0-9A-Z]{2})?$` (5 a 9 dígitos y complemento
       opcional; sin lugar de expedición). Los atletas ya cargados quedan sin CI.
-- [ ] Editar atleta (hoy solo se puede crear; un error de tipeo no se puede corregir sin SQL).
-      Permite completar el CI de los atletas existentes.
+- [x] Editar atleta (API y admin). Reglas al cambiar género o peso con inscripciones: torneo en
+      curso lo bloquea si deja de encajar; en borrador retira de las categorías donde ya no encaja, con confirmación;
+      finalizado lo permite. Ver `docs/DECISIONS.md`, 2026-10-24.
 - [ ] Buscar atleta por CI o por nombre en la pantalla admin de atletas.
 - [x] Editar club (API y admin).
 
@@ -149,7 +150,9 @@ consistente con el resto del proyecto.
       duda de "generar todas las llaves automático al activar": no hace falta, porque el
       admin sigue generando cada llave a mano, categoría por categoría, pero recién puede
       hacerlo después de pasar a `en curso` — el orden queda forzado por esta regla, sin
-      necesidad de automatizar nada.
+      necesidad de automatizar nada. Además cierra un hueco de la 0.4.0: `PATCH /athletes` retira
+      a un atleta de una categoría de un torneo en borrador sin mirar si ya tiene llave, porque con
+      esta regla un torneo en borrador nunca tendrá llave.
 - [ ] Solo se puede mover a `FINISHED` cuando **todos** los matches de **todas** las
       categorías del torneo llegaron a un estado terminal. Ojo con el detalle: un bye nunca
       pasa a `MatchStatus.FINISHED` (se queda en `BYE` para siempre, ver `app/models.py`),

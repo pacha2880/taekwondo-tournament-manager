@@ -3,8 +3,9 @@
 # que se evalúe la anotación.
 import datetime
 import re
+from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
 
 from app.models import BeltGroup, Discipline, Gender, MatchStatus, TournamentStatus
 
@@ -40,9 +41,23 @@ class ClubRead(ClubBase):
 CI_REGEX = r"[0-9]{5,9}(?:-[0-9A-Z]{2})?"
 
 
+def normalize_ci(value: str | None) -> str | None:
+    if value is None:
+        return None
+    value = value.strip().upper()
+    if not value:
+        return None
+    if not re.fullmatch(CI_REGEX, value):
+        raise ValueError("el CI debe tener de 5 a 9 dígitos y, si corresponde, un complemento (ej. 1234567-1A)")
+    return value
+
+
+NormalizedCi = Annotated[str | None, AfterValidator(normalize_ci)]
+
+
 class AthleteBase(BaseModel):
     name: str = Field(description="Nombre completo del atleta.", examples=["Mateo Quispe Mamani"])
-    ci: str | None = Field(
+    ci: NormalizedCi = Field(
         default=None,
         description=(
             "Cédula de identidad, opcional (hay niños que todavía no tienen). Si se informa: de 5 a 9 "
@@ -60,21 +75,36 @@ class AthleteBase(BaseModel):
     weight_kg: float = Field(description="Peso en kilogramos.", examples=[38.5])
     club_id: int = Field(description="Id del club al que pertenece. El club debe existir.")
 
-    @field_validator("ci")
-    @classmethod
-    def normalize_ci(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        value = value.strip().upper()
-        if not value:
-            return None
-        if not re.fullmatch(CI_REGEX, value):
-            raise ValueError("el CI debe tener de 5 a 9 dígitos y, si corresponde, un complemento (ej. 1234567-1A)")
-        return value
-
 
 class AthleteCreate(AthleteBase):
     pass
+
+
+class AthleteUpdate(BaseModel):
+    name: str | None = Field(default=None, description="Nuevo nombre. Si no se envía, no cambia.")
+    ci: NormalizedCi = Field(
+        default=None,
+        description=(
+            "Nuevo CI, con el mismo formato que al crear. Si no se envía, no cambia; `null` o texto vacío "
+            "lo borra."
+        ),
+        json_schema_extra={"pattern": f"^{CI_REGEX}$"},
+    )
+    birth_date: datetime.date | None = Field(
+        default=None, description="Nueva fecha de nacimiento (`YYYY-MM-DD`). Si no se envía, no cambia."
+    )
+    gender: Gender | None = Field(
+        default=None,
+        description="Nuevo género. Si no se envía, no cambia. Ver las reglas con inscripciones en la operación.",
+    )
+    belt_rank: str | None = Field(default=None, description="Nuevo cinturón o grado. Si no se envía, no cambia.")
+    weight_kg: float | None = Field(
+        default=None,
+        description="Nuevo peso en kilogramos. Si no se envía, no cambia. Ver las reglas con inscripciones en la operación.",
+    )
+    club_id: int | None = Field(
+        default=None, description="Id del nuevo club, que debe existir. Si no se envía, no cambia."
+    )
 
 
 class AthleteRead(AthleteBase):

@@ -18,6 +18,12 @@ funcionando sobre una base ya migrada.
   mayúsculas. Un CI repetido responde `409`. Está en `POST /api/v1/athletes`, en las respuestas de
   atletas e inscripciones (`null` si no tiene) y en el formulario del admin. Migración
   `a4f1c2e8b7d3`: agrega la columna; los atletas ya cargados quedan sin CI.
+- **Editar atletas**: `PATCH /api/v1/athletes/{id}` y botón "Editar" en el admin. Solo cambian los campos
+  que se envían; `ci` con `null` o vacío lo borra, y el atleta puede cambiar de club. Reglas cuando el
+  cambio de **género o peso** afecta inscripciones: en un torneo **en curso** se rechaza (`409`) si deja de
+  cumplir las reglas de la categoría (si sigue encajando, se guarda); en un torneo **en borrador**, si deja
+  de cumplirlas hay que confirmar (`?confirm_withdrawal=true`; en el admin, botón "Confirmar y retirar") y
+  se lo retira de ella; en un torneo **finalizado** se permite y la inscripción queda como estaba.
 - **Editar clubes**: `PATCH /api/v1/clubs/{id}` y botón "Editar" en el admin (el nombre sigue siendo único).
 
 ## [0.3.0] - 2026-10-22

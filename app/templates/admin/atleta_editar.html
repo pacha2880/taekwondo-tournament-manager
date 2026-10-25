@@ -1,0 +1,63 @@
+{% extends "admin/base.html" %}
+{% block title %}Editar atleta{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/admin/atletas">Atletas</a></li>
+    <li class="breadcrumb-item active">Editar {{ athlete.name }}</li>
+  </ol>
+</nav>
+<h1 class="mb-4">Editar atleta</h1>
+{% if error %}<div class="alert {{ 'alert-warning' if needs_confirmation else 'alert-danger' }}">{{ error }}</div>{% endif %}
+<div class="row">
+  <div class="col-md-6">
+    <form method="post" action="/admin/atletas/{{ athlete.id }}/editar">
+      <div class="mb-2">
+        <label class="form-label">Nombre</label>
+        <input type="text" name="name" class="form-control" required value="{{ values.name }}">
+      </div>
+      <div class="mb-2">
+        <label class="form-label">CI</label>
+        <input type="text" name="ci" class="form-control" maxlength="12" value="{{ values.ci }}"
+               placeholder="ej. 1234567 o 1234567-1A">
+        <div class="form-text">Opcional (hay niños sin CI). Dejalo vacío para quitarlo.</div>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">Fecha de nacimiento</label>
+        <input type="date" name="birth_date" class="form-control" required value="{{ values.birth_date }}">
+      </div>
+      <div class="mb-2">
+        <label class="form-label">Género</label>
+        <select name="gender" class="form-select" required>
+          <option value="male" {% if values.gender == "male" %}selected{% endif %}>Masculino</option>
+          <option value="female" {% if values.gender == "female" %}selected{% endif %}>Femenino</option>
+        </select>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">Cinturón</label>
+        <input type="text" name="belt_rank" class="form-control" required value="{{ values.belt_rank }}"
+               placeholder="ej. verde, negro 1er dan">
+      </div>
+      <div class="mb-2">
+        <label class="form-label">Peso (kg)</label>
+        <input type="number" step="0.1" name="weight_kg" class="form-control" required value="{{ values.weight_kg }}">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Club</label>
+        <select name="club_id" class="form-select" required>
+          {% for c in clubs %}
+          <option value="{{ c.id }}" {% if values.club_id|string == c.id|string %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% if needs_confirmation %}
+      <input type="hidden" name="confirm_withdrawal" value="true">
+      <button type="submit" class="btn btn-warning">Confirmar y retirar</button>
+      {% else %}
+      <button type="submit" class="btn btn-primary">Guardar</button>
+      {% endif %}
+      <a href="/admin/atletas" class="btn btn-link">Cancelar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

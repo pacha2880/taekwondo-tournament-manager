@@ -418,5 +418,42 @@ pasaportes. Si aparece el caso, se relaja la regla en `CI_REGEX` (`app/schemas.p
 donde está definida; el `pattern` se publica en el esquema OpenAPI para que el frontend externo valide igual.
 
 **Mensaje en español sin `Field(pattern=...)`.** Con `pattern`, Pydantic responde en inglés ("String should
-match pattern"); un `field_validator` con `ValueError` da el mensaje en español que ve el admin. El `pattern`
+match pattern"); un validador (`AfterValidator`) con `ValueError` da el mensaje en español que ve el admin. El `pattern`
 se publica aparte con `json_schema_extra`, a partir de la misma constante.
+
+## 2026-10-24 — Editar atletas y clubes (0.4.0)
+
+**`PATCH` con campos opcionales, igual que el de torneos.** Lo que no se envía no cambia y un `null` se ignora,
+con una excepción: `ci`, donde `null` o `""` significa "borrar el CI" (se distingue de "no enviado" con
+`exclude_unset`). El club del atleta se puede cambiar: corrige un error de carga o un traspaso, y las llaves
+solo guardan nombres. La normalización del CI quedó en un tipo anotado (`NormalizedCi`) que comparten el alta y
+la edición.
+
+**Qué pasa al cambiar género o peso de un atleta inscrito** (la inscripción valida género y peso contra la
+categoría; la edad no se valida, así que la fecha de nacimiento se edita siempre). La regla sale de la idea de
+que cada inscripción pertenece a un torneo con un estado:
+
+- **En curso:** se rechaza (`409`) si el nuevo valor ya no encaja en la categoría: no hay retiro posible
+  porque la llave ya está sorteada, y sacarlo cambiaría las reglas del juego a mitad. Si sigue encajando se
+  permite, igual que en borrador: no cambia la categoría ni la llave, y bloquearlo impediría corregir un
+  error de tipeo o actualizar el peso para un torneo siguiente hasta que este termine.
+- **En borrador:** si el nuevo género o peso ya no encaja en la categoría, se retira al atleta de ella, previa
+  confirmación. Si sigue encajando no pasa nada: corregir un peso de 40 a 41 kg no debe sacarlo de ningún lado.
+- **Finalizado:** se permite y no se toca la inscripción. El torneo ya es historia y el niño puede crecer para
+  los siguientes; la inscripción antigua no se revalida ni se borra.
+
+**Confirmación en dos pasos, sin estado en el servidor.** La API no tiene popups: si el cambio retiraría al
+atleta de alguna categoría y no viene `confirm_withdrawal=true`, responde `409` con la lista de categorías y no
+cambia nada; repetida con el parámetro, aplica el cambio y borra esas inscripciones. El admin usa la misma
+función: vuelve a mostrar el formulario con el aviso (la excepción `WithdrawalNotConfirmed` lo distingue de los
+demás `409`) y un botón "Confirmar y retirar" que reenvía el formulario con el parámetro. La validación de
+género y peso se extrajo de `create_registration` a `app/services/eligibility.py` para que la inscripción y la
+edición usen una sola regla.
+
+**Hueco conocido hasta la 0.6.0: llaves en torneos en borrador.** Hoy se puede generar una llave en un torneo en
+borrador; si luego se retira a un atleta de esa categoría, la llave queda apuntando a un atleta que ya no está
+inscrito. No se agregó un chequeo ni el borrado de la llave porque la 0.6.0 prohíbe generarla fuera de `en
+curso`, con lo que ese caso desaparece (ver BACKLOG). Hasta entonces, no editar género o peso de atletas de
+categorías con llave en un torneo en borrador.
+
+**Club.** Solo cambia el nombre, que sigue siendo único (`409` si lo tiene otro club; el propio nombre no cuenta).

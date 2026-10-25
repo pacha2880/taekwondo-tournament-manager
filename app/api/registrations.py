@@ -2,11 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api.athletes import get_athlete_or_404
 from app.api_docs import TAG_REGISTRATIONS, errors
 from app.auth import ADMIN_ONLY
 from app.database import get_db
-from app.models import Athlete, Category, Registration
+from app.models import Category, Registration
 from app.schemas import RegistrationCreate, RegistrationRead
+from app.services.eligibility import category_mismatch
 
 router = APIRouter(prefix="/api/v1/registrations", tags=[TAG_REGISTRATIONS])
 
@@ -21,24 +23,13 @@ router = APIRouter(prefix="/api/v1/registrations", tags=[TAG_REGISTRATIONS])
     responses=errors({404: "El atleta o la categoría no existe.", 409: "El atleta ya está inscrito en esa categoría o en otra del mismo torneo."}, auth=True),
 )
 def create_registration(payload: RegistrationCreate, db: Session = Depends(get_db)):
-    athlete = db.get(Athlete, payload.athlete_id)
-    if not athlete:
-        raise HTTPException(status_code=404, detail="Atleta no encontrado")
+    athlete = get_athlete_or_404(db, payload.athlete_id)
     category = db.get(Category, payload.category_id)
     if not category:
         raise HTTPException(status_code=404, detail="Categoría no encontrada")
-    if athlete.gender != category.gender:
-        raise HTTPException(
-            status_code=422, detail="El género del atleta no coincide con el de la categoría"
-        )
-    if category.min_weight is not None and athlete.weight_kg < category.min_weight:
-        raise HTTPException(
-            status_code=422, detail="El peso del atleta es menor al mínimo de la categoría"
-        )
-    if category.max_weight is not None and athlete.weight_kg > category.max_weight:
-        raise HTTPException(
-            status_code=422, detail="El peso del atleta es mayor al máximo de la categoría"
-        )
+    mismatch = category_mismatch(athlete.gender, athlete.weight_kg, category)
+    if mismatch:
+        raise HTTPException(status_code=422, detail=mismatch)
     existing = db.scalar(
         select(Registration).where(
             Registration.athlete_id == payload.athlete_id,

@@ -298,6 +298,65 @@ def _extract_match_id(category_page_html: str) -> str:
     return category_page_html[start:end]
 
 
+def _edit_athlete_form(athlete, **overrides):
+    form = {
+        "name": athlete["name"],
+        "ci": athlete["ci"] or "",
+        "birth_date": athlete["birth_date"],
+        "gender": athlete["gender"],
+        "belt_rank": athlete["belt_rank"],
+        "weight_kg": str(athlete["weight_kg"]),
+        "club_id": str(athlete["club"]["id"]),
+    }
+    return {**form, **overrides}
+
+
+def test_edit_athlete_page_is_linked_from_the_list_and_prefilled(client, athlete):
+    _login(client)
+
+    assert f'href="/admin/atletas/{athlete["id"]}/editar"' in client.get("/admin/atletas").text
+    page = client.get(f"/admin/atletas/{athlete['id']}/editar").text
+
+    for field in ('value="Juan Perez"', 'value="1234567"', 'value="2012-05-01"', 'value="verde"', 'value="40.5"'):
+        assert field in page
+    assert '<option value="male" selected>' in page
+    assert f'<option value="{athlete["club"]["id"]}" selected>' in page
+    assert client.get("/admin/atletas/999/editar").status_code == 404
+
+
+def test_edit_athlete_asks_for_confirmation_before_withdrawing_it_from_a_category(client, athlete, category):
+    _login(client)
+    client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
+    url = f"/admin/atletas/{athlete['id']}/editar"
+
+    asked = client.post(url, data=_edit_athlete_form(athlete, weight_kg="50"), follow_redirects=False)
+
+    assert asked.status_code == 409
+    assert "Este cambio retira al atleta de: Cadete Hasta 45kg (Copa Nacional)" in asked.text
+    assert '<input type="hidden" name="confirm_withdrawal" value="true">' in asked.text
+    assert 'value="50.0"' in asked.text
+
+    confirmed = client.post(
+        url, data=_edit_athlete_form(athlete, weight_kg="50", confirm_withdrawal="true"), follow_redirects=False
+    )
+
+    assert confirmed.status_code == 303
+
+
+def test_edit_athlete_in_a_tournament_in_progress_shows_the_reason_without_a_confirm_button(
+    client, athlete, category, tournament
+):
+    _login(client)
+    client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
+    client.patch(f"/api/v1/tournaments/{tournament['id']}", json={"status": "in_progress"})
+
+    resp = client.post(f"/admin/atletas/{athlete['id']}/editar", data=_edit_athlete_form(athlete, weight_kg="50"))
+
+    assert resp.status_code == 400
+    assert "torneo en curso «Copa Nacional»" in resp.text
+    assert "Confirmar y retirar" not in resp.text
+
+
 def test_edit_club_via_admin(client, club):
     _login(client)
     client.post("/api/v1/clubs", json={"name": "Dojang Norte"})

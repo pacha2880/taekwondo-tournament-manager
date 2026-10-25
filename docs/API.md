@@ -89,6 +89,18 @@ curl -s -X POST $BASE/api/v1/matches/1/rounds -H "$AUTH" -H "$JSON" \
   -d '{"round_number": 1, "red_points": 12, "blue_points": 5}'
 ```
 
+## Editar un atleta
+
+`PATCH /api/v1/athletes/{id}` cambia solo los campos que se envían. Para quitar el CI se envía
+`"ci": null` (o `""`). Si el cambio de **género o peso** afecta inscripciones:
+
+- En un torneo **en curso**, si el nuevo género o peso ya no encaja en la categoría, responde `409` y no
+  cambia nada (la llave ya está sorteada). Si sigue encajando, se guarda.
+- En un torneo **en borrador**, si el nuevo género o peso ya no encaja en la categoría, responde `409` con
+  las categorías afectadas. Para aceptarlo hay que repetir la petición con `?confirm_withdrawal=true`: el
+  atleta se guarda con los datos nuevos y se lo retira de esas categorías.
+- En un torneo **finalizado** el cambio se permite y la inscripción queda como estaba.
+
 ## Errores
 
 Los errores de negocio responden `{"detail": "mensaje en español"}`: `400` (la petición no es válida en el

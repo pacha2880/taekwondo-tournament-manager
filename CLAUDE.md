@@ -36,6 +36,9 @@ de uso en `README.md` — este archivo no repite ese contenido, solo apunta a é
 - `app/services/scoring.py` — `record_round`: un round no puede empatar (422); el combate
   pasa a `FINISHED` (y dispara `advance_winner`) recién al llegar a
   `category.rounds_to_win` rounds ganados, no antes.
+- `app/services/eligibility.py` — `category_mismatch`: regla de género/peso de un atleta contra una
+  categoría; la usan la inscripción y la edición de atletas (`PATCH /athletes`, que retira de las
+  categorías de torneos en borrador donde ya no encaja, con confirmación). No duplicarla.
 - `app/web/admin.py` / `app/web/admin/` — pantalla admin (login por sesión,
   `SessionMiddleware`). **Sus handlers llaman directo a las funciones de `app/api/*.py`** (ej.
   `create_club_api = create_club`) en vez de reimplementar validaciones de negocio — son
