@@ -75,26 +75,11 @@ def test_create_athlete_requires_a_club_first(client):
     assert "Primero tenés que crear un club" in resp.text
 
 
-def _post_athlete(client, club, name, ci):
-    return client.post(
-        "/admin/atletas",
-        data={
-            "name": name,
-            "ci": ci,
-            "birth_date": "2012-01-01",
-            "gender": "male",
-            "belt_rank": "verde",
-            "weight_kg": "40",
-            "club_id": club["id"],
-        },
-        follow_redirects=False,
-    )
-
-
 def test_admin_athlete_list_shows_the_ci_only_when_there_is_one(client, club):
     _login(client)
-    _post_athlete(client, club, "Ana Con Cedula", "1234567")
-    _post_athlete(client, club, "Beto Sin Cedula", "  ")
+    form = {"birth_date": "2012-01-01", "gender": "male", "belt_rank": "verde", "weight_kg": "40", "club_id": club["id"]}
+    client.post("/admin/atletas", data={**form, "name": "Ana Con Cedula", "ci": "1234567"})
+    client.post("/admin/atletas", data={**form, "name": "Beto Sin Cedula", "ci": "  "})
 
     rows = client.get("/admin/atletas").text.split("</li>")
     [ana] = [row for row in rows if "Ana Con Cedula" in row]
@@ -126,7 +111,6 @@ def test_full_admin_workflow_creates_bracket_and_scores_a_match(client):
         "/admin/atletas",
         data={
             "name": "Atleta Uno",
-            "ci": "1000001",
             "birth_date": "2012-01-01",
             "gender": "male",
             "belt_rank": "verde",
@@ -140,7 +124,6 @@ def test_full_admin_workflow_creates_bracket_and_scores_a_match(client):
         "/admin/atletas",
         data={
             "name": "Atleta Dos",
-            "ci": "1000002",
             "birth_date": "2012-01-01",
             "gender": "male",
             "belt_rank": "verde",
