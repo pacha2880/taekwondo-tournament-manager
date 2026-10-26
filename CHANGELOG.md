@@ -24,6 +24,9 @@ funcionando sobre una base ya migrada.
   cumplir las reglas de la categoría (si sigue encajando, se guarda); en un torneo **en borrador**, si deja
   de cumplirlas hay que confirmar (`?confirm_withdrawal=true`; en el admin, botón "Confirmar y retirar") y
   se lo retira de ella; en un torneo **finalizado** se permite y la inscripción queda como estaba.
+- **Buscar atletas** por nombre o CI: `GET /api/v1/athletes?q=texto` y cuadro de búsqueda en la lista del
+  admin. Busca el texto dentro del nombre o del CI sin distinguir mayúsculas ni tildes (`perez` encuentra a
+  `Pérez`); sin `q` devuelve todos, como antes.
 - **Editar clubes**: `PATCH /api/v1/clubs/{id}` y botón "Editar" en el admin (el nombre sigue siendo único).
 
 ## [0.3.0] - 2026-10-22

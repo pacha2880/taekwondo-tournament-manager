@@ -457,3 +457,19 @@ curso`, con lo que ese caso desaparece (ver BACKLOG). Hasta entonces, no editar 
 categorías con llave en un torneo en borrador.
 
 **Club.** Solo cambia el nombre, que sigue siendo único (`409` si lo tiene otro club; el propio nombre no cuenta).
+
+## 2026-10-25 — Búsqueda de atletas (0.4.0)
+
+**Un parámetro `q` opcional en `GET /athletes`, usado también por el admin.** El admin llama a la misma función
+que la API (`list_athletes`), que delega en `app/services/athlete_search.py`; así hay una sola definición de
+"coincide". Sin `q` el comportamiento es el de siempre. Busca el texto *dentro* del nombre o del CI.
+
+**Se filtra en Python, no en SQL, para ignorar las tildes.** `ILIKE` ignora mayúsculas pero no tildes, y la
+extensión `unaccent` de Postgres no existe en SQLite. Se normaliza (NFD sin marcas combinantes, `casefold`) el
+texto buscado y el de cada atleta: `perez` encuentra a `Pérez`, y como efecto colateral `nunez` encuentra a
+`Núñez` (la `ñ` también se descompone). **Costo aceptado:** cada búsqueda carga todos los atletas en memoria;
+con cientos o pocos miles es imperceptible. Si el volumen crece, la salida es una columna de búsqueda
+normalizada en la base o `unaccent` en Postgres, no cambiar el contrato de la API.
+
+**Fuera de alcance, por decisión:** buscar por club y un filtro "solo sin CI" (la lista ya omite "CI" en quien
+no lo tiene).

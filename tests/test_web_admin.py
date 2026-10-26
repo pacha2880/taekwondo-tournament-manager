@@ -371,3 +371,43 @@ def test_edit_club_via_admin(client, club):
     assert duplicate.status_code == 400
     assert "Ya existe un club con ese nombre" in duplicate.text
     assert client.get("/admin/clubes/999/editar").status_code == 404
+
+
+def _admin_search(client, q):
+    return client.get("/admin/atletas", params={"q": q}).text
+
+
+def test_admin_search_passes_the_text_to_the_api_keeps_it_and_offers_to_clear(client, club):
+    _login(client)
+    for name, ci in [("Ana Pérez", "1234567"), ("Luis Núñez", "7654321")]:
+        client.post("/api/v1/athletes", json={**_athlete_json(club), "name": name, "ci": ci})
+
+    searched = _admin_search(client, "perez")
+    unfiltered = client.get("/admin/atletas").text
+
+    assert "Ana Pérez" in searched
+    assert "Luis Núñez" not in searched
+    assert 'value="perez"' in searched
+    assert ">Limpiar</a>" in searched
+    assert "Luis Núñez" in unfiltered
+    assert "Limpiar" not in unfiltered
+
+
+def test_admin_search_without_matches_says_so_and_escapes_the_text(client):
+    _login(client)
+
+    page = _admin_search(client, "<b>x</b>")
+
+    assert "Ningún atleta coincide con «&lt;b&gt;x&lt;/b&gt;»" in page
+    assert "<b>x</b>" not in page
+
+
+def _athlete_json(club):
+    return {
+        "name": "X",
+        "birth_date": "2012-01-01",
+        "gender": "male",
+        "belt_rank": "verde",
+        "weight_kg": 40,
+        "club_id": club["id"],
+    }

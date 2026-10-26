@@ -106,7 +106,7 @@ edición de atletas ni de clubes, así que cada ítem de editar se hace **en la 
 - [x] Editar atleta (API y admin). Reglas al cambiar género o peso con inscripciones: torneo en
       curso lo bloquea si deja de encajar; en borrador retira de las categorías donde ya no encaja, con confirmación;
       finalizado lo permite. Ver `docs/DECISIONS.md`, 2026-10-24.
-- [ ] Buscar atleta por CI o por nombre en la pantalla admin de atletas.
+- [x] Buscar atleta por CI o por nombre (admin y `GET /athletes?q=`), sin distinguir mayúsculas ni tildes.
 - [x] Editar club (API y admin).
 
 ## 0.5.0 — Admin más seguro, parte B (sin cambios de API ni de base de datos)

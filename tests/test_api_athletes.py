@@ -278,3 +278,53 @@ def test_only_draft_tournaments_withdraw_the_athlete(client, athlete, category, 
     assert resp.status_code == 200
     assert len(_registrations(client, category)) == 1
     assert _registrations(client, next_category) == []
+
+
+@pytest.fixture()
+def searchable_athletes(client, club):
+    people = [
+        ("Ana Pérez", "1234567"),
+        ("Luis Núñez", "7654321-1A"),
+        ("María Quispe", None),
+    ]
+    for name, ci in people:
+        client.post("/api/v1/athletes", json=_athlete_payload(club, name=name, ci=ci))
+
+
+def _search(client, q):
+    resp = client.get("/api/v1/athletes", params={"q": q})
+    assert resp.status_code == 200
+    return [athlete["name"] for athlete in resp.json()]
+
+
+def test_list_without_q_returns_everyone_ordered_by_name(client, searchable_athletes):
+    assert [a["name"] for a in client.get("/api/v1/athletes").json()] == ["Ana Pérez", "Luis Núñez", "María Quispe"]
+
+
+@pytest.mark.parametrize("q", ["", "   "])
+def test_blank_q_does_not_filter(client, searchable_athletes, q):
+    assert len(_search(client, q)) == 3
+
+
+@pytest.mark.parametrize("q", ["perez", "PÉREZ", "pérez", "  ana  ", "a pe"])
+def test_search_by_name_ignores_case_and_accents(client, searchable_athletes, q):
+    assert _search(client, q) == ["Ana Pérez"]
+
+
+def test_search_accents_in_the_query_match_unaccented_text_and_vice_versa(client, searchable_athletes):
+    assert _search(client, "nunez") == ["Luis Núñez"]
+    assert _search(client, "núñez") == ["Luis Núñez"]
+
+
+@pytest.mark.parametrize("q", ["1234567", "2345", "7654321-1a", "-1A"])
+def test_search_by_ci_matches_part_of_the_number(client, searchable_athletes, q):
+    assert len(_search(client, q)) == 1
+
+
+def test_search_without_matches_returns_an_empty_list(client, searchable_athletes):
+    assert _search(client, "zzz") == []
+
+
+def test_athletes_without_ci_are_found_by_name_but_never_by_none(client, searchable_athletes):
+    assert _search(client, "quispe") == ["María Quispe"]
+    assert _search(client, "none") == []

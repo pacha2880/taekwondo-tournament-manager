@@ -8,6 +8,7 @@ from app.auth import ADMIN_ONLY
 from app.database import get_db
 from app.models import Athlete, TournamentStatus
 from app.schemas import AthleteCreate, AthleteRead, AthleteUpdate
+from app.services.athlete_search import search_athletes
 from app.services.eligibility import category_mismatch
 
 router = APIRouter(prefix="/api/v1/athletes", tags=[TAG_ATHLETES])
@@ -96,11 +97,20 @@ def create_athlete(payload: AthleteCreate, db: Session = Depends(get_db)):
     response_model=list[AthleteRead],
     dependencies=ADMIN_ONLY,
     summary="Listar atletas",
-    description="Devuelve todos los atletas con su club, ordenados por nombre. Incluye fecha de nacimiento y peso, por eso requiere token.",
+    description=(
+        "Devuelve los atletas con su club, ordenados por nombre. Con `q` solo devuelve los que contienen ese "
+        "texto en el nombre o en el CI, sin distinguir mayúsculas ni tildes (`perez` encuentra a `Pérez`). "
+        "Incluye fecha de nacimiento y peso, por eso requiere token."
+    ),
     responses=errors(auth=True),
 )
-def list_athletes(db: Session = Depends(get_db)):
-    return db.scalars(select(Athlete).order_by(Athlete.name)).all()
+def list_athletes(
+    q: str | None = Query(
+        default=None, description="Texto a buscar en el nombre o en el CI. Si se omite o está vacío, devuelve todos."
+    ),
+    db: Session = Depends(get_db),
+):
+    return search_athletes(db, q)
 
 
 @router.get(

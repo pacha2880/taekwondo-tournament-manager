@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.api.athletes import WithdrawalNotConfirmed
 from app.api.athletes import create_athlete as create_athlete_api
+from app.api.athletes import list_athletes as list_athletes_api
 from app.api.athletes import get_athlete_or_404
 from app.api.athletes import update_athlete as update_athlete_api
 from app.database import get_db
@@ -17,22 +18,25 @@ from app.web.templating import templates
 router = APIRouter(dependencies=[Depends(require_admin)])
 
 
-def _render_athletes(request: Request, db: Session, error: str | None = None, status_code: int = 200):
+def _render_athletes(
+    request: Request, db: Session, error: str | None = None, status_code: int = 200, q: str = ""
+):
     return templates.TemplateResponse(
         request,
         "admin/atletas.html",
         {
-            "athletes": db.scalars(select(Athlete).order_by(Athlete.name)).all(),
+            "athletes": list_athletes_api(q, db),
             "clubs": db.scalars(select(Club).order_by(Club.name)).all(),
             "error": error,
+            "q": q.strip(),
         },
         status_code=status_code,
     )
 
 
 @router.get("/atletas")
-def athletes_view(request: Request, db: Session = Depends(get_db)):
-    return _render_athletes(request, db)
+def athletes_view(request: Request, q: str = "", db: Session = Depends(get_db)):
+    return _render_athletes(request, db, q=q)
 
 
 @router.post("/atletas")

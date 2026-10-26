@@ -89,6 +89,11 @@ curl -s -X POST $BASE/api/v1/matches/1/rounds -H "$AUTH" -H "$JSON" \
   -d '{"round_number": 1, "red_points": 12, "blue_points": 5}'
 ```
 
+## Buscar atletas
+
+`GET /api/v1/athletes?q=texto` devuelve solo los atletas cuyo nombre o CI contienen el texto, sin distinguir
+mayúsculas ni tildes (`perez` encuentra a `Pérez`). Sin `q`, o con `q` vacío, devuelve todos.
+
 ## Editar un atleta
 
 `PATCH /api/v1/athletes/{id}` cambia solo los campos que se envían. Para quitar el CI se envía
