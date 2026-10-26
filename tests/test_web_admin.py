@@ -436,3 +436,118 @@ def test_admin_pages_include_the_confirmation_modal(client):
 
     assert 'id="confirm-modal"' in client.get("/admin").text
 
+
+def test_create_club_form_keeps_the_typed_name_when_it_fails(client, club):
+    _login(client)
+
+    resp = client.post("/admin/clubes", data={"name": club["name"]})  # nombre ya usado
+
+    assert resp.status_code == 400
+    assert f'required value="{club["name"]}"' in resp.text
+
+
+def test_create_athlete_form_keeps_everything_typed_when_the_ci_is_taken(client, club, athlete):
+    _login(client)
+
+    resp = client.post(
+        "/admin/atletas",
+        data={
+            "name": "Otra Persona",
+            "ci": athlete["ci"],  # CI de otro atleta
+            "birth_date": "2011-02-03",
+            "gender": "female",
+            "belt_rank": "azul",
+            "weight_kg": "37.5",
+            "club_id": club["id"],
+        },
+    )
+
+    assert resp.status_code == 400
+    assert "Ya existe un atleta con ese CI" in resp.text
+    for typed in (
+        'value="Otra Persona"',
+        f'value="{athlete["ci"]}"',
+        'value="2011-02-03"',
+        'value="azul"',
+        'value="37.5"',
+        '<option value="female" selected>',
+        f'<option value="{club["id"]}" selected>',
+    ):
+        assert typed in resp.text
+
+
+def test_create_tournament_form_keeps_the_typed_values_when_it_fails(client):
+    _login(client)
+
+    # fecha imposible
+    resp = client.post("/admin/torneos", data={"name": "Copa Rota", "date": "2026-13-45", "location": "Oruro"})
+
+    assert resp.status_code == 400
+    for typed in ('value="Copa Rota"', 'value="2026-13-45"', 'value="Oruro"'):
+        assert typed in resp.text
+
+
+def test_create_category_form_keeps_the_typed_values_when_it_fails(client, tournament):
+    _login(client)
+
+    resp = client.post(
+        f"/admin/torneos/{tournament['id']}/categorias",
+        data={
+            "age_label": "Juvenil",
+            "min_age": "15",
+            "max_age": "17",
+            "gender": "female",
+            "belt_group": "black",
+            "weight_label": "Hasta 55kg",
+            "min_weight": "60",  # mínimo mayor que el máximo
+            "max_weight": "55",
+        },
+    )
+
+    assert resp.status_code == 400
+    for typed in (
+        'value="Juvenil"',
+        'value="15"',
+        'value="17"',
+        '<option value="female" selected>',
+        '<option value="black" selected>',
+        'value="Hasta 55kg"',
+        'value="60.0"',
+        'value="55.0"',
+    ):
+        assert typed in resp.text
+
+
+def test_registration_form_keeps_the_selected_athlete_when_it_fails(client, club, category):
+    heavy = client.post(
+        "/api/v1/athletes",
+        json={
+            "name": "Pesado Perez",
+            "ci": "7777777",
+            "birth_date": "2012-01-01",
+            "gender": "male",
+            "belt_rank": "verde",
+            "weight_kg": 50,  # la categoría admite hasta 45 kg
+            "club_id": club["id"],
+        },
+    ).json()
+    _login(client)
+
+    resp = client.post(f"/admin/categorias/{category['id']}/inscripciones", data={"athlete_id": heavy["id"]})
+
+    assert resp.status_code == 400
+    assert "El peso del atleta es mayor al máximo" in resp.text
+    assert f'<option value="{heavy["id"]}" selected>' in resp.text
+
+
+def test_round_form_keeps_the_typed_points_when_it_fails(client, club, category, register_n_athletes):
+    register_n_athletes(client, club, category, 2)
+    match = client.post(f"/api/v1/categories/{category['id']}/bracket").json()["matches"][0]
+    _login(client)
+
+    # un round no puede empatar
+    resp = client.post(f"/admin/combates/{match['id']}/rounds", data={"red_points": "7", "blue_points": "7"})
+
+    assert resp.status_code == 400
+    assert "empate" in resp.text
+    assert resp.text.count('value="7"') == 2

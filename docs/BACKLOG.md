@@ -118,6 +118,8 @@ La parte A (selector filtrado, botón "Torneos", colores de estado) salió en la
       club, atleta, torneo, categoría; inscribir; generar llave; cargar round; editar atleta y
       club; cambiar el estado del torneo; cerrar sesión). La de rounds avisa que no se pueden editar
       después. Un test falla si un formulario nuevo no la declara.
+- [x] Cuando un formulario del admin falla (CI repetido, rango inválido…), se vuelve a mostrar con
+      todo lo que se había escrito en vez de vaciarse. Es una regla para todo formulario nuevo.
 
 ## 0.6.0 — Ciclo de vida del torneo (cambia el comportamiento de la API)
 

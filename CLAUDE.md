@@ -46,7 +46,8 @@ de uso en `README.md` — este archivo no repite ese contenido, solo apunta a é
   explícito. Cada handler atrapa `HTTPException`/`ValidationError` y re-renderiza la página
   con el error en español en vez de devolver JSON crudo. Todo `<form method="post">` de las
   plantillas admin lleva `data-confirm` (ventana de confirmación de `admin/base.html`);
-  `tests/test_admin_confirmations.py` falla si falta.
+  `tests/test_admin_confirmations.py` falla si falta. Si un formulario falla, se vuelve a mostrar con lo
+  escrito: `echo_form(...)` en el manejador y `form.<campo>` en la plantilla (nunca vacío).
 - `app/web/labels.py` — traducción de enums a español (filtro Jinja `es_label` y
   `match_status_badge_class`). `app/web/templating.py` — único entorno Jinja2 compartido
   (filtros + versión global); no crear otro.

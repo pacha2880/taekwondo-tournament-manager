@@ -10,16 +10,21 @@ from app.api.clubs import update_club as update_club_api
 from app.database import get_db
 from app.models import Club
 from app.schemas import ClubCreate, ClubUpdate
-from app.web.admin._shared import error_message, require_admin
+from app.web.admin._shared import echo_form, error_message, require_admin
 from app.web.templating import templates
 
 router = APIRouter(dependencies=[Depends(require_admin)])
 
 
-def _render_clubs(request: Request, db: Session, error: str | None = None, status_code: int = 200):
+def _render_clubs(
+    request: Request, db: Session, error: str | None = None, status_code: int = 200, form: dict | None = None
+):
     clubs = db.scalars(select(Club).order_by(Club.name)).all()
     return templates.TemplateResponse(
-        request, "admin/clubes.html", {"clubs": clubs, "error": error}, status_code=status_code
+        request,
+        "admin/clubes.html",
+        {"clubs": clubs, "error": error, "form": form or {}},
+        status_code=status_code,
     )
 
 
@@ -33,7 +38,7 @@ def create_club_view(request: Request, name: str = Form(...), db: Session = Depe
     try:
         create_club_api(ClubCreate(name=name), db)
     except (HTTPException, ValidationError) as exc:
-        return _render_clubs(request, db, error_message(exc), status_code=400)
+        return _render_clubs(request, db, error_message(exc), status_code=400, form=echo_form(name=name))
     return RedirectResponse(url="/admin/clubes", status_code=303)
 
 

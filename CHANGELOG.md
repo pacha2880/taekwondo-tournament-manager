@@ -24,6 +24,8 @@ funcionando sobre una base ya migrada.
   round repetido.
 - En el admin, el formulario de resultados muestra el número del round como texto fijo en vez de un
   campo editable.
+- Si un formulario del admin falla (por ejemplo, un CI repetido), se vuelve a mostrar con todo lo que se
+  había escrito en vez de vaciarse.
 
 ## [0.4.0] - 2026-10-25
 

@@ -19,3 +19,8 @@ def error_message(exc: Exception) -> str:
             f"{e['loc'][-1]}: {e['msg']}" if e["loc"] else e["msg"] for e in exc.errors()
         )
     return str(exc)
+
+
+def echo_form(**values) -> dict:
+    """Valores enviados, para volver a mostrarlos en el formulario si falla (None se muestra vacío)."""
+    return {name: "" if value is None else value for name, value in values.items()}

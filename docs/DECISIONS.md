@@ -506,6 +506,11 @@ ya avisa «Este cambio retira al atleta de…» no abre una segunda ventana. Com
 JavaScript, `tests/test_admin_confirmations.py` revisa en las plantillas que ningún formulario POST nuevo
 olvide el atributo, y el comportamiento de la ventana se verificó a mano en el navegador.
 
+**Un formulario que falla conserva lo escrito.** Cada manejador de creación pasa lo que recibió con
+`echo_form(...)` (`app/web/admin/_shared.py`, convierte `None` en vacío) y la plantilla lo vuelve a poner en
+los campos (`form.<campo>`); en los `<select>` se marca la opción elegida. Es solo de la vista: la API no
+cambia. Es una regla para todo formulario nuevo del admin; los de editar ya lo hacían.
+
 **No se agrega corrección de rounds ya cargados.** Era la decisión pendiente del backlog: se resolvió que
 alcanza con el número fijo y la confirmación con los puntos a la vista. Corregir un round obligaría a
 reabrir el combate y a deshacer el avance del ganador, que es el cambio con más riesgo de dejar datos
