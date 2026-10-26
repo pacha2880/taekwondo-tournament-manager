@@ -92,9 +92,6 @@ Detalle completo del porqué en `docs/DECISIONS.md` (entrada 2026-10-16). Cinco 
 - [x] **Extra, al final: `docs/API.md`**, corto — cómo leer una llave (`round_number`, `slot`,
       rojo/azul, `next_match_id`, pases directos) y un ejemplo de flujo con `curl`. No duplica lo
       que ya dice `/docs`; lo enlaza.
-- [ ] Evaluar, con el feedback real del frontend externo, el endpoint agregado para el detalle de
-      categoría (ver el ítem de "Más adelante"): el disparador que lo condicionaba
-      —un frontend separado— ya ocurrió.
 
 ## 0.4.0 — Datos de atletas y clubes (única migración de esquema, aditiva)
 
@@ -103,13 +100,14 @@ camino commit → push → deploy → migración → rollback antes de los cambi
 También la necesita el frontend externo en su etapa de administración: hoy la API no tiene
 edición de atletas ni de clubes, así que cada ítem de editar se hace **en la API y en el admin**.
 
-- [ ] Campo CI (documento de identidad) único por atleta. Columna **nullable** en la base
-      (los atletas ya cargados no tienen CI; en Postgres y SQLite un índice único admite
-      varios `NULL`), obligatoria en el formulario de alta.
-- [ ] Editar atleta (hoy solo se puede crear; un error de tipeo no se puede corregir sin SQL).
-      Permite completar el CI de los atletas existentes.
-- [ ] Buscar atleta por CI o por nombre en la pantalla admin de atletas.
-- [ ] Editar club (a confirmar si hace falta).
+- [x] Campo CI (documento de identidad) **opcional** (hay niños sin CI, confirmado con el cliente) y
+      único cuando se informa, con formato `^\d{5,9}(?:-[0-9A-Z]{2})?$` (5 a 9 dígitos y complemento
+      opcional; sin lugar de expedición). Los atletas ya cargados quedan sin CI.
+- [x] Editar atleta (API y admin). Reglas al cambiar género o peso con inscripciones: torneo en
+      curso lo bloquea si deja de encajar; en borrador retira de las categorías donde ya no encaja, con confirmación;
+      finalizado lo permite. Ver `docs/DECISIONS.md`, 2026-10-24.
+- [x] Buscar atleta por CI o por nombre (admin y `GET /athletes?q=`), sin distinguir mayúsculas ni tildes.
+- [x] Editar club (API y admin).
 
 ## 0.5.0 — Admin más seguro, parte B (sin cambios de API ni de base de datos)
 
@@ -152,7 +150,9 @@ consistente con el resto del proyecto.
       duda de "generar todas las llaves automático al activar": no hace falta, porque el
       admin sigue generando cada llave a mano, categoría por categoría, pero recién puede
       hacerlo después de pasar a `en curso` — el orden queda forzado por esta regla, sin
-      necesidad de automatizar nada.
+      necesidad de automatizar nada. Además cierra un hueco de la 0.4.0: `PATCH /athletes` retira
+      a un atleta de una categoría de un torneo en borrador sin mirar si ya tiene llave, porque con
+      esta regla un torneo en borrador nunca tendrá llave.
 - [ ] Solo se puede mover a `FINISHED` cuando **todos** los matches de **todas** las
       categorías del torneo llegaron a un estado terminal. Ojo con el detalle: un bye nunca
       pasa a `MatchStatus.FINISHED` (se queda en `BYE` para siempre, ver `app/models.py`),

@@ -75,6 +75,20 @@ def test_create_athlete_requires_a_club_first(client):
     assert "Primero tenés que crear un club" in resp.text
 
 
+def test_admin_athlete_list_shows_the_ci_only_when_there_is_one(client, club):
+    _login(client)
+    form = {"birth_date": "2012-01-01", "gender": "male", "belt_rank": "verde", "weight_kg": "40", "club_id": club["id"]}
+    client.post("/admin/atletas", data={**form, "name": "Ana Con Cedula", "ci": "1234567"})
+    client.post("/admin/atletas", data={**form, "name": "Beto Sin Cedula", "ci": "  "})
+
+    rows = client.get("/admin/atletas").text.split("</li>")
+    [ana] = [row for row in rows if "Ana Con Cedula" in row]
+    [beto] = [row for row in rows if "Beto Sin Cedula" in row]
+
+    assert "CI 1234567" in ana
+    assert "CI" not in beto
+
+
 def test_full_admin_workflow_creates_bracket_and_scores_a_match(client):
     _login(client)
     club_resp = client.post("/admin/clubes", data={"name": "Dojang Flujo"}, follow_redirects=False)
@@ -282,3 +296,118 @@ def _extract_match_id(category_page_html: str) -> str:
     start = category_page_html.index(marker) + len(marker)
     end = category_page_html.index("/rounds", start)
     return category_page_html[start:end]
+
+
+def _edit_athlete_form(athlete, **overrides):
+    form = {
+        "name": athlete["name"],
+        "ci": athlete["ci"] or "",
+        "birth_date": athlete["birth_date"],
+        "gender": athlete["gender"],
+        "belt_rank": athlete["belt_rank"],
+        "weight_kg": str(athlete["weight_kg"]),
+        "club_id": str(athlete["club"]["id"]),
+    }
+    return {**form, **overrides}
+
+
+def test_edit_athlete_page_is_linked_from_the_list_and_prefilled(client, athlete):
+    _login(client)
+
+    assert f'href="/admin/atletas/{athlete["id"]}/editar"' in client.get("/admin/atletas").text
+    page = client.get(f"/admin/atletas/{athlete['id']}/editar").text
+
+    for field in ('value="Juan Perez"', 'value="1234567"', 'value="2012-05-01"', 'value="verde"', 'value="40.5"'):
+        assert field in page
+    assert '<option value="male" selected>' in page
+    assert f'<option value="{athlete["club"]["id"]}" selected>' in page
+    assert client.get("/admin/atletas/999/editar").status_code == 404
+
+
+def test_edit_athlete_asks_for_confirmation_before_withdrawing_it_from_a_category(client, athlete, category):
+    _login(client)
+    client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
+    url = f"/admin/atletas/{athlete['id']}/editar"
+
+    asked = client.post(url, data=_edit_athlete_form(athlete, weight_kg="50"), follow_redirects=False)
+
+    assert asked.status_code == 409
+    assert "Este cambio retira al atleta de: Cadete Hasta 45kg (Copa Nacional)" in asked.text
+    assert '<input type="hidden" name="confirm_withdrawal" value="true">' in asked.text
+    assert 'value="50.0"' in asked.text
+
+    confirmed = client.post(
+        url, data=_edit_athlete_form(athlete, weight_kg="50", confirm_withdrawal="true"), follow_redirects=False
+    )
+
+    assert confirmed.status_code == 303
+
+
+def test_edit_athlete_in_a_tournament_in_progress_shows_the_reason_without_a_confirm_button(
+    client, athlete, category, tournament
+):
+    _login(client)
+    client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
+    client.patch(f"/api/v1/tournaments/{tournament['id']}", json={"status": "in_progress"})
+
+    resp = client.post(f"/admin/atletas/{athlete['id']}/editar", data=_edit_athlete_form(athlete, weight_kg="50"))
+
+    assert resp.status_code == 400
+    assert "torneo en curso «Copa Nacional»" in resp.text
+    assert "Confirmar y retirar" not in resp.text
+
+
+def test_edit_club_via_admin(client, club):
+    _login(client)
+    client.post("/api/v1/clubs", json={"name": "Dojang Norte"})
+
+    assert f'href="/admin/clubes/{club["id"]}/editar"' in client.get("/admin/clubes").text
+    assert f'value="{club["name"]}"' in client.get(f"/admin/clubes/{club['id']}/editar").text
+
+    saved = client.post(f"/admin/clubes/{club['id']}/editar", data={"name": "Dojang Renovado"}, follow_redirects=False)
+    duplicate = client.post(f"/admin/clubes/{club['id']}/editar", data={"name": "Dojang Norte"})
+
+    assert saved.status_code == 303
+    assert duplicate.status_code == 400
+    assert "Ya existe un club con ese nombre" in duplicate.text
+    assert client.get("/admin/clubes/999/editar").status_code == 404
+
+
+def _admin_search(client, q):
+    return client.get("/admin/atletas", params={"q": q}).text
+
+
+def test_admin_search_passes_the_text_to_the_api_keeps_it_and_offers_to_clear(client, club):
+    _login(client)
+    for name, ci in [("Ana Pérez", "1234567"), ("Luis Núñez", "7654321")]:
+        client.post("/api/v1/athletes", json={**_athlete_json(club), "name": name, "ci": ci})
+
+    searched = _admin_search(client, "perez")
+    unfiltered = client.get("/admin/atletas").text
+
+    assert "Ana Pérez" in searched
+    assert "Luis Núñez" not in searched
+    assert 'value="perez"' in searched
+    assert ">Limpiar</a>" in searched
+    assert "Luis Núñez" in unfiltered
+    assert "Limpiar" not in unfiltered
+
+
+def test_admin_search_without_matches_says_so_and_escapes_the_text(client):
+    _login(client)
+
+    page = _admin_search(client, "<b>x</b>")
+
+    assert "Ningún atleta coincide con «&lt;b&gt;x&lt;/b&gt;»" in page
+    assert "<b>x</b>" not in page
+
+
+def _athlete_json(club):
+    return {
+        "name": "X",
+        "birth_date": "2012-01-01",
+        "gender": "male",
+        "belt_rank": "verde",
+        "weight_kg": 40,
+        "club_id": club["id"],
+    }

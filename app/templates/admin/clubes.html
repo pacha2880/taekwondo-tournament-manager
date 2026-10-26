@@ -7,7 +7,10 @@
   <div class="col-md-6">
     <ul class="list-group mb-4">
       {% for c in clubs %}
-      <li class="list-group-item">{{ c.name }}</li>
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        {{ c.name }}
+        <a href="/admin/clubes/{{ c.id }}/editar" class="btn btn-sm btn-outline-secondary">Editar</a>
+      </li>
       {% else %}
       <li class="list-group-item text-muted">Todavía no hay clubes.</li>
       {% endfor %}

@@ -68,8 +68,8 @@ repo; las migraciones corren solas al arrancar). Variables de entorno en Render:
 | `APP_ENV` | `production` — la app se niega a arrancar si `SECRET_KEY` o `ADMIN_PASSWORD` quedaron con el valor por defecto, o si `CORS_ORIGINS` contiene `*`. `staging` exige las mismas credenciales pero sí permite `CORS_ORIGINS=*` (para el servicio `dev`, que prueba contra frontends externos) |
 | `CORS_ORIGINS` | (opcional) orígenes de los frontends autorizados a llamar a la API desde el navegador, separados por comas; sin definir no se permite ninguno |
 
-Render define `PORT` por su cuenta. Si `SECRET_KEY` mide menos de 32 bytes, la app lo avisa en los
-logs al arrancar (nunca imprime el valor); generá una buena con
+Render define `PORT` por su cuenta. Si `SECRET_KEY` mide menos de 32 bytes, la app se niega a
+arrancar (nunca imprime el valor); generá una buena con
 `python3 -c "import secrets; print(secrets.token_urlsafe(48))"`. Plan gratis: el servicio se duerme tras ~15 min sin tráfico
 y la primera visita siguiente tarda ~30-50 s.
 

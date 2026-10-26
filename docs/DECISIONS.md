@@ -397,3 +397,86 @@ propias (ahí `staging` es tan estricto como `production`), pero el rechazo de `
 siendo exclusivo de `production` — es la única excepción real que necesitaba el servicio `dev`.
 `warn_if_short_secret_key` también pasa a mirar `DEPLOYED_ENVIRONMENTS` en vez de solo `production`,
 por la misma razón: un `staging` público con una clave corta es tan riesgoso como uno en producción.
+
+## 2026-10-23 — CI del atleta (0.4.0)
+
+**Opcional y único cuando existe.** Se había planteado obligatorio, pero el cliente confirmó que hay niños
+pequeños sin CI, así que el campo es opcional en la base, en la API y en el admin. Una columna `NULL`able con
+índice único admite varios `NULL` en SQLite y en Postgres, de modo que hay un solo criterio en todas las
+capas y la migración solo agrega. Los atletas ya cargados quedan sin CI (no se inventan valores de relleno,
+que además podrían chocar con un CI real). Omitir el campo, enviar `null` o enviar texto
+vacío o en blanco (`""`) significan lo mismo, "sin CI", en la API y en el admin: lo resuelve el validador de
+`app/schemas.py`, un solo lugar. Las respuestas siempre devuelven `null`.
+
+**Formato: `[0-9]{5,9}(?:-[0-9A-Z]{2})?`.** Se pidió esta expresión y se revisó si alcanza. Cubre el CI
+boliviano (número de 5 a 9 dígitos) y el complemento que se agrega para distinguir a dos personas con el mismo
+número. Dos ajustes: (1) `[0-9]` en lugar de `\d`, porque en Python `\d` acepta dígitos de otros alfabetos
+(por ejemplo árabe-índicos); (2) antes de validar se recortan espacios y se pasa a mayúsculas, así
+`1234567-1a` no se rechaza ni se duplica. La unicidad es sobre el texto completo, porque el mismo número con
+otro complemento es otra persona. **Limitación aceptada:** no admite CI de extranjeros con otros formatos ni
+pasaportes. Si aparece el caso, se relaja la regla en `CI_REGEX` (`app/schemas.py`), que es el único lugar
+donde está definida; el `pattern` se publica en el esquema OpenAPI para que el frontend externo valide igual.
+
+**Mensaje en español sin `Field(pattern=...)`.** Con `pattern`, Pydantic responde en inglés ("String should
+match pattern"); un validador (`AfterValidator`) con `ValueError` da el mensaje en español que ve el admin. El `pattern`
+se publica aparte con `json_schema_extra`, a partir de la misma constante.
+
+## 2026-10-24 — Editar atletas y clubes (0.4.0)
+
+**`PATCH` con campos opcionales, igual que el de torneos.** Lo que no se envía no cambia y un `null` se ignora,
+con una excepción: `ci`, donde `null` o `""` significa "borrar el CI" (se distingue de "no enviado" con
+`exclude_unset`). El club del atleta se puede cambiar: corrige un error de carga o un traspaso, y las llaves
+solo guardan nombres. La normalización del CI quedó en un tipo anotado (`NormalizedCi`) que comparten el alta y
+la edición.
+
+**Qué pasa al cambiar género o peso de un atleta inscrito** (la inscripción valida género y peso contra la
+categoría; la edad no se valida, así que la fecha de nacimiento se edita siempre). La regla sale de la idea de
+que cada inscripción pertenece a un torneo con un estado:
+
+- **En curso:** se rechaza (`409`) si el nuevo valor ya no encaja en la categoría: no hay retiro posible
+  porque la llave ya está sorteada, y sacarlo cambiaría las reglas del juego a mitad. Si sigue encajando se
+  permite, igual que en borrador: no cambia la categoría ni la llave, y bloquearlo impediría corregir un
+  error de tipeo o actualizar el peso para un torneo siguiente hasta que este termine.
+- **En borrador:** si el nuevo género o peso ya no encaja en la categoría, se retira al atleta de ella, previa
+  confirmación. Si sigue encajando no pasa nada: corregir un peso de 40 a 41 kg no debe sacarlo de ningún lado.
+- **Finalizado:** se permite y no se toca la inscripción. El torneo ya es historia y el niño puede crecer para
+  los siguientes; la inscripción antigua no se revalida ni se borra.
+
+**Confirmación en dos pasos, sin estado en el servidor.** La API no tiene popups: si el cambio retiraría al
+atleta de alguna categoría y no viene `confirm_withdrawal=true`, responde `409` con la lista de categorías y no
+cambia nada; repetida con el parámetro, aplica el cambio y borra esas inscripciones. El admin usa la misma
+función: vuelve a mostrar el formulario con el aviso (la excepción `WithdrawalNotConfirmed` lo distingue de los
+demás `409`) y un botón "Confirmar y retirar" que reenvía el formulario con el parámetro. La validación de
+género y peso se extrajo de `create_registration` a `app/services/eligibility.py` para que la inscripción y la
+edición usen una sola regla.
+
+**Hueco conocido hasta la 0.6.0: llaves en torneos en borrador.** Hoy se puede generar una llave en un torneo en
+borrador; si luego se retira a un atleta de esa categoría, la llave queda apuntando a un atleta que ya no está
+inscrito. No se agregó un chequeo ni el borrado de la llave porque la 0.6.0 prohíbe generarla fuera de `en
+curso`, con lo que ese caso desaparece (ver BACKLOG). Hasta entonces, no editar género o peso de atletas de
+categorías con llave en un torneo en borrador.
+
+**Club.** Solo cambia el nombre, que sigue siendo único (`409` si lo tiene otro club; el propio nombre no cuenta).
+
+## 2026-10-25 — Búsqueda de atletas (0.4.0)
+
+**Un parámetro `q` opcional en `GET /athletes`, usado también por el admin.** El admin llama a la misma función
+que la API (`list_athletes`), que delega en `app/services/athlete_search.py`; así hay una sola definición de
+"coincide". Sin `q` el comportamiento es el de siempre. Busca el texto *dentro* del nombre o del CI.
+
+**Se filtra en Python, no en SQL, para ignorar las tildes.** `ILIKE` ignora mayúsculas pero no tildes, y la
+extensión `unaccent` de Postgres no existe en SQLite. Se normaliza (NFD sin marcas combinantes, `casefold`) el
+texto buscado y el de cada atleta: `perez` encuentra a `Pérez`, y como efecto colateral `nunez` encuentra a
+`Núñez` (la `ñ` también se descompone). **Costo aceptado:** cada búsqueda carga todos los atletas en memoria;
+con cientos o pocos miles es imperceptible. Si el volumen crece, la salida es una columna de búsqueda
+normalizada en la base o `unaccent` en Postgres, no cambiar el contrato de la API.
+
+**Fuera de alcance, por decisión:** buscar por club y un filtro "solo sin CI" (la lista ya omite "CI" en quien
+no lo tiene).
+
+## 2026-10-25 — `SECRET_KEY` corta: de aviso a error
+
+Con `APP_ENV=production` o `staging`, un `SECRET_KEY` de menos de 32 bytes ahora impide arrancar, igual que
+las credenciales por defecto: un aviso en los logs es fácil de pasar por alto. Es el endurecimiento que preveía
+la entrada de la 0.2.0. Antes de desplegarlo hay que confirmar que las claves de Render (`dev` y producción)
+miden 32 bytes o más; si no, el deploy queda caído hasta cambiarlas.

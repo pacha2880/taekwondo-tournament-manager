@@ -1,0 +1,24 @@
+{% extends "admin/base.html" %}
+{% block title %}Editar club{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/admin/clubes">Clubes</a></li>
+    <li class="breadcrumb-item active">Editar {{ club.name }}</li>
+  </ol>
+</nav>
+<h1 class="mb-4">Editar club</h1>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+<div class="row">
+  <div class="col-md-6">
+    <form method="post" action="/admin/clubes/{{ club.id }}/editar">
+      <div class="mb-3">
+        <label class="form-label">Nombre</label>
+        <input type="text" name="name" class="form-control" required value="{{ name }}">
+      </div>
+      <button type="submit" class="btn btn-primary">Guardar</button>
+      <a href="/admin/clubes" class="btn btn-link">Cancelar</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -76,7 +76,7 @@ curl -s -X POST $BASE/api/v1/categories -H "$AUTH" -H "$JSON" \
 
 # 3) Atletas e inscripciones (repetir por cada atleta)
 curl -s -X POST $BASE/api/v1/athletes -H "$AUTH" -H "$JSON" \
-  -d '{"name": "Mateo Quispe", "birth_date": "2012-03-14", "gender": "male",
+  -d '{"name": "Mateo Quispe", "ci": "1234567", "birth_date": "2012-03-14", "gender": "male",
        "belt_rank": "verde", "weight_kg": 38.5, "club_id": 1}'
 curl -s -X POST $BASE/api/v1/registrations -H "$AUTH" -H "$JSON" -d '{"athlete_id": 1, "category_id": 1}'
 
@@ -88,6 +88,23 @@ curl -s $BASE/api/v1/categories/1/bracket
 curl -s -X POST $BASE/api/v1/matches/1/rounds -H "$AUTH" -H "$JSON" \
   -d '{"round_number": 1, "red_points": 12, "blue_points": 5}'
 ```
+
+## Buscar atletas
+
+`GET /api/v1/athletes?q=texto` devuelve solo los atletas cuyo nombre o CI contienen el texto, sin distinguir
+mayúsculas ni tildes (`perez` encuentra a `Pérez`). Sin `q`, o con `q` vacío, devuelve todos.
+
+## Editar un atleta
+
+`PATCH /api/v1/athletes/{id}` cambia solo los campos que se envían. Para quitar el CI se envía
+`"ci": null` (o `""`). Si el cambio de **género o peso** afecta inscripciones:
+
+- En un torneo **en curso**, si el nuevo género o peso ya no encaja en la categoría, responde `409` y no
+  cambia nada (la llave ya está sorteada). Si sigue encajando, se guarda.
+- En un torneo **en borrador**, si el nuevo género o peso ya no encaja en la categoría, responde `409` con
+  las categorías afectadas. Para aceptarlo hay que repetir la petición con `?confirm_withdrawal=true`: el
+  atleta se guarda con los datos nuevos y se lo retira de esas categorías.
+- En un torneo **finalizado** el cambio se permite y la inscripción queda como estaba.
 
 ## Errores
 

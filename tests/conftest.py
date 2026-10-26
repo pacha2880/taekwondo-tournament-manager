@@ -45,6 +45,7 @@ def _test_db():
     app.dependency_overrides[get_db] = override_get_db
     yield
     app.dependency_overrides.clear()
+    engine.dispose()
 
 
 @pytest.fixture()
@@ -100,6 +101,7 @@ def athlete(client, club):
         "/api/v1/athletes",
         json={
             "name": "Juan Perez",
+            "ci": "1234567",
             "birth_date": "2012-05-01",
             "gender": "male",
             "belt_rank": "verde",
@@ -119,6 +121,7 @@ def register_n_athletes():
                 "/api/v1/athletes",
                 json={
                     "name": f"Atleta {i}",
+                    "ci": str(7000000 + i),
                     "birth_date": "2012-01-01",
                     "gender": "male",
                     "belt_rank": "verde",

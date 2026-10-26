@@ -7,16 +7,16 @@ de uso en `README.md` — este archivo no repite ese contenido, solo apunta a é
 
 ## Estado actual
 
-- Versión `0.3.0` (`app/version.py`, única fuente de verdad). En producción:
+- Versión `0.4.0` (`app/version.py`, única fuente de verdad). En producción:
   https://taekwondo-tournament-manager.onrender.com (Render + Neon, región Ohio). Hay un
   servicio **dev** en Render que despliega la rama `dev` contra una rama `dev` de Neon.
 - Quedan datos de demo en la base de **producción** (club "Club Demo Cochabamba", torneo
   "Copa Cochabamba DEMO"); el admin no tiene botón de borrar — limpieza solo por SQL desde el
   panel de Neon.
-- La `0.3.0` (CORS + documentación de la API para consumidores externos) está lista en `dev`
+- La `0.3.0` (CORS + documentación de la API) está liberada (tag `v0.3.0`). La `0.4.0` (CI de
+  atletas, editar atletas y clubes, búsqueda, `SECRET_KEY` de 32 bytes mínimo) está lista en `dev`
   para el PR a `main`. Después: backlog de Fase 9 en `docs/BACKLOG.md` (tiene decisiones
-  pendientes del usuario anotadas al principio del archivo), empezando por la `0.4.0` (datos de
-  atletas y clubes).
+  pendientes del usuario anotadas al principio).
 - Contexto de prioridades: un amigo del usuario construye un frontend separado (otra
   tecnología) contra esta API — por eso la API pasó a ser un producto con su propia
   autenticación, CORS y documentación, priorizados antes que editar datos de atletas.
@@ -36,6 +36,9 @@ de uso en `README.md` — este archivo no repite ese contenido, solo apunta a é
 - `app/services/scoring.py` — `record_round`: un round no puede empatar (422); el combate
   pasa a `FINISHED` (y dispara `advance_winner`) recién al llegar a
   `category.rounds_to_win` rounds ganados, no antes.
+- `app/services/eligibility.py` — `category_mismatch`: regla de género/peso de un atleta contra una
+  categoría; la usan la inscripción y la edición de atletas (`PATCH /athletes`, que retira de las
+  categorías de torneos en borrador donde ya no encaja, con confirmación). No duplicarla.
 - `app/web/admin.py` / `app/web/admin/` — pantalla admin (login por sesión,
   `SessionMiddleware`). **Sus handlers llaman directo a las funciones de `app/api/*.py`** (ej.
   `create_club_api = create_club`) en vez de reimplementar validaciones de negocio — son
@@ -142,15 +145,19 @@ sección **Versionado** de `README.md`.
 
 ## Estilo de código
 
-- Minimizar comentarios: priorizar código autodocumentado (nombres claros de variables y
-  funciones) antes que explicar con un comentario. Solo comentar cuando aporta algo que el
-  código en sí no puede transmitir (el porqué de una decisión no obvia, una referencia a un
-  bug/limitación externa, una propiedad matemática no evidente a simple vista) — no repetir
-  en palabras lo que ya dice el código.
-- Después de implementar algo, hacer una segunda pasada rápida (de pasada, sin analizar a
-  fondo ni frenar el flujo de trabajo) buscando si hay una versión más simple o coherente con
-  el resto del código. No sacrificar velocidad por esto — si no aparece nada obvio en esa
-  pasada rápida, seguir adelante.
+- **YAGNI**: no construir algo hasta que haga falta.
+- **Simple primero**: la solución obvia; optimizar solo si hace falta. Después de implementar,
+  una pasada rápida (sin frenar el trabajo) buscando una versión más simple o coherente con el
+  resto; si no aparece nada obvio, seguir.
+- **DRY**: una regla de negocio se extrae en cuanto aparece la segunda copia; el código
+  incidental, a la tercera.
+- **Fallar rápido**: un error explícito es mejor que un comportamiento silencioso.
+- **Borrar sin miedo** código y tests redundantes, salvo lo protegido en **Reglas de
+  extensibilidad** y las migraciones.
+- **Nombres que se explican solos** (`confirm_withdrawal`, no `confirm`), en vez de comentarios.
+  Comentar solo lo que el código no puede decir (el porqué de una decisión no obvia, un bug o
+  límite externo, una propiedad no evidente), nunca repetir lo que ya dice. Vale para nombres
+  nuevos: nunca renombrar algo ya publicado en la API.
 
 ## Idioma
 
@@ -183,6 +190,8 @@ sección **Versionado** de `README.md`.
 - No hardcodear tablas oficiales de peso por cinturón/edad/género. `Category.weight_label`
   es texto libre que define el admin al crear la categoría — las tablas de peso varían por
   federación y no son parte del problema que este proyecto resuelve.
+- `Athlete.ci` es opcional (hay niños sin CI) y único cuando se informa; el formato vive solo en
+  `CI_REGEX` de `app/schemas.py`.
 - `Club` es una entidad propia (`id`, `name`). `Athlete.club_id` es una FK obligatoria — el
   club es un atributo fijo del atleta, no algo que se elija por torneo/inscripción.
 - `RoundScore` no tiene penalizaciones todavía; si se agregan, es aditivo (columnas nuevas),

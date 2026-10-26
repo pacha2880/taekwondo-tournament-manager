@@ -5,17 +5,25 @@
 {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
 <div class="row">
   <div class="col-md-6">
+    <form method="get" action="/admin/atletas" class="d-flex gap-2 mb-3" role="search">
+      <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Buscar por nombre o CI">
+      <button type="submit" class="btn btn-outline-primary">Buscar</button>
+      {% if q %}<a href="/admin/atletas" class="btn btn-outline-secondary">Limpiar</a>{% endif %}
+    </form>
     <ul class="list-group mb-4">
       {% for a in athletes %}
-      <li class="list-group-item">
-        {{ a.name }}
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <div>{{ a.name }}
         <span class="text-muted small">
-          &middot; {{ a.club.name }} &middot; {{ a.gender|es_label }} &middot; {{ a.weight_kg }}kg
+          &middot; {% if a.ci %}CI {{ a.ci }} &middot; {% endif %}{{ a.club.name }} &middot; {{ a.gender|es_label }} &middot; {{ a.weight_kg }}kg
           &middot; {{ a.belt_rank }}
-        </span>
+        </span></div>
+        <a href="/admin/atletas/{{ a.id }}/editar" class="btn btn-sm btn-outline-secondary">Editar</a>
       </li>
       {% else %}
-      <li class="list-group-item text-muted">Todavía no hay atletas.</li>
+      <li class="list-group-item text-muted">
+        {% if q %}Ningún atleta coincide con «{{ q }}».{% else %}Todavía no hay atletas.{% endif %}
+      </li>
       {% endfor %}
     </ul>
   </div>
@@ -28,6 +36,12 @@
       <div class="mb-2">
         <label class="form-label">Nombre</label>
         <input type="text" name="name" class="form-control" required>
+      </div>
+      <div class="mb-2">
+        <label class="form-label">CI</label>
+        <input type="text" name="ci" class="form-control" maxlength="12"
+               placeholder="ej. 1234567 o 1234567-1A">
+        <div class="form-text">Opcional (hay niños sin CI). De 5 a 9 dígitos, con complemento opcional.</div>
       </div>
       <div class="mb-2">
         <label class="form-label">Fecha de nacimiento</label>

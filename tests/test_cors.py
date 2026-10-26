@@ -81,7 +81,7 @@ def test_preflight_from_other_origin_is_rejected():
 def test_production_refuses_wildcard_origin():
     env = {
         "APP_ENV": "production",
-        "SECRET_KEY": "clave-larga-aleatoria",
+        "SECRET_KEY": "clave-larga-aleatoria-de-32-bytes",
         "ADMIN_PASSWORD": "otra-clave",
         "CORS_ORIGINS": f"{ALLOWED}, *",
     }
@@ -93,7 +93,7 @@ def test_production_refuses_wildcard_origin():
 def test_production_accepts_explicit_origins():
     env = {
         "APP_ENV": "production",
-        "SECRET_KEY": "clave-larga-aleatoria",
+        "SECRET_KEY": "clave-larga-aleatoria-de-32-bytes",
         "ADMIN_PASSWORD": "otra-clave",
         "CORS_ORIGINS": f"{ALLOWED},http://localhost:5173",
     }
@@ -108,7 +108,7 @@ def test_wildcard_is_allowed_outside_production():
 def test_staging_also_allows_wildcard_origin():
     env = {
         "APP_ENV": "staging",
-        "SECRET_KEY": "clave-larga-aleatoria",
+        "SECRET_KEY": "clave-larga-aleatoria-de-32-bytes",
         "ADMIN_PASSWORD": "otra-clave",
         "CORS_ORIGINS": "*",
     }
