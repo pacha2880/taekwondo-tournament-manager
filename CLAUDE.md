@@ -144,15 +144,19 @@ sección **Versionado** de `README.md`.
 
 ## Estilo de código
 
-- Minimizar comentarios: priorizar código autodocumentado (nombres claros de variables y
-  funciones) antes que explicar con un comentario. Solo comentar cuando aporta algo que el
-  código en sí no puede transmitir (el porqué de una decisión no obvia, una referencia a un
-  bug/limitación externa, una propiedad matemática no evidente a simple vista) — no repetir
-  en palabras lo que ya dice el código.
-- Después de implementar algo, hacer una segunda pasada rápida (de pasada, sin analizar a
-  fondo ni frenar el flujo de trabajo) buscando si hay una versión más simple o coherente con
-  el resto del código. No sacrificar velocidad por esto — si no aparece nada obvio en esa
-  pasada rápida, seguir adelante.
+- **YAGNI**: no construir algo hasta que haga falta.
+- **Simple primero**: la solución obvia; optimizar solo si hace falta. Después de implementar,
+  una pasada rápida (sin frenar el trabajo) buscando una versión más simple o coherente con el
+  resto; si no aparece nada obvio, seguir.
+- **DRY**: una regla de negocio se extrae en cuanto aparece la segunda copia; el código
+  incidental, a la tercera.
+- **Fallar rápido**: un error explícito es mejor que un comportamiento silencioso.
+- **Borrar sin miedo** código y tests redundantes, salvo lo protegido en **Reglas de
+  extensibilidad** y las migraciones.
+- **Nombres que se explican solos** (`confirm_withdrawal`, no `confirm`), en vez de comentarios.
+  Comentar solo lo que el código no puede decir (el porqué de una decisión no obvia, un bug o
+  límite externo, una propiedad no evidente), nunca repetir lo que ya dice. Vale para nombres
+  nuevos: nunca renombrar algo ya publicado en la API.
 
 ## Idioma
 
