@@ -11,6 +11,8 @@ funcionando sobre una base ya migrada.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-26
+
 ### Added
 - El admin **pide confirmación antes de guardar**: crear club, atleta, torneo o categoría, inscribir un
   atleta, generar una llave, cargar un round, guardar cambios de un atleta o un club, cambiar el estado
@@ -142,7 +144,8 @@ https://taekwondo-tournament-manager.onrender.com.
 - `pool_pre_ping=True` en la conexión a la base de datos: Neon suspende el cómputo por
   inactividad y la primera conexión tras un rato inactivo pudo fallar con un error 500.
 
-[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.1.0...v0.2.0
