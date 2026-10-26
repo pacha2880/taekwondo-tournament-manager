@@ -171,13 +171,13 @@ def test_full_admin_workflow_creates_bracket_and_scores_a_match(client):
 
     score_resp = client.post(
         f"/admin/combates/{match_id}/rounds",
-        data={"round_number": "1", "red_points": "12", "blue_points": "5"},
+        data={"red_points": "12", "blue_points": "5"},
         follow_redirects=False,
     )
     assert score_resp.status_code == 303
     score_resp = client.post(
         f"/admin/combates/{match_id}/rounds",
-        data={"round_number": "2", "red_points": "9", "blue_points": "3"},
+        data={"red_points": "9", "blue_points": "3"},
         follow_redirects=False,
     )
     assert score_resp.status_code == 303
@@ -320,6 +320,7 @@ def test_edit_athlete_page_is_linked_from_the_list_and_prefilled(client, athlete
     for field in ('value="Juan Perez"', 'value="1234567"', 'value="2012-05-01"', 'value="verde"', 'value="40.5"'):
         assert field in page
     assert '<option value="male" selected>' in page
+    assert 'data-confirm="Guardar cambios del atleta"' in page
     assert f'<option value="{athlete["club"]["id"]}" selected>' in page
     assert client.get("/admin/atletas/999/editar").status_code == 404
 
@@ -335,6 +336,7 @@ def test_edit_athlete_asks_for_confirmation_before_withdrawing_it_from_a_categor
     assert "Este cambio retira al atleta de: Cadete Hasta 45kg (Copa Nacional)" in asked.text
     assert '<input type="hidden" name="confirm_withdrawal" value="true">' in asked.text
     assert 'value="50.0"' in asked.text
+    assert 'data-confirm="Guardar cambios del atleta"' not in asked.text
 
     confirmed = client.post(
         url, data=_edit_athlete_form(athlete, weight_kg="50", confirm_withdrawal="true"), follow_redirects=False
@@ -411,3 +413,26 @@ def _athlete_json(club):
         "weight_kg": 40,
         "club_id": club["id"],
     }
+
+
+def test_round_form_shows_the_next_round_number_without_an_editable_field(client, club, category, register_n_athletes):
+    register_n_athletes(client, club, category, 2)
+    match = client.post(f"/api/v1/categories/{category['id']}/bracket").json()["matches"][0]
+    _login(client)
+    page_url = f"/admin/categorias/{category['id']}"
+
+    first = client.get(page_url).text
+    client.post(f"/admin/combates/{match['id']}/rounds", data={"red_points": "10", "blue_points": "5"})
+    second = client.get(page_url).text
+
+    assert 'data-confirm="Cargar round 1"' in first
+    assert 'data-confirm-note="Una vez cargado, el resultado de un round no se puede editar."' in first
+    assert 'name="round_number"' not in first
+    assert 'data-confirm="Cargar round 2"' in second
+
+
+def test_admin_pages_include_the_confirmation_modal(client):
+    _login(client)
+
+    assert 'id="confirm-modal"' in client.get("/admin").text
+

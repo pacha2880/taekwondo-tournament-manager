@@ -44,7 +44,9 @@ de uso en `README.md` — este archivo no repite ese contenido, solo apunta a é
   `create_club_api = create_club`) en vez de reimplementar validaciones de negocio — son
   funciones Python normales, `Depends(get_db)` es solo un default que se ignora al pasar `db`
   explícito. Cada handler atrapa `HTTPException`/`ValidationError` y re-renderiza la página
-  con el error en español en vez de devolver JSON crudo.
+  con el error en español en vez de devolver JSON crudo. Todo `<form method="post">` de las
+  plantillas admin lleva `data-confirm` (ventana de confirmación de `admin/base.html`);
+  `tests/test_admin_confirmations.py` falla si falta.
 - `app/web/labels.py` — traducción de enums a español (filtro Jinja `es_label` y
   `match_status_badge_class`). `app/web/templating.py` — único entorno Jinja2 compartido
   (filtros + versión global); no crear otro.

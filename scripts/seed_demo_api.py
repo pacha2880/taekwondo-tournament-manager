@@ -154,11 +154,11 @@ def total_rounds(api, category_id: int) -> int:
 
 
 def record_rounds(api, rng: random.Random, match: dict, red_wins_round: list[bool]) -> None:
-    for number, red_wins in enumerate(red_wins_round, start=1):
+    for red_wins in red_wins_round:
         winner_points = rng.randint(6, 14)
         loser_points = rng.randint(0, winner_points - 1)
         red, blue = (winner_points, loser_points) if red_wins else (loser_points, winner_points)
-        api("POST", f"/api/v1/matches/{match['id']}/rounds", {"round_number": number, "red_points": red, "blue_points": blue})
+        api("POST", f"/api/v1/matches/{match['id']}/rounds", {"red_points": red, "blue_points": blue})
 
 
 def finish_match(api, rng: random.Random, match: dict) -> None:

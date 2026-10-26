@@ -11,6 +11,20 @@ funcionando sobre una base ya migrada.
 
 ## [Unreleased]
 
+### Added
+- El admin **pide confirmación antes de guardar**: crear club, atleta, torneo o categoría, inscribir un
+  atleta, generar una llave, cargar un round, guardar cambios de un atleta o un club, cambiar el estado
+  del torneo y cerrar sesión abren una ventana con los datos que se van a enviar. La de los rounds avisa
+  que no se pueden editar después.
+
+### Changed
+- **Importante para quien use la API:** `POST /api/v1/matches/{id}/rounds` ya no recibe `round_number`,
+  solo `red_points` y `blue_points`. El servidor numera los rounds (1, 2, 3…) en el orden en que se
+  cargan y devuelve el número asignado; un `round_number` enviado se ignora. Desaparece el error por
+  round repetido.
+- En el admin, el formulario de resultados muestra el número del round como texto fijo en vez de un
+  campo editable.
+
 ## [0.4.0] - 2026-10-25
 
 ### Added

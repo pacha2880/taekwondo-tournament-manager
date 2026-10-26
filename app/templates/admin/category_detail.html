@@ -33,9 +33,9 @@
     {% if not bracket %}
     <h2 class="h5">Inscribir atleta</h2>
     {% if available_athletes %}
-    <form method="post" action="/admin/categorias/{{ category.id }}/inscripciones" class="mb-4">
+    <form method="post" action="/admin/categorias/{{ category.id }}/inscripciones" class="mb-4" data-confirm="Inscribir atleta">
       <div class="mb-2 d-flex gap-2">
-        <select name="athlete_id" class="form-select" required>
+        <select name="athlete_id" class="form-select" aria-label="Atleta" required>
           {% for a in available_athletes %}
           <option value="{{ a.id }}">{{ a.name }} ({{ a.club.name }})</option>
           {% endfor %}
@@ -47,7 +47,8 @@
     <p class="text-muted mb-4">No quedan atletas para inscribir en esta categoría.</p>
     {% endif %}
 
-    <form method="post" action="/admin/categorias/{{ category.id }}/llave">
+    <form method="post" action="/admin/categorias/{{ category.id }}/llave" data-confirm="Generar llave"
+          data-confirm-note="Se sorteará la llave de esta categoría con los atletas inscritos.">
       <button type="submit" class="btn btn-success" {% if registrations|length < 2 %}disabled{% endif %}>
         Generar llave
       </button>
@@ -83,11 +84,11 @@
         </div>
         {% endif %}
         {% if m.status == "pending" and m.athlete_red_id and m.athlete_blue_id %}
-        <form method="post" action="/admin/combates/{{ m.id }}/rounds" class="row g-1 mt-2">
-          <div class="col-3">
-            <input type="number" name="round_number" class="form-control form-control-sm"
-                   placeholder="Round" required min="1">
-          </div>
+        {% set next_round = m.round_scores|length + 1 %}
+        <form method="post" action="/admin/combates/{{ m.id }}/rounds" class="row g-1 mt-2"
+              data-confirm="Cargar round {{ next_round }}"
+              data-confirm-note="Una vez cargado, el resultado de un round no se puede editar.">
+          <div class="col-3 small text-muted align-self-center">Round {{ next_round }}</div>
           <div class="col-3">
             <input type="number" name="red_points" class="form-control form-control-sm"
                    placeholder="Rojo" required min="0">

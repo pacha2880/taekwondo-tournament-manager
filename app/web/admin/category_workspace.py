@@ -106,7 +106,6 @@ def create_bracket_view(category_id: int, request: Request, db: Session = Depend
 def create_round_score_view(
     match_id: int,
     request: Request,
-    round_number: int = Form(...),
     red_points: int = Form(...),
     blue_points: int = Form(...),
     db: Session = Depends(get_db),
@@ -115,7 +114,7 @@ def create_round_score_view(
     if not match:
         raise HTTPException(status_code=404, detail="Combate no encontrado")
     category_id = match.bracket.category_id
-    payload = RoundScoreCreate(round_number=round_number, red_points=red_points, blue_points=blue_points)
+    payload = RoundScoreCreate(red_points=red_points, blue_points=blue_points)
     return _submit_and_redirect(
         request, db, category_id, lambda: create_round_score_api(match_id, payload, db)
     )

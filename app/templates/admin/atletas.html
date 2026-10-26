@@ -32,7 +32,7 @@
     {% if not clubs %}
     <p class="text-muted">Primero tenés que crear un club.</p>
     {% else %}
-    <form method="post" action="/admin/atletas">
+    <form method="post" action="/admin/atletas" data-confirm="Crear atleta">
       <div class="mb-2">
         <label class="form-label">Nombre</label>
         <input type="text" name="name" class="form-control" required>

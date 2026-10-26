@@ -15,8 +15,6 @@ volver al tag anterior siga funcionando sobre una base ya migrada; tras el deplo
 - **Categoría sin llave y cierre del torneo.** ¿Una categoría sin llave bloquea pasar el torneo
   a `FINISHED`? Propuesta: sí si tiene 2 o más inscritos (hay combates sin jugar); se ignora si
   tiene 0 o 1 (lo resuelve la 0.7.0).
-- **Editar rounds ya cargados (ver "Más adelante").** ¿Hace falta, o alcanza con el número de
-  round fijo más la confirmación previa de la 0.5.0?
 - **Asignación de área/cancha por categoría.** Un torneo real corre varias categorías en
   paralelo en distintas áreas (viene de la planilla física de control, campo "AREA"). Falta
   decidir: ¿una entidad `Area` propia (nombre/número), o alcanza con que el admin indique
@@ -109,18 +107,17 @@ edición de atletas ni de clubes, así que cada ítem de editar se hace **en la 
 - [x] Buscar atleta por CI o por nombre (admin y `GET /athletes?q=`), sin distinguir mayúsculas ni tildes.
 - [x] Editar club (API y admin).
 
-## 0.5.0 — Admin más seguro, parte B (sin cambios de API ni de base de datos)
+## 0.5.0 — Admin más seguro, parte B (un cambio chico de API; sin cambios de base de datos)
 
 La parte A (selector filtrado, botón "Torneos", colores de estado) salió en la 0.2.0.
 
-- [ ] En el formulario de carga de resultados del admin, no dejar el número de round libre —
-      calcularlo y mostrarlo fijo (rounds ya cargados de ese combate + 1) para que no se pueda
-      cargar un round fuera de orden. Sumar un popup de confirmación antes de guardar,
-      aclarando que hoy no se puede editar después.
-- [ ] De forma más general: cada vez que se crea algo desde el admin (club, atleta, torneo,
-      categoría, inscripción, llave, round), mostrar un popup de confirmación con los datos
-      antes de mandar el form — no necesariamente aclarando que no se puede editar después,
-      solo para que el usuario confirme lo que está a punto de crear.
+- [x] El número de round deja de ser un dato que se envía: `POST /matches/{id}/rounds` recibe solo
+      `red_points` y `blue_points` y el servidor numera los rounds (1, 2, 3…). Cierra el hueco de la
+      API (se podía cargar el round 5 sin el 1) y el formulario del admin muestra el número fijo.
+- [x] Ventana de confirmación con los datos antes de enviar cada formulario POST del admin (crear
+      club, atleta, torneo, categoría; inscribir; generar llave; cargar round; editar atleta y
+      club; cambiar el estado del torneo; cerrar sesión). La de rounds avisa que no se pueden editar
+      después. Un test falla si un formulario nuevo no la declara.
 
 ## 0.6.0 — Ciclo de vida del torneo (cambia el comportamiento de la API)
 
@@ -160,10 +157,12 @@ consistente con el resto del proyecto.
       `status == FINISHED` a secas — si no, un bracket con cualquier bye bloquearía el
       torneo para siempre. Qué pasa con una categoría que nunca generó bracket: ver
       "Decisiones pendientes".
-- [ ] `FINISHED` es inmutable una vez alcanzado — ningún otro cambio de estado permitido
-      después (ni volver a `DRAFT`/`IN_PROGRESS`, ni ningún otro campo del torneo). En el
-      admin, el form que pasa el torneo a `FINISHED` necesita un popup de confirmación
-      avisando que es irreversible, antes de mandar el cambio.
+- [ ] El estado solo avanza: `DRAFT` → `IN_PROGRESS` → `FINISHED`, sin volver atrás (`409` si se
+      intenta). Pasar de estado es una promoción en el funcionamiento del torneo (cierra
+      inscripciones, habilita llaves, cierra resultados), no un dato que se corrige. `FINISHED`
+      además es inmutable: ningún otro campo del torneo se puede cambiar. En el admin, el selector
+      ofrece solo el estado siguiente y la confirmación (que ya existe desde la 0.5.0) avisa que es
+      irreversible.
 - [ ] Ocultar los torneos en estado `DRAFT` de la lista principal de la pantalla pública (`/`).
       Queda abierta la pregunta de si también hay que bloquear el acceso directo a
       `/torneos/{id}`/`/categorias/{id}` de un torneo en borrador (hoy no miran `status` para
@@ -233,7 +232,8 @@ Dos cambios de modelo que salen directo del pedido real de Abel Bravo (ver
       hay que reabrirlo (volver a `pending`, revertir `winner_id`) y, si el ganador ya se
       propagó a la siguiente ronda (`advance_winner`), también revertir esa propagación —
       puede afectar en cascada otro combate ya en curso. Es el cambio con más riesgo de dejar
-      datos inconsistentes; ver "Decisiones pendientes".
+      datos inconsistentes. Decidido en la 0.5.0 que por ahora no hace falta (ver
+      `docs/DECISIONS.md`, 2026-10-26); se reabre si el uso real lo pide.
 - [ ] Evitar atletas duplicados por doble clic en "Crear" (hoy no hay restricción de
       unicidad en atletas; el campo CI único de la 0.4.0 lo resuelve de raíz).
 - [ ] Área/cancha asignada a cada categoría o bracket, para torneos que corren varias en

@@ -64,11 +64,11 @@ def test_category_detail_shows_round_scores_after_match_finishes(
     match = client.post(f"/api/v1/categories/{category['id']}/bracket").json()["matches"][0]
     client.post(
         f"/api/v1/matches/{match['id']}/rounds",
-        json={"round_number": 1, "red_points": 12, "blue_points": 5},
+        json={"red_points": 12, "blue_points": 5},
     )
     client.post(
         f"/api/v1/matches/{match['id']}/rounds",
-        json={"round_number": 2, "red_points": 9, "blue_points": 3},
+        json={"red_points": 9, "blue_points": 3},
     )
 
     resp = client.get(f"/categorias/{category['id']}")

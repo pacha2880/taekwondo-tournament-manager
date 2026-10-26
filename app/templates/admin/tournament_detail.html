@@ -13,8 +13,9 @@
     <h1>{{ tournament.name }}</h1>
     <p class="text-muted mb-0">{{ tournament.location }} &middot; {{ tournament.date }}</p>
   </div>
-  <form method="post" action="/admin/torneos/{{ tournament.id }}/estado" class="d-flex align-items-center gap-2">
-    <select name="status" class="form-select form-select-sm">
+  <form method="post" action="/admin/torneos/{{ tournament.id }}/estado" class="d-flex align-items-center gap-2"
+        data-confirm="Cambiar el estado del torneo">
+    <select name="status" class="form-select form-select-sm" aria-label="Nuevo estado">
       {% for value, label in status_options %}
       <option value="{{ value }}" {% if tournament.status == value %}selected{% endif %}>{{ label }}</option>
       {% endfor %}
@@ -41,7 +42,7 @@
   </div>
   <div class="col-md-6">
     <h2 class="h5">Crear categoría</h2>
-    <form method="post" action="/admin/torneos/{{ tournament.id }}/categorias">
+    <form method="post" action="/admin/torneos/{{ tournament.id }}/categorias" data-confirm="Crear categoría">
       <div class="mb-2">
         <label class="form-label">Nombre del rango de edad</label>
         <input type="text" name="age_label" class="form-control" required placeholder="ej. Cadete">

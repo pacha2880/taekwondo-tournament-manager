@@ -13,10 +13,6 @@ class MatchAlreadyFinished(Exception):
     pass
 
 
-class DuplicateRound(Exception):
-    pass
-
-
 class TiedRound(Exception):
     pass
 
@@ -29,22 +25,15 @@ def _rounds_won(db: Session, match_id: int, athlete_id: int) -> int:
     )
 
 
-def record_round(
-    db: Session, match: Match, round_number: int, red_points: int, blue_points: int
-) -> RoundScore:
+def record_round(db: Session, match: Match, red_points: int, blue_points: int) -> RoundScore:
     if match.athlete_red_id is None or match.athlete_blue_id is None:
         raise MatchNotReady("El combate todavía no tiene ambos atletas definidos")
     if match.status == MatchStatus.FINISHED:
         raise MatchAlreadyFinished("El combate ya está finalizado")
     if red_points == blue_points:
         raise TiedRound("Un round no puede terminar en empate")
-    if db.scalar(
-        select(RoundScore).where(
-            RoundScore.match_id == match.id, RoundScore.round_number == round_number
-        )
-    ):
-        raise DuplicateRound(f"Ya existe un resultado para el round {round_number} de este combate")
 
+    round_number = db.scalar(select(func.count()).select_from(RoundScore).where(RoundScore.match_id == match.id)) + 1
     round_winner_id = match.athlete_red_id if red_points > blue_points else match.athlete_blue_id
     round_score = RoundScore(
         match_id=match.id,
