@@ -7,15 +7,16 @@ de uso en `README.md` — este archivo no repite ese contenido, solo apunta a é
 
 ## Estado actual
 
-- Versión `0.3.0` (`app/version.py`, única fuente de verdad). En producción:
+- Versión `0.4.0` (`app/version.py`, única fuente de verdad). En producción:
   https://taekwondo-tournament-manager.onrender.com (Render + Neon, región Ohio). Hay un
   servicio **dev** en Render que despliega la rama `dev` contra una rama `dev` de Neon.
 - Quedan datos de demo en la base de **producción** (club "Club Demo Cochabamba", torneo
   "Copa Cochabamba DEMO"); el admin no tiene botón de borrar — limpieza solo por SQL desde el
   panel de Neon.
-- La `0.3.0` (CORS + documentación de la API) está liberada (tag `v0.3.0`). En desarrollo en
-  `dev`: `0.4.0` (CI de atletas, editar atletas y clubes, búsqueda). Después: backlog de Fase 9
-  en `docs/BACKLOG.md` (tiene decisiones pendientes del usuario anotadas al principio).
+- La `0.3.0` (CORS + documentación de la API) está liberada (tag `v0.3.0`). La `0.4.0` (CI de
+  atletas, editar atletas y clubes, búsqueda, `SECRET_KEY` de 32 bytes mínimo) está lista en `dev`
+  para el PR a `main`. Después: backlog de Fase 9 en `docs/BACKLOG.md` (tiene decisiones
+  pendientes del usuario anotadas al principio).
 - Contexto de prioridades: un amigo del usuario construye un frontend separado (otra
   tecnología) contra esta API — por eso la API pasó a ser un producto con su propia
   autenticación, CORS y documentación, priorizados antes que editar datos de atletas.
