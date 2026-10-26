@@ -29,6 +29,10 @@ funcionando sobre una base ya migrada.
   `Pérez`); sin `q` devuelve todos, como antes.
 - **Editar clubes**: `PATCH /api/v1/clubs/{id}` y botón "Editar" en el admin (el nombre sigue siendo único).
 
+### Changed
+- Con `APP_ENV=production` o `staging`, un `SECRET_KEY` de menos de 32 bytes ahora impide arrancar la
+  app (antes solo se avisaba en los logs).
+
 ## [0.3.0] - 2026-10-22
 
 ### Added

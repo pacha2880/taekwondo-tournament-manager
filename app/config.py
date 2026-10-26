@@ -1,4 +1,3 @@
-import logging
 import os
 from collections.abc import Mapping
 
@@ -12,8 +11,6 @@ MIN_SECRET_KEY_BYTES = 32
 # sí puede querer aceptar cualquier origen (CORS_ORIGINS=*) mientras se prueba un frontend
 # externo sin actualizar la lista a mano.
 DEPLOYED_ENVIRONMENTS = {"production", "staging"}
-
-logger = logging.getLogger(__name__)
 
 
 def secret_key() -> str:
@@ -45,11 +42,9 @@ def check_production_settings(env: Mapping[str, str] = os.environ) -> None:
         raise RuntimeError(
             "APP_ENV=production no admite CORS_ORIGINS=*; lista los orígenes permitidos separados por comas"
         )
-
-
-def warn_if_short_secret_key(env: Mapping[str, str] = os.environ) -> None:
-    if env.get("APP_ENV") not in DEPLOYED_ENVIRONMENTS:
-        return
-    length = len(env.get("SECRET_KEY", INSECURE_DEFAULTS["SECRET_KEY"]).encode())
-    if length < MIN_SECRET_KEY_BYTES:
-        logger.warning("SECRET_KEY tiene %d bytes; se recomiendan %d o más", length, MIN_SECRET_KEY_BYTES)
+    secret_key_bytes = len(env["SECRET_KEY"].encode())
+    if secret_key_bytes < MIN_SECRET_KEY_BYTES:
+        raise RuntimeError(
+            f"APP_ENV={app_env} requiere un SECRET_KEY de {MIN_SECRET_KEY_BYTES} bytes o más "
+            f"(tiene {secret_key_bytes})"
+        )

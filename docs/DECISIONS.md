@@ -473,3 +473,10 @@ normalizada en la base o `unaccent` en Postgres, no cambiar el contrato de la AP
 
 **Fuera de alcance, por decisión:** buscar por club y un filtro "solo sin CI" (la lista ya omite "CI" en quien
 no lo tiene).
+
+## 2026-10-25 — `SECRET_KEY` corta: de aviso a error
+
+Con `APP_ENV=production` o `staging`, un `SECRET_KEY` de menos de 32 bytes ahora impide arrancar, igual que
+las credenciales por defecto: un aviso en los logs es fácil de pasar por alto. Es el endurecimiento que preveía
+la entrada de la 0.2.0. Antes de desplegarlo hay que confirmar que las claves de Render (`dev` y producción)
+miden 32 bytes o más; si no, el deploy queda caído hasta cambiarlas.
