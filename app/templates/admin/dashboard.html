@@ -19,18 +19,18 @@
   </div>
   <div class="col-md-6">
     <h2 class="h5">Crear torneo</h2>
-    <form method="post" action="/admin/torneos">
+    <form method="post" action="/admin/torneos" data-confirm="Crear torneo">
       <div class="mb-2">
         <label class="form-label">Nombre</label>
-        <input type="text" name="name" class="form-control" required>
+        <input type="text" name="name" class="form-control" required value="{{ form.name }}">
       </div>
       <div class="mb-2">
         <label class="form-label">Fecha</label>
-        <input type="date" name="date" class="form-control" required>
+        <input type="date" name="date" class="form-control" required value="{{ form.date }}">
       </div>
       <div class="mb-2">
         <label class="form-label">Lugar</label>
-        <input type="text" name="location" class="form-control" required>
+        <input type="text" name="location" class="form-control" required value="{{ form.location }}">
       </div>
       <button type="submit" class="btn btn-primary">Crear</button>
     </form>

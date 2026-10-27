@@ -11,7 +11,7 @@
 {% if error %}<div class="alert {{ 'alert-warning' if needs_confirmation else 'alert-danger' }}">{{ error }}</div>{% endif %}
 <div class="row">
   <div class="col-md-6">
-    <form method="post" action="/admin/atletas/{{ athlete.id }}/editar">
+    <form method="post" action="/admin/atletas/{{ athlete.id }}/editar" {% if not needs_confirmation %}data-confirm="Guardar cambios del atleta"{% endif %}>
       <div class="mb-2">
         <label class="form-label">Nombre</label>
         <input type="text" name="name" class="form-control" required value="{{ values.name }}">

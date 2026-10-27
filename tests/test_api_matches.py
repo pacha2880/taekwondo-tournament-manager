@@ -9,7 +9,7 @@ def test_match_not_ready_rejects_round_score(client, club, category, register_n_
 
     resp = client.post(
         f"/api/v1/matches/{not_ready['id']}/rounds",
-        json={"round_number": 1, "red_points": 10, "blue_points": 5},
+        json={"red_points": 10, "blue_points": 5},
     )
     assert resp.status_code == 400
 
@@ -20,24 +20,22 @@ def test_tied_round_rejected(client, club, category, register_n_athletes):
 
     resp = client.post(
         f"/api/v1/matches/{match['id']}/rounds",
-        json={"round_number": 1, "red_points": 5, "blue_points": 5},
+        json={"red_points": 5, "blue_points": 5},
     )
     assert resp.status_code == 422
 
 
-def test_duplicate_round_number_rejected(client, club, category, register_n_athletes):
+def test_rounds_are_numbered_by_the_server_in_the_order_they_are_loaded(client, club, category, register_n_athletes):
     register_n_athletes(client, club, category, 2)
     match = client.post(f"/api/v1/categories/{category['id']}/bracket").json()["matches"][0]
-    client.post(
-        f"/api/v1/matches/{match['id']}/rounds",
-        json={"round_number": 1, "red_points": 10, "blue_points": 5},
-    )
+    url = f"/api/v1/matches/{match['id']}/rounds"
 
-    resp = client.post(
-        f"/api/v1/matches/{match['id']}/rounds",
-        json={"round_number": 1, "red_points": 3, "blue_points": 9},
-    )
-    assert resp.status_code == 409
+    numbers = [
+        client.post(url, json={"red_points": red, "blue_points": blue}).json()["round_number"]
+        for red, blue in ((10, 5), (3, 8), (7, 2))
+    ]
+
+    assert numbers == [1, 2, 3]
 
 
 def test_match_finishes_after_two_round_wins(client, club, category, register_n_athletes):
@@ -46,11 +44,11 @@ def test_match_finishes_after_two_round_wins(client, club, category, register_n_
 
     client.post(
         f"/api/v1/matches/{match['id']}/rounds",
-        json={"round_number": 1, "red_points": 10, "blue_points": 5},
+        json={"red_points": 10, "blue_points": 5},
     )
     resp = client.post(
         f"/api/v1/matches/{match['id']}/rounds",
-        json={"round_number": 2, "red_points": 8, "blue_points": 3},
+        json={"red_points": 8, "blue_points": 3},
     )
     assert resp.status_code == 201
 
@@ -66,18 +64,18 @@ def test_match_can_go_to_a_third_round(client, club, category, register_n_athlet
 
     client.post(
         f"/api/v1/matches/{match['id']}/rounds",
-        json={"round_number": 1, "red_points": 10, "blue_points": 5},
+        json={"red_points": 10, "blue_points": 5},
     )
     client.post(
         f"/api/v1/matches/{match['id']}/rounds",
-        json={"round_number": 2, "red_points": 3, "blue_points": 8},
+        json={"red_points": 3, "blue_points": 8},
     )
     mid_match = client.get(f"/api/v1/matches/{match['id']}").json()
     assert mid_match["status"] == "pending"
 
     resp = client.post(
         f"/api/v1/matches/{match['id']}/rounds",
-        json={"round_number": 3, "red_points": 2, "blue_points": 7},
+        json={"red_points": 2, "blue_points": 7},
     )
     assert resp.status_code == 201
     finished = client.get(f"/api/v1/matches/{match['id']}").json()
@@ -90,16 +88,16 @@ def test_finished_match_rejects_more_rounds(client, club, category, register_n_a
     match = client.post(f"/api/v1/categories/{category['id']}/bracket").json()["matches"][0]
     client.post(
         f"/api/v1/matches/{match['id']}/rounds",
-        json={"round_number": 1, "red_points": 10, "blue_points": 5},
+        json={"red_points": 10, "blue_points": 5},
     )
     client.post(
         f"/api/v1/matches/{match['id']}/rounds",
-        json={"round_number": 2, "red_points": 8, "blue_points": 3},
+        json={"red_points": 8, "blue_points": 3},
     )
 
     resp = client.post(
         f"/api/v1/matches/{match['id']}/rounds",
-        json={"round_number": 3, "red_points": 1, "blue_points": 9},
+        json={"red_points": 1, "blue_points": 9},
     )
     assert resp.status_code == 409
 
@@ -114,11 +112,11 @@ def test_winner_propagates_to_next_round(client, club, category, register_n_athl
     for semi in semis:
         client.post(
             f"/api/v1/matches/{semi['id']}/rounds",
-            json={"round_number": 1, "red_points": 10, "blue_points": 2},
+            json={"red_points": 10, "blue_points": 2},
         )
         client.post(
             f"/api/v1/matches/{semi['id']}/rounds",
-            json={"round_number": 2, "red_points": 10, "blue_points": 2},
+            json={"red_points": 10, "blue_points": 2},
         )
         winners.append(client.get(f"/api/v1/matches/{semi['id']}").json()["winner_id"])
 

@@ -480,3 +480,38 @@ Con `APP_ENV=production` o `staging`, un `SECRET_KEY` de menos de 32 bytes ahora
 las credenciales por defecto: un aviso en los logs es fácil de pasar por alto. Es el endurecimiento que preveía
 la entrada de la 0.2.0. Antes de desplegarlo hay que confirmar que las claves de Render (`dev` y producción)
 miden 32 bytes o más; si no, el deploy queda caído hasta cambiarlas.
+
+## 2026-10-26 — El servidor numera los rounds y el admin confirma antes de guardar (0.5.0)
+
+**El número de round lo asigna el servidor, no el cliente.** El backlog planteaba fijar el número solo en el
+formulario del admin, pero el hueco estaba en la API: `round_number` era obligatorio y solo se rechazaba un
+número repetido, así que se podía cargar el round 5 sin el 1 o dejar huecos, y el frontend externo habría
+heredado el problema. Ahora `RoundScoreCreate` solo lleva `red_points` y `blue_points`, y `record_round`
+asigna `rounds ya cargados + 1`; la respuesta (`RoundScoreRead`) sigue incluyendo `round_number`. Se
+eliminó `DuplicateRound`, que ya no puede ocurrir. Sin capa de compatibilidad (estamos en `0.x`, y Pydantic
+ignora el campo si alguien todavía lo envía). **Costos aceptados:** (1) la restricción única
+`uq_round_per_match` sigue siendo la red de seguridad si dos envíos simultáneos calculan el mismo número: el
+segundo falla con un error 500 en lugar de un mensaje claro; la ventana de confirmación deshabilita el botón
+tras el primer clic, así que es poco probable. (2) El admin muestra «Round N» calculado al renderizar la
+página; si se carga un round desde otra pestaña, un envío desde una página vieja se numera con el que
+corresponde en ese momento, no se rechaza.
+
+**Ventana de confirmación genérica.** Todo `<form method="post" data-confirm="Título">` del admin abre una
+ventana de Bootstrap con los datos que el usuario escribió (etiqueta y valor de cada campo; para los
+`<select>`, el texto de la opción elegida) y los botones Cancelar / Confirmar; `data-confirm-note` agrega una
+aclaración. El script vive una sola vez en `admin/base.html`, junto con el JavaScript de Bootstrap 5.3.3 del
+mismo CDN que el CSS. Queda fuera solo el login. «Salir» y el cambio de estado del torneo también piden
+confirmación; el del estado avisará además que es irreversible cuando la 0.6.0 prohíba volver atrás; en «Editar atleta», la pantalla que
+ya avisa «Este cambio retira al atleta de…» no abre una segunda ventana. Como los tests no ejecutan
+JavaScript, `tests/test_admin_confirmations.py` revisa en las plantillas que ningún formulario POST nuevo
+olvide el atributo, y el comportamiento de la ventana se verificó a mano en el navegador.
+
+**Un formulario que falla conserva lo escrito.** Cada manejador de creación pasa lo que recibió con
+`echo_form(...)` (`app/web/admin/_shared.py`, convierte `None` en vacío) y la plantilla lo vuelve a poner en
+los campos (`form.<campo>`); en los `<select>` se marca la opción elegida. Es solo de la vista: la API no
+cambia. Es una regla para todo formulario nuevo del admin; los de editar ya lo hacían.
+
+**No se agrega corrección de rounds ya cargados.** Era la decisión pendiente del backlog: se resolvió que
+alcanza con el número fijo y la confirmación con los puntos a la vista. Corregir un round obligaría a
+reabrir el combate y a deshacer el avance del ganador, que es el cambio con más riesgo de dejar datos
+inconsistentes; se reabre solo si el uso real lo pide.

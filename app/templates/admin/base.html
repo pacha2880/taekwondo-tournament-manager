@@ -7,10 +7,74 @@
       <a class="btn btn-outline-light btn-sm me-2" href="/admin">Torneos</a>
       <a class="btn btn-outline-light btn-sm me-2" href="/admin/clubes">Clubes</a>
       <a class="btn btn-outline-light btn-sm me-2" href="/admin/atletas">Atletas</a>
-      <form method="post" action="/admin/logout" class="d-inline">
+      <form method="post" action="/admin/logout" class="d-inline" data-confirm="Cerrar sesión" data-confirm-note="¿Seguro que querés cerrar sesión?">
         <button class="btn btn-outline-light btn-sm" type="submit">Salir</button>
       </form>
     </div>
   </div>
 </nav>
+{% endblock %}
+{% block scripts %}
+<div class="modal fade" id="confirm-modal" tabindex="-1" aria-labelledby="confirm-modal-title" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title h5" id="confirm-modal-title"></h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <dl class="row mb-0" id="confirm-modal-data"></dl>
+        <p class="text-muted small mt-3 mb-0" id="confirm-modal-note"></p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="confirm-modal-accept">Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // Todo <form data-confirm="Título"> pide confirmación mostrando los datos que se van a enviar.
+  // data-confirm-note agrega una aclaración debajo de los datos.
+  const confirmModal = new bootstrap.Modal(document.getElementById("confirm-modal"));
+  let pendingForm = null;
+
+  function fieldLabel(field) {
+    const label = field.closest("div")?.querySelector("label");
+    return (label?.textContent || field.getAttribute("aria-label") || field.placeholder || field.name).trim();
+  }
+
+  function fieldValue(field) {
+    return field.tagName === "SELECT" ? field.selectedOptions[0]?.text.trim() : field.value.trim();
+  }
+
+  document.addEventListener("submit", (event) => {
+    const form = event.target;
+    if (!form.dataset.confirm) return;
+    event.preventDefault();
+    pendingForm = form;
+    document.getElementById("confirm-modal-title").textContent = form.dataset.confirm;
+    const note = document.getElementById("confirm-modal-note");
+    note.textContent = form.dataset.confirmNote || "";
+    const data = document.getElementById("confirm-modal-data");
+    data.replaceChildren();
+    for (const field of form.querySelectorAll("input:not([type=hidden]), select, textarea")) {
+      const term = document.createElement("dt");
+      term.className = "col-5";
+      term.textContent = fieldLabel(field);
+      const description = document.createElement("dd");
+      description.className = "col-7";
+      description.textContent = fieldValue(field) || "—";
+      data.append(term, description);
+    }
+    note.className = data.children.length ? "text-muted small mt-3 mb-0" : "mb-0";
+    confirmModal.show();
+  });
+
+  document.getElementById("confirm-modal-accept").addEventListener("click", (event) => {
+    event.currentTarget.disabled = true;
+    pendingForm.submit();
+  });
+</script>
 {% endblock %}

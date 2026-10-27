@@ -13,8 +13,9 @@
     <h1>{{ tournament.name }}</h1>
     <p class="text-muted mb-0">{{ tournament.location }} &middot; {{ tournament.date }}</p>
   </div>
-  <form method="post" action="/admin/torneos/{{ tournament.id }}/estado" class="d-flex align-items-center gap-2">
-    <select name="status" class="form-select form-select-sm">
+  <form method="post" action="/admin/torneos/{{ tournament.id }}/estado" class="d-flex align-items-center gap-2"
+        data-confirm="Cambiar el estado del torneo">
+    <select name="status" class="form-select form-select-sm" aria-label="Nuevo estado">
       {% for value, label in status_options %}
       <option value="{{ value }}" {% if tournament.status == value %}selected{% endif %}>{{ label }}</option>
       {% endfor %}
@@ -41,47 +42,47 @@
   </div>
   <div class="col-md-6">
     <h2 class="h5">Crear categoría</h2>
-    <form method="post" action="/admin/torneos/{{ tournament.id }}/categorias">
+    <form method="post" action="/admin/torneos/{{ tournament.id }}/categorias" data-confirm="Crear categoría">
       <div class="mb-2">
         <label class="form-label">Nombre del rango de edad</label>
-        <input type="text" name="age_label" class="form-control" required placeholder="ej. Cadete">
+        <input type="text" name="age_label" class="form-control" required placeholder="ej. Cadete" value="{{ form.age_label }}">
       </div>
       <div class="row">
         <div class="col mb-2">
           <label class="form-label">Edad mínima</label>
-          <input type="number" name="min_age" class="form-control" required>
+          <input type="number" name="min_age" class="form-control" required value="{{ form.min_age }}">
         </div>
         <div class="col mb-2">
           <label class="form-label">Edad máxima (opcional)</label>
-          <input type="number" name="max_age" class="form-control">
+          <input type="number" name="max_age" class="form-control" value="{{ form.max_age }}">
         </div>
       </div>
       <div class="mb-2">
         <label class="form-label">Género</label>
         <select name="gender" class="form-select" required>
-          <option value="male">Masculino</option>
-          <option value="female">Femenino</option>
+          <option value="male" {% if form.gender == "male" %}selected{% endif %}>Masculino</option>
+          <option value="female" {% if form.gender == "female" %}selected{% endif %}>Femenino</option>
         </select>
       </div>
       <div class="mb-2">
         <label class="form-label">Cinturón</label>
         <select name="belt_group" class="form-select" required>
-          <option value="color">Cinturón de color</option>
-          <option value="black">Cinturón negro</option>
+          <option value="color" {% if form.belt_group == "color" %}selected{% endif %}>Cinturón de color</option>
+          <option value="black" {% if form.belt_group == "black" %}selected{% endif %}>Cinturón negro</option>
         </select>
       </div>
       <div class="mb-2">
         <label class="form-label">Peso (etiqueta)</label>
-        <input type="text" name="weight_label" class="form-control" required placeholder="ej. Hasta 45kg">
+        <input type="text" name="weight_label" class="form-control" required placeholder="ej. Hasta 45kg" value="{{ form.weight_label }}">
       </div>
       <div class="row">
         <div class="col mb-2">
           <label class="form-label">Peso mínimo kg (opcional)</label>
-          <input type="number" step="0.1" name="min_weight" class="form-control">
+          <input type="number" step="0.1" name="min_weight" class="form-control" value="{{ form.min_weight }}">
         </div>
         <div class="col mb-2">
           <label class="form-label">Peso máximo kg (opcional)</label>
-          <input type="number" step="0.1" name="max_weight" class="form-control">
+          <input type="number" step="0.1" name="max_weight" class="form-control" value="{{ form.max_weight }}">
         </div>
       </div>
       <button type="submit" class="btn btn-primary">Crear</button>

@@ -171,13 +171,13 @@ def test_full_admin_workflow_creates_bracket_and_scores_a_match(client):
 
     score_resp = client.post(
         f"/admin/combates/{match_id}/rounds",
-        data={"round_number": "1", "red_points": "12", "blue_points": "5"},
+        data={"red_points": "12", "blue_points": "5"},
         follow_redirects=False,
     )
     assert score_resp.status_code == 303
     score_resp = client.post(
         f"/admin/combates/{match_id}/rounds",
-        data={"round_number": "2", "red_points": "9", "blue_points": "3"},
+        data={"red_points": "9", "blue_points": "3"},
         follow_redirects=False,
     )
     assert score_resp.status_code == 303
@@ -320,6 +320,7 @@ def test_edit_athlete_page_is_linked_from_the_list_and_prefilled(client, athlete
     for field in ('value="Juan Perez"', 'value="1234567"', 'value="2012-05-01"', 'value="verde"', 'value="40.5"'):
         assert field in page
     assert '<option value="male" selected>' in page
+    assert 'data-confirm="Guardar cambios del atleta"' in page
     assert f'<option value="{athlete["club"]["id"]}" selected>' in page
     assert client.get("/admin/atletas/999/editar").status_code == 404
 
@@ -335,6 +336,7 @@ def test_edit_athlete_asks_for_confirmation_before_withdrawing_it_from_a_categor
     assert "Este cambio retira al atleta de: Cadete Hasta 45kg (Copa Nacional)" in asked.text
     assert '<input type="hidden" name="confirm_withdrawal" value="true">' in asked.text
     assert 'value="50.0"' in asked.text
+    assert 'data-confirm="Guardar cambios del atleta"' not in asked.text
 
     confirmed = client.post(
         url, data=_edit_athlete_form(athlete, weight_kg="50", confirm_withdrawal="true"), follow_redirects=False
@@ -411,3 +413,141 @@ def _athlete_json(club):
         "weight_kg": 40,
         "club_id": club["id"],
     }
+
+
+def test_round_form_shows_the_next_round_number_without_an_editable_field(client, club, category, register_n_athletes):
+    register_n_athletes(client, club, category, 2)
+    match = client.post(f"/api/v1/categories/{category['id']}/bracket").json()["matches"][0]
+    _login(client)
+    page_url = f"/admin/categorias/{category['id']}"
+
+    first = client.get(page_url).text
+    client.post(f"/admin/combates/{match['id']}/rounds", data={"red_points": "10", "blue_points": "5"})
+    second = client.get(page_url).text
+
+    assert 'data-confirm="Cargar round 1"' in first
+    assert 'data-confirm-note="Una vez cargado, el resultado de un round no se puede editar."' in first
+    assert 'name="round_number"' not in first
+    assert 'data-confirm="Cargar round 2"' in second
+
+
+def test_admin_pages_include_the_confirmation_modal(client):
+    _login(client)
+
+    assert 'id="confirm-modal"' in client.get("/admin").text
+
+
+def test_create_club_form_keeps_the_typed_name_when_it_fails(client, club):
+    _login(client)
+
+    resp = client.post("/admin/clubes", data={"name": club["name"]})  # nombre ya usado
+
+    assert resp.status_code == 400
+    assert f'required value="{club["name"]}"' in resp.text
+
+
+def test_create_athlete_form_keeps_everything_typed_when_the_ci_is_taken(client, club, athlete):
+    _login(client)
+
+    resp = client.post(
+        "/admin/atletas",
+        data={
+            "name": "Otra Persona",
+            "ci": athlete["ci"],  # CI de otro atleta
+            "birth_date": "2011-02-03",
+            "gender": "female",
+            "belt_rank": "azul",
+            "weight_kg": "37.5",
+            "club_id": club["id"],
+        },
+    )
+
+    assert resp.status_code == 400
+    assert "Ya existe un atleta con ese CI" in resp.text
+    for typed in (
+        'value="Otra Persona"',
+        f'value="{athlete["ci"]}"',
+        'value="2011-02-03"',
+        'value="azul"',
+        'value="37.5"',
+        '<option value="female" selected>',
+        f'<option value="{club["id"]}" selected>',
+    ):
+        assert typed in resp.text
+
+
+def test_create_tournament_form_keeps_the_typed_values_when_it_fails(client):
+    _login(client)
+
+    # fecha imposible
+    resp = client.post("/admin/torneos", data={"name": "Copa Rota", "date": "2026-13-45", "location": "Oruro"})
+
+    assert resp.status_code == 400
+    for typed in ('value="Copa Rota"', 'value="2026-13-45"', 'value="Oruro"'):
+        assert typed in resp.text
+
+
+def test_create_category_form_keeps_the_typed_values_when_it_fails(client, tournament):
+    _login(client)
+
+    resp = client.post(
+        f"/admin/torneos/{tournament['id']}/categorias",
+        data={
+            "age_label": "Juvenil",
+            "min_age": "15",
+            "max_age": "17",
+            "gender": "female",
+            "belt_group": "black",
+            "weight_label": "Hasta 55kg",
+            "min_weight": "60",  # mínimo mayor que el máximo
+            "max_weight": "55",
+        },
+    )
+
+    assert resp.status_code == 400
+    for typed in (
+        'value="Juvenil"',
+        'value="15"',
+        'value="17"',
+        '<option value="female" selected>',
+        '<option value="black" selected>',
+        'value="Hasta 55kg"',
+        'value="60.0"',
+        'value="55.0"',
+    ):
+        assert typed in resp.text
+
+
+def test_registration_form_keeps_the_selected_athlete_when_it_fails(client, club, category):
+    heavy = client.post(
+        "/api/v1/athletes",
+        json={
+            "name": "Pesado Perez",
+            "ci": "7777777",
+            "birth_date": "2012-01-01",
+            "gender": "male",
+            "belt_rank": "verde",
+            "weight_kg": 50,  # la categoría admite hasta 45 kg
+            "club_id": club["id"],
+        },
+    ).json()
+    _login(client)
+
+    resp = client.post(f"/admin/categorias/{category['id']}/inscripciones", data={"athlete_id": heavy["id"]})
+
+    assert resp.status_code == 400
+    assert "El peso del atleta es mayor al máximo" in resp.text
+    assert f'<option value="{heavy["id"]}" selected>' in resp.text
+
+
+def test_round_form_keeps_the_typed_points_when_it_fails(client, club, category, register_n_athletes):
+    register_n_athletes(client, club, category, 2)
+    match = client.post(f"/api/v1/categories/{category['id']}/bracket").json()["matches"][0]
+    _login(client)
+
+    # un round no puede empatar
+    resp = client.post(f"/admin/combates/{match['id']}/rounds", data={"red_points": "7", "blue_points": "7"})
+
+    assert resp.status_code == 400
+    assert "empate" in resp.text
+    assert resp.text.count('value="7"') == 2

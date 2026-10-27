@@ -13,7 +13,7 @@ from app.database import get_db
 from app.models import Athlete, Bracket, Category, Match, Registration
 from app.schemas import RegistrationCreate, RoundScoreCreate
 from app.services.brackets import resolve_athlete_names
-from app.web.admin._shared import error_message, require_admin
+from app.web.admin._shared import echo_form, error_message, require_admin
 from app.web.templating import templates
 
 router = APIRouter(dependencies=[Depends(require_admin)])
@@ -61,22 +61,27 @@ def _category_detail_context(db: Session, category_id: int) -> dict:
 
 
 def _render_category_detail(
-    request: Request, db: Session, category_id: int, error: str | None = None, status_code: int = 200
+    request: Request,
+    db: Session,
+    category_id: int,
+    error: str | None = None,
+    status_code: int = 200,
+    form: dict | None = None,
 ):
     context = _category_detail_context(db, category_id)
     return templates.TemplateResponse(
         request,
         "admin/category_detail.html",
-        {**context, "error": error},
+        {**context, "error": error, "form": form or {}},
         status_code=status_code,
     )
 
 
-def _submit_and_redirect(request: Request, db: Session, category_id: int, action):
+def _submit_and_redirect(request: Request, db: Session, category_id: int, action, form: dict | None = None):
     try:
         action()
     except (HTTPException, ValidationError) as exc:
-        return _render_category_detail(request, db, category_id, error_message(exc), status_code=400)
+        return _render_category_detail(request, db, category_id, error_message(exc), status_code=400, form=form)
     return RedirectResponse(url=f"/admin/categorias/{category_id}", status_code=303)
 
 
@@ -93,7 +98,8 @@ def create_registration_view(
         request,
         db,
         category_id,
-        lambda: create_registration_api(RegistrationCreate(athlete_id=athlete_id, category_id=category_id), db),
+        form=echo_form(athlete_id=athlete_id),
+        action=lambda: create_registration_api(RegistrationCreate(athlete_id=athlete_id, category_id=category_id), db),
     )
 
 
@@ -106,7 +112,6 @@ def create_bracket_view(category_id: int, request: Request, db: Session = Depend
 def create_round_score_view(
     match_id: int,
     request: Request,
-    round_number: int = Form(...),
     red_points: int = Form(...),
     blue_points: int = Form(...),
     db: Session = Depends(get_db),
@@ -115,7 +120,11 @@ def create_round_score_view(
     if not match:
         raise HTTPException(status_code=404, detail="Combate no encontrado")
     category_id = match.bracket.category_id
-    payload = RoundScoreCreate(round_number=round_number, red_points=red_points, blue_points=blue_points)
+    payload = RoundScoreCreate(red_points=red_points, blue_points=blue_points)
     return _submit_and_redirect(
-        request, db, category_id, lambda: create_round_score_api(match_id, payload, db)
+        request,
+        db,
+        category_id,
+        form=echo_form(match_id=match_id, red_points=red_points, blue_points=blue_points),
+        action=lambda: create_round_score_api(match_id, payload, db),
     )

@@ -12,14 +12,19 @@ from app.api.athletes import update_athlete as update_athlete_api
 from app.database import get_db
 from app.models import Athlete, Club
 from app.schemas import AthleteCreate, AthleteUpdate
-from app.web.admin._shared import error_message, require_admin
+from app.web.admin._shared import echo_form, error_message, require_admin
 from app.web.templating import templates
 
 router = APIRouter(dependencies=[Depends(require_admin)])
 
 
 def _render_athletes(
-    request: Request, db: Session, error: str | None = None, status_code: int = 200, q: str = ""
+    request: Request,
+    db: Session,
+    error: str | None = None,
+    status_code: int = 200,
+    q: str = "",
+    form: dict | None = None,
 ):
     return templates.TemplateResponse(
         request,
@@ -29,6 +34,7 @@ def _render_athletes(
             "clubs": db.scalars(select(Club).order_by(Club.name)).all(),
             "error": error,
             "q": q.strip(),
+            "form": form or {},
         },
         status_code=status_code,
     )
@@ -63,7 +69,10 @@ def create_athlete_view(
         )
         create_athlete_api(payload, db)
     except (HTTPException, ValidationError) as exc:
-        return _render_athletes(request, db, error_message(exc), status_code=400)
+        form = echo_form(
+            name=name, ci=ci, birth_date=birth_date, gender=gender, belt_rank=belt_rank, weight_kg=weight_kg, club_id=club_id
+        )
+        return _render_athletes(request, db, error_message(exc), status_code=400, form=form)
     return RedirectResponse(url="/admin/atletas", status_code=303)
 
 

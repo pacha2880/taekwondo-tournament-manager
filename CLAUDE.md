@@ -7,15 +7,16 @@ de uso en `README.md` — este archivo no repite ese contenido, solo apunta a é
 
 ## Estado actual
 
-- Versión `0.4.0` (`app/version.py`, única fuente de verdad). En producción:
+- Versión `0.5.0` (`app/version.py`, única fuente de verdad). En producción:
   https://taekwondo-tournament-manager.onrender.com (Render + Neon, región Ohio). Hay un
   servicio **dev** en Render que despliega la rama `dev` contra una rama `dev` de Neon.
 - Quedan datos de demo en la base de **producción** (club "Club Demo Cochabamba", torneo
   "Copa Cochabamba DEMO"); el admin no tiene botón de borrar — limpieza solo por SQL desde el
   panel de Neon.
-- La `0.3.0` (CORS + documentación de la API) está liberada (tag `v0.3.0`). La `0.4.0` (CI de
-  atletas, editar atletas y clubes, búsqueda, `SECRET_KEY` de 32 bytes mínimo) está lista en `dev`
-  para el PR a `main`. Después: backlog de Fase 9 en `docs/BACKLOG.md` (tiene decisiones
+- Liberadas, cada una con su tag: `0.3.0` (CORS + documentación de la API) y `0.4.0` (CI de
+  atletas, editar atletas y clubes, búsqueda, `SECRET_KEY` de 32 bytes mínimo). La `0.5.0` (round
+  numerado por el servidor, ventana de confirmación y formularios que conservan lo escrito) está
+  lista en `dev` para el PR a `main`. Después: backlog de Fase 9 en `docs/BACKLOG.md` (tiene decisiones
   pendientes del usuario anotadas al principio).
 - Contexto de prioridades: un amigo del usuario construye un frontend separado (otra
   tecnología) contra esta API — por eso la API pasó a ser un producto con su propia
@@ -44,7 +45,10 @@ de uso en `README.md` — este archivo no repite ese contenido, solo apunta a é
   `create_club_api = create_club`) en vez de reimplementar validaciones de negocio — son
   funciones Python normales, `Depends(get_db)` es solo un default que se ignora al pasar `db`
   explícito. Cada handler atrapa `HTTPException`/`ValidationError` y re-renderiza la página
-  con el error en español en vez de devolver JSON crudo.
+  con el error en español en vez de devolver JSON crudo. Todo `<form method="post">` de las
+  plantillas admin lleva `data-confirm` (ventana de confirmación de `admin/base.html`);
+  `tests/test_admin_confirmations.py` falla si falta. Si un formulario falla, se vuelve a mostrar con lo
+  escrito: `echo_form(...)` en el manejador y `form.<campo>` en la plantilla (nunca vacío).
 - `app/web/labels.py` — traducción de enums a español (filtro Jinja `es_label` y
   `match_status_badge_class`). `app/web/templating.py` — único entorno Jinja2 compartido
   (filtros + versión global); no crear otro.

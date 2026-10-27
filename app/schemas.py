@@ -197,9 +197,6 @@ class CategoryRead(CategoryBase):
 
 
 class RoundScoreCreate(BaseModel):
-    round_number: int = Field(
-        description="Número del round dentro del combate, desde 1. No se puede repetir.", examples=[1]
-    )
     red_points: int = Field(description="Puntos del lado rojo en este round.", examples=[12])
     blue_points: int = Field(description="Puntos del lado azul en este round.", examples=[5])
 
@@ -209,6 +206,10 @@ class RoundScoreRead(RoundScoreCreate):
 
     id: int = Field(description="Identificador del resultado del round.")
     match_id: int = Field(description="Id del combate al que pertenece el round.")
+    round_number: int = Field(
+        description="Número del round dentro del combate, desde 1. Lo asigna el servidor en el orden en que se cargan.",
+        examples=[1],
+    )
     round_winner_id: int | None = Field(description="Atleta que ganó el round: el del lado con más puntos.")
 
 

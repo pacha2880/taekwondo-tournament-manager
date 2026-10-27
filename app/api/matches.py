@@ -8,7 +8,6 @@ from app.models import Match
 from app.schemas import MatchRead, RoundScoreCreate, RoundScoreRead
 from app.services.brackets import resolve_athlete_names
 from app.services.scoring import (
-    DuplicateRound,
     MatchAlreadyFinished,
     MatchNotReady,
     TiedRound,
@@ -43,18 +42,18 @@ def get_match(match_id: int, db: Session = Depends(get_db)):
     status_code=201,
     dependencies=ADMIN_ONLY,
     summary="Cargar el resultado de un round",
-    description="Gana el round el lado con más puntos; un round no puede terminar en empate (422). Cuando un atleta llega a `rounds_to_win` rounds ganados, el combate pasa a `finished` y su ganador avanza a la siguiente ronda. Requiere token.",
-    responses=errors({400: "El combate todavía no tiene a sus dos atletas definidos.", 404: "El combate no existe.", 409: "El combate ya terminó, o ese número de round ya está cargado."}, auth=True),
+    description="Solo se envían los puntos de cada lado: el servidor numera los rounds (1, 2, 3…) en el orden en que se cargan. Gana el round el lado con más puntos; un round no puede terminar en empate (422). Cuando un atleta llega a `rounds_to_win` rounds ganados, el combate pasa a `finished` y su ganador avanza a la siguiente ronda. Requiere token.",
+    responses=errors({400: "El combate todavía no tiene a sus dos atletas definidos.", 404: "El combate no existe.", 409: "El combate ya terminó, así que no admite más rounds."}, auth=True),
 )
 def create_round_score(match_id: int, payload: RoundScoreCreate, db: Session = Depends(get_db)):
     match = db.get(Match, match_id)
     if not match:
         raise HTTPException(status_code=404, detail="Combate no encontrado")
     try:
-        return record_round(db, match, payload.round_number, payload.red_points, payload.blue_points)
+        return record_round(db, match, payload.red_points, payload.blue_points)
     except MatchNotReady as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except (MatchAlreadyFinished, DuplicateRound) as exc:
+    except MatchAlreadyFinished as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except TiedRound as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
