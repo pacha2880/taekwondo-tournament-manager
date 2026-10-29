@@ -13,15 +13,19 @@
     <h1>{{ tournament.name }}</h1>
     <p class="text-muted mb-0">{{ tournament.location }} &middot; {{ tournament.date }}</p>
   </div>
-  <form method="post" action="/admin/torneos/{{ tournament.id }}/estado" class="d-flex align-items-center gap-2"
-        data-confirm="Cambiar el estado del torneo">
-    <select name="status" class="form-select form-select-sm" aria-label="Nuevo estado">
-      {% for value, label in status_options %}
-      <option value="{{ value }}" {% if tournament.status == value %}selected{% endif %}>{{ label }}</option>
-      {% endfor %}
-    </select>
-    <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap">Actualizar estado</button>
+  {% if tournament.status == "draft" %}
+  <form method="post" action="/admin/torneos/{{ tournament.id }}/iniciar"
+        data-confirm="Cerrar inscripciones e iniciar torneo"
+        data-confirm-note="Es irreversible: ya no se podrá inscribir atletas ni crear categorías.">
+    <button type="submit" class="btn btn-sm btn-primary text-nowrap">Cerrar inscripciones e iniciar torneo</button>
   </form>
+  {% elif tournament.status == "in_progress" %}
+  <form method="post" action="/admin/torneos/{{ tournament.id }}/finalizar"
+        data-confirm="Finalizar torneo"
+        data-confirm-note="Es irreversible: los resultados quedan como definitivos.">
+    <button type="submit" class="btn btn-sm btn-success text-nowrap">Finalizar torneo</button>
+  </form>
+  {% endif %}
 </div>
 
 {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}

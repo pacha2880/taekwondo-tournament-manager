@@ -125,10 +125,11 @@ class TournamentCreate(TournamentBase):
 
 
 class TournamentUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     name: str | None = Field(default=None, description="Nuevo nombre. Si no se envía, no cambia.")
     date: datetime.date | None = Field(default=None, description="Nueva fecha (`YYYY-MM-DD`). Si no se envía, no cambia.")
     location: str | None = Field(default=None, description="Nuevo lugar. Si no se envía, no cambia.")
-    status: TournamentStatus | None = Field(default=None, description="Nuevo estado. Si no se envía, no cambia.")
 
 
 class TournamentRead(TournamentBase):

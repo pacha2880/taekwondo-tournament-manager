@@ -233,7 +233,7 @@ def main() -> None:
     category_ids = [load_category(api, tournament_id, club_ids, entry) for entry in in_progress_entries]
 
     print("  Pasando el torneo a «en curso», sorteando las llaves y cargando resultados...")
-    api("PATCH", f"/api/v1/tournaments/{tournament_id}", {"status": "in_progress"})
+    api("POST", f"/api/v1/tournaments/{tournament_id}/start")
     match_rng = random.Random(7)
     for category_id, entry in zip(category_ids, in_progress_entries):
         api("POST", f"/api/v1/categories/{category_id}/bracket")

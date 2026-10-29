@@ -12,9 +12,6 @@ volver al tag anterior siga funcionando sobre una base ya migrada; tras el deplo
 
 ## Decisiones pendientes
 
-- **Categoría sin llave y cierre del torneo.** ¿Una categoría sin llave bloquea pasar el torneo
-  a `FINISHED`? Propuesta: sí si tiene 2 o más inscritos (hay combates sin jugar); se ignora si
-  tiene 0 o 1 (lo resuelve la 0.7.0).
 - **Asignación de área/cancha por categoría.** Un torneo real corre varias categorías en
   paralelo en distintas áreas (viene de la planilla física de control, campo "AREA"). Falta
   decidir: ¿una entidad `Area` propia (nombre/número), o alcanza con que el admin indique
@@ -137,6 +134,14 @@ pública. La versión se sube al final, con las cuatro.
       generada: como las llaves solo se generan con el torneo en curso (Parte 2), una categoría con llave
       ya tiene las inscripciones cerradas, y todo el ciclo depende de una sola cosa, el estado del torneo.
       Ver `docs/DECISIONS.md`, 2026-10-27.
+- [x] **(Parte 1)** El estado deja de fijarse con `PATCH` y pasa a dos acciones:
+      `POST /tournaments/{id}/start` (solo desde `draft`; no exige nada más) y
+      `POST /tournaments/{id}/finish` (solo desde `in_progress`, ver condiciones abajo). Repetir una
+      acción o saltar de `draft` a `finished` responde 409. Se **elimina `status` del `PATCH`** de
+      torneos: cambio incompatible, va marcado en el CHANGELOG y hay que avisarle al frontend externo
+      antes del deploy. En el admin, el selector se reemplaza por un solo botón según el estado:
+      «Cerrar inscripciones e iniciar torneo» y «Finalizar torneo», cada uno con confirmación que
+      avisa que es irreversible. Ver `docs/DECISIONS.md`, 2026-10-27.
 - [ ] No permitir cargar resultados de rounds (`record_round` en `app/services/scoring.py`)
       mientras el torneo está en `DRAFT` — mensaje pidiendo pasar el torneo a "en curso"
       primero.
@@ -153,19 +158,13 @@ pública. La versión se sube al final, con las cuatro.
       necesidad de automatizar nada. Además cierra un hueco de la 0.4.0: `PATCH /athletes` retira
       a un atleta de una categoría de un torneo en borrador sin mirar si ya tiene llave, porque con
       esta regla un torneo en borrador nunca tendrá llave.
-- [ ] Solo se puede mover a `FINISHED` cuando **todos** los matches de **todas** las
-      categorías del torneo llegaron a un estado terminal. Ojo con el detalle: un bye nunca
-      pasa a `MatchStatus.FINISHED` (se queda en `BYE` para siempre, ver `app/models.py`),
-      así que la condición es `status in (FINISHED, BYE)` para cada match, no
-      `status == FINISHED` a secas — si no, un bracket con cualquier bye bloquearía el
-      torneo para siempre. Qué pasa con una categoría que nunca generó bracket: ver
-      "Decisiones pendientes".
-- [ ] El estado solo avanza: `DRAFT` → `IN_PROGRESS` → `FINISHED`, sin volver atrás (`409` si se
-      intenta). Pasar de estado es una promoción en el funcionamiento del torneo (cierra
-      inscripciones, habilita llaves, cierra resultados), no un dato que se corrige. `FINISHED`
-      además es inmutable: ningún otro campo del torneo se puede cambiar. En el admin, el selector
-      ofrece solo el estado siguiente y la confirmación (que ya existe desde la 0.5.0) avisa que es
-      irreversible.
+- [x] `finish` exige que **todos** los matches de **todas** las categorías del torneo hayan
+      llegado a un estado terminal. Ojo con el detalle: un bye nunca pasa a
+      `MatchStatus.FINISHED` (se queda en `BYE` para siempre, ver `app/models.py`), así que la
+      condición es `status in (FINISHED, BYE)` para cada match, no `status == FINISHED` a secas —
+      si no, un bracket con cualquier bye bloquearía el torneo para siempre. **Decidido:** una
+      categoría sin llave bloquea si tiene 2 o más inscritos (hay combates sin jugar) y se ignora si
+      tiene 0 o 1 (la de 1 la resuelve la 0.7.0).
 - [ ] Ocultar los torneos en estado `DRAFT` de la lista principal de la pantalla pública (`/`).
       Queda abierta la pregunta de si también hay que bloquear el acceso directo a
       `/torneos/{id}`/`/categorias/{id}` de un torneo en borrador (hoy no miran `status` para

@@ -89,8 +89,10 @@ def test_athlete_in_second_category_of_same_tournament_rejected(client, athlete,
 
 
 @pytest.mark.parametrize("status", ["in_progress", "finished"])
-def test_registrations_are_closed_once_the_tournament_started(client, athlete, category, tournament, status):
-    client.patch(f"/api/v1/tournaments/{tournament['id']}", json={"status": status})
+def test_registrations_are_closed_once_the_tournament_started(
+    client, athlete, category, tournament, status, set_tournament_status
+):
+    set_tournament_status(client, tournament["id"], status)
 
     resp = client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
 

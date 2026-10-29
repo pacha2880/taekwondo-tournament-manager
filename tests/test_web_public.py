@@ -4,12 +4,12 @@ def test_home_lists_tournaments(client, tournament):
     assert tournament["name"] in resp.text
 
 
-def test_home_colors_each_tournament_status_badge(client):
+def test_home_colors_each_tournament_status_badge(client, set_tournament_status):
     for name, status in (("T1", "draft"), ("T2", "in_progress"), ("T3", "finished")):
         created = client.post(
             "/api/v1/tournaments", json={"name": name, "date": "2026-11-15", "location": "La Paz"}
         ).json()
-        client.patch(f"/api/v1/tournaments/{created['id']}", json={"status": status})
+        set_tournament_status(client, created["id"], status)
 
     html = client.get("/").text
 

@@ -2,13 +2,21 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api.lifecycle import require_all_matches_played, require_tournament_status
 from app.api_docs import TAG_TOURNAMENTS, errors
 from app.auth import ADMIN_ONLY
 from app.database import get_db
-from app.models import Tournament
+from app.models import Tournament, TournamentStatus
 from app.schemas import TournamentCreate, TournamentRead, TournamentUpdate
 
 router = APIRouter(prefix="/api/v1/tournaments", tags=[TAG_TOURNAMENTS])
+
+
+def get_tournament_or_404(db: Session, tournament_id: int) -> Tournament:
+    tournament = db.get(Tournament, tournament_id)
+    if not tournament:
+        raise HTTPException(status_code=404, detail="Torneo no encontrado")
+    return tournament
 
 
 @router.post(
@@ -47,10 +55,7 @@ def list_tournaments(db: Session = Depends(get_db)):
     responses=errors({404: "El torneo no existe."}),
 )
 def get_tournament(tournament_id: int, db: Session = Depends(get_db)):
-    tournament = db.get(Tournament, tournament_id)
-    if not tournament:
-        raise HTTPException(status_code=404, detail="Torneo no encontrado")
-    return tournament
+    return get_tournament_or_404(db, tournament_id)
 
 
 @router.patch(
@@ -58,15 +63,54 @@ def get_tournament(tournament_id: int, db: Session = Depends(get_db)):
     response_model=TournamentRead,
     dependencies=ADMIN_ONLY,
     summary="Actualizar un torneo",
-    description="Modifica solo los campos que se envían (nombre, fecha, lugar o estado). Requiere token.",
+    description="Modifica solo los campos que se envían (nombre, fecha o lugar). El estado no se cambia acá: "
+    "ver `start` y `finish`. Requiere token.",
     responses=errors({404: "El torneo no existe."}, auth=True),
 )
 def update_tournament(tournament_id: int, payload: TournamentUpdate, db: Session = Depends(get_db)):
-    tournament = db.get(Tournament, tournament_id)
-    if not tournament:
-        raise HTTPException(status_code=404, detail="Torneo no encontrado")
+    tournament = get_tournament_or_404(db, tournament_id)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(tournament, field, value)
+    db.commit()
+    db.refresh(tournament)
+    return tournament
+
+
+@router.post(
+    "/{tournament_id}/start",
+    response_model=TournamentRead,
+    dependencies=ADMIN_ONLY,
+    summary="Iniciar un torneo",
+    description="Pasa el torneo de `draft` a `in_progress`: se cierran las inscripciones y la creación de "
+    "categorías, y se pueden generar las llaves. Es irreversible. Requiere token.",
+    responses=errors({404: "El torneo no existe.", 409: "El torneo ya empezó."}, auth=True),
+)
+def start_tournament(tournament_id: int, db: Session = Depends(get_db)):
+    tournament = get_tournament_or_404(db, tournament_id)
+    require_tournament_status(tournament, TournamentStatus.DRAFT, "El torneo ya empezó")
+    tournament.status = TournamentStatus.IN_PROGRESS
+    db.commit()
+    db.refresh(tournament)
+    return tournament
+
+
+@router.post(
+    "/{tournament_id}/finish",
+    response_model=TournamentRead,
+    dependencies=ADMIN_ONLY,
+    summary="Finalizar un torneo",
+    description="Pasa el torneo de `in_progress` a `finished`: sus resultados quedan como definitivos. Exige que "
+    "no queden combates por jugar: toda llave terminada, y toda categoría con 2 o más inscritos con su llave "
+    "generada. Es irreversible. Requiere token.",
+    responses=errors(
+        {404: "El torneo no existe.", 409: "El torneo no está en curso, o quedan combates por jugar."}, auth=True
+    ),
+)
+def finish_tournament(tournament_id: int, db: Session = Depends(get_db)):
+    tournament = get_tournament_or_404(db, tournament_id)
+    require_tournament_status(tournament, TournamentStatus.IN_PROGRESS, "Solo se puede finalizar un torneo en curso")
+    require_all_matches_played(tournament)
+    tournament.status = TournamentStatus.FINISHED
     db.commit()
     db.refresh(tournament)
     return tournament

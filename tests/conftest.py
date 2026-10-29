@@ -113,6 +113,17 @@ def athlete(client, club):
 
 
 @pytest.fixture()
+def set_tournament_status():
+    def _set(client, tournament_id, status):
+        actions = {"draft": [], "in_progress": ["start"], "finished": ["start", "finish"]}[status]
+        for action in actions:
+            resp = client.post(f"/api/v1/tournaments/{tournament_id}/{action}")
+            assert resp.status_code == 200, resp.json()
+
+    return _set
+
+
+@pytest.fixture()
 def register_n_athletes():
     def _register(client, club, category, n, weight_kg=40):
         registrations = []

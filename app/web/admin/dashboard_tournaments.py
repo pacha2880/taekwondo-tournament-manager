@@ -6,13 +6,13 @@ from sqlalchemy.orm import Session
 
 from app.api.categories import create_category as create_category_api
 from app.api.tournaments import create_tournament as create_tournament_api
-from app.api.tournaments import update_tournament as update_tournament_api
+from app.api.tournaments import finish_tournament as finish_tournament_api
+from app.api.tournaments import start_tournament as start_tournament_api
 from app.database import get_db
-from app.models import Category, Tournament, TournamentStatus
-from app.schemas import CategoryCreate, TournamentCreate, TournamentUpdate
+from app.models import Category, Tournament
+from app.schemas import CategoryCreate, TournamentCreate
 from app.web.admin._shared import echo_form, error_message, require_admin
 from app.web.templating import templates
-from app.web.labels import es_label
 
 router = APIRouter(dependencies=[Depends(require_admin)])
 
@@ -62,14 +62,12 @@ def _render_tournament_detail(
     if not tournament:
         raise HTTPException(status_code=404, detail="Torneo no encontrado")
     categories = db.scalars(select(Category).where(Category.tournament_id == tournament_id)).all()
-    status_options = [(s.value, es_label(s)) for s in TournamentStatus]
     return templates.TemplateResponse(
         request,
         "admin/tournament_detail.html",
         {
             "tournament": tournament,
             "categories": categories,
-            "status_options": status_options,
             "error": error,
             "form": form or {},
         },
@@ -90,13 +88,14 @@ def tournament_detail(tournament_id: int, request: Request, db: Session = Depend
     return _render_tournament_detail(request, db, tournament_id)
 
 
-@router.post("/torneos/{tournament_id}/estado")
-def update_tournament_status(
-    tournament_id: int, request: Request, status: str = Form(...), db: Session = Depends(get_db)
-):
-    return _submit_and_redirect(
-        request, db, tournament_id, lambda: update_tournament_api(tournament_id, TournamentUpdate(status=status), db)
-    )
+@router.post("/torneos/{tournament_id}/iniciar")
+def start_tournament_view(tournament_id: int, request: Request, db: Session = Depends(get_db)):
+    return _submit_and_redirect(request, db, tournament_id, lambda: start_tournament_api(tournament_id, db))
+
+
+@router.post("/torneos/{tournament_id}/finalizar")
+def finish_tournament_view(tournament_id: int, request: Request, db: Session = Depends(get_db)):
+    return _submit_and_redirect(request, db, tournament_id, lambda: finish_tournament_api(tournament_id, db))
 
 
 @router.post("/torneos/{tournament_id}/categorias")

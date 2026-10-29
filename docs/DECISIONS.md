@@ -531,7 +531,25 @@ una categoría que todavía no tiene llave, y como no se vuelve atrás tampoco h
 inscripciones. Por eso el cambio de estado pide confirmación en el admin avisando que cierra la preparación.
 Si hace falta, más adelante se puede agregar «reabrir inscripciones» solo cuando no exista ninguna llave.
 
-**Dónde vive.** `require_tournament_status` está en `app/api/lifecycle.py`,
-junto a la API y no en `app/services/`, porque lanza `HTTPException` (los servicios no dependen de FastAPI).
+**El estado cambia con acciones, no con `PATCH`.** `POST /tournaments/{id}/start` (solo desde `draft`) y
+`POST /tournaments/{id}/finish` (solo desde `in_progress`). Primero se probó un `PATCH {"status": ...}` que solo
+dejaba avanzar, pero «fijar un estado» escondía condiciones previas en un endpoint genérico y permitía saltar de
+`draft` a `finished`, un torneo que nunca se jugó. Con una acción por paso cada una tiene sus condiciones, sus
+errores y su documentación, y el admin muestra un solo botón según el estado («Cerrar inscripciones e iniciar
+torneo», «Finalizar torneo»). No se vuelve atrás: reabrir un torneo con llaves volvería a permitir categorías e
+inscripciones. Repetir una acción responde 409. `status` salió del `PATCH` (cambio incompatible, aceptado en
+`0.x`), que además rechaza campos desconocidos (422) para que un cliente viejo que mande `status` se entere en
+vez de que se ignore en silencio. Todos los bloqueos de estado responden 409, el mismo código que usa editar un
+atleta inscrito en un torneo en curso.
+
+**Para qué existe `finished`.** Las condiciones de `finish` ya garantizan que no queda nada por jugar (toda
+llave terminada, contando los `bye`, y toda categoría con 2 o más inscritos con su llave), así que no hace
+falta «congelar» nada más: cargar rounds o generar llaves ya es imposible, y el nombre, la fecha y el lugar se
+pueden seguir corrigiendo. Su efecto es comunicar que los resultados son **definitivos** (para el público y el
+frontend externo, «en curso» = pueden cambiar) y liberar la edición de atletas, que ya no quedan atados a ese
+torneo. Una categoría sin llave con 0 o 1 inscritos no bloquea el cierre (no hay nada que jugar).
+
+**Dónde vive.** `require_tournament_status` y `require_all_matches_played` están en `app/api/lifecycle.py`,
+junto a la API y no en `app/services/`, porque lanzan `HTTPException` (los servicios no dependen de FastAPI).
 En el admin, cuando el torneo ya empezó, los formularios de crear categoría e inscribir se reemplazan por un
 aviso en vez de dejar que fallen.

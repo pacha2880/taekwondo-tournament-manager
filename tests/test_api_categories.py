@@ -62,8 +62,8 @@ def test_create_category_rejects_min_age_greater_than_max_age(client, tournament
 
 
 @pytest.mark.parametrize("status", ["in_progress", "finished"])
-def test_categories_cannot_be_created_once_the_tournament_started(client, tournament, status):
-    client.patch(f"/api/v1/tournaments/{tournament['id']}", json={"status": status})
+def test_categories_cannot_be_created_once_the_tournament_started(client, tournament, status, set_tournament_status):
+    set_tournament_status(client, tournament["id"], status)
 
     resp = client.post(
         "/api/v1/categories",

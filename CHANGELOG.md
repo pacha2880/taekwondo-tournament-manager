@@ -12,11 +12,17 @@ funcionando sobre una base ya migrada.
 ## [Unreleased]
 
 ### Changed
+- **Incompatible — importante para quien use la API:** el estado de un torneo ya no se cambia con
+  `PATCH /api/v1/tournaments/{id}` (enviar `status` ahora responde `422`). Se usan dos acciones:
+  `POST /api/v1/tournaments/{id}/start` (de `draft` a `in_progress`) y `POST /api/v1/tournaments/{id}/finish`
+  (de `in_progress` a `finished`, solo si no quedan combates por jugar). El estado no vuelve atrás: repetir
+  una acción o saltar un paso responde `409`.
 - **Importante para quien use la API:** las categorías y las inscripciones solo se crean mientras el torneo
   está en `draft`; con el torneo ya iniciado, `POST /api/v1/categories` y `POST /api/v1/registrations`
   responden `409`. Con esto, al pasar a «en curso» se cierra la preparación del torneo.
 - En el admin, cuando el torneo ya empezó, los formularios de crear categoría e inscribir atleta se
-  reemplazan por un aviso.
+  reemplazan por un aviso. El selector de estado se reemplaza por un solo botón según el estado
+  («Cerrar inscripciones e iniciar torneo» o «Finalizar torneo»), con confirmación que avisa que es irreversible.
 
 ## [0.5.0] - 2026-10-26
 
