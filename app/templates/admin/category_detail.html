@@ -22,8 +22,14 @@
     <h2 class="h5">Inscritos</h2>
     <ul class="list-group mb-3">
       {% for r in registrations %}
-      <li class="list-group-item">
-        {{ r.athlete.name }} <span class="text-muted small">&middot; {{ r.athlete.club.name }}</span>
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span>{{ r.athlete.name }} <span class="text-muted small">&middot; {{ r.athlete.club.name }}</span></span>
+        {% if tournament.status == "draft" %}
+        <form method="post" action="/admin/categorias/{{ category.id }}/inscripciones/{{ r.id }}/retirar"
+              data-confirm="Retirar atleta" data-confirm-note="Se retirará a {{ r.athlete.name }} de esta categoría.">
+          <button type="submit" class="btn btn-sm btn-outline-danger">Retirar</button>
+        </form>
+        {% endif %}
       </li>
       {% else %}
       <li class="list-group-item text-muted">Todavía no hay atletas inscritos.</li>

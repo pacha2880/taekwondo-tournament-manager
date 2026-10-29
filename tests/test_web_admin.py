@@ -582,6 +582,36 @@ def test_registration_form_is_replaced_by_a_notice_once_the_tournament_started(c
     assert "Las inscripciones están cerradas porque el torneo ya empezó" in after
 
 
+def test_withdraw_button_is_offered_only_while_the_tournament_is_in_draft(client, athlete, category, tournament):
+    _login(client)
+    page_url = f"/admin/categorias/{category['id']}"
+    registration = client.post(
+        "/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]}
+    ).json()
+    withdraw_url = f"{page_url}/inscripciones/{registration['id']}/retirar"
+
+    draft = client.get(page_url).text
+    client.post(f"/api/v1/tournaments/{tournament['id']}/start")
+    started = client.get(page_url).text
+    rejected = client.post(withdraw_url)  # el torneo ya empezó
+
+    assert f'action="{withdraw_url}"' in draft
+    assert withdraw_url not in started
+    assert rejected.status_code == 400
+    assert "Las inscripciones están cerradas" in rejected.text
+
+
+def test_withdraw_button_removes_the_athlete(client, athlete, category):
+    _login(client)
+    registration = client.post(
+        "/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]}
+    ).json()
+
+    resp = client.post(f"/admin/categorias/{category['id']}/inscripciones/{registration['id']}/retirar")
+
+    assert "Todavía no hay atletas inscritos" in resp.text
+
+
 def test_tournament_page_offers_only_the_next_step_of_its_lifecycle(client, tournament):
     _login(client)
     page_url = f"/admin/torneos/{tournament['id']}"

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.api.brackets import create_bracket as create_bracket_api
 from app.api.matches import create_round_score as create_round_score_api
 from app.api.registrations import create_registration as create_registration_api
+from app.api.registrations import delete_registration as delete_registration_api
 from app.database import get_db
 from app.models import Athlete, Bracket, Category, Match, Registration
 from app.schemas import RegistrationCreate, RoundScoreCreate
@@ -101,6 +102,11 @@ def create_registration_view(
         form=echo_form(athlete_id=athlete_id),
         action=lambda: create_registration_api(RegistrationCreate(athlete_id=athlete_id, category_id=category_id), db),
     )
+
+
+@router.post("/categorias/{category_id}/inscripciones/{registration_id}/retirar")
+def delete_registration_view(category_id: int, registration_id: int, request: Request, db: Session = Depends(get_db)):
+    return _submit_and_redirect(request, db, category_id, lambda: delete_registration_api(registration_id, db))
 
 
 @router.post("/categorias/{category_id}/llave")

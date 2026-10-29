@@ -86,8 +86,9 @@ El estado no se cambia con `PATCH` sino con dos acciones, y solo avanza (`409` s
 paso):
 
 - `POST /api/v1/tournaments/{id}/start`: de `draft` a `in_progress`. Mientras el torneo está en `draft` se
-  crean las categorías y se inscribe a los atletas; al iniciarlo esas dos cosas se cierran
-  (`POST /categories` y `POST /registrations` responden `409`). Con el torneo en curso se generan las
+  crean las categorías y se inscribe (o se retira, con `DELETE /registrations/{id}`) a los atletas; al
+  iniciarlo esas cosas se cierran (`POST /categories`, `POST /registrations` y `DELETE /registrations/{id}`
+  responden `409`). Con el torneo en curso se generan las
   llaves y se cargan los resultados; en `draft` o `finished` ambas cosas responden `409`.
 - `POST /api/v1/tournaments/{id}/finish`: de `in_progress` a `finished`, los resultados quedan como
   definitivos. Exige que no queden combates por jugar: si falta alguno responde `409` y `detail` nombra las

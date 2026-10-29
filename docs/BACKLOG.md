@@ -142,6 +142,10 @@ pública. La versión se sube al final, con las cuatro.
       antes del deploy. En el admin, el selector se reemplaza por un solo botón según el estado:
       «Cerrar inscripciones e iniciar torneo» y «Finalizar torneo», cada uno con confirmación que
       avisa que es irreversible. Ver `docs/DECISIONS.md`, 2026-10-27.
+- [x] Retirar a un atleta de una categoría: `DELETE /registrations/{id}`, solo con el torneo en
+      `draft` (409 si no, con `require_tournament_status`). En el admin, un botón «Retirar» en cada
+      fila de la lista de inscritos de la categoría, con confirmación (`data-confirm`); con el torneo
+      ya iniciado el botón no aparece.
 - [x] **(Parte 2)** No permitir cargar resultados de rounds (`record_round` en `app/services/scoring.py`)
       mientras el torneo está en `DRAFT` — mensaje pidiendo pasar el torneo a "en curso"
       primero.

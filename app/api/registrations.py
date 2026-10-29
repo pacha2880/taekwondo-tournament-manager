@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -75,3 +75,23 @@ def list_registrations(category_id: int | None = None, db: Session = Depends(get
     if category_id is not None:
         stmt = stmt.where(Registration.category_id == category_id)
     return db.scalars(stmt).all()
+
+
+@router.delete(
+    "/{registration_id}",
+    status_code=204,
+    dependencies=ADMIN_ONLY,
+    summary="Retirar a un atleta de una categoría",
+    description="Borra la inscripción. Solo mientras el torneo está en `draft`: con el torneo ya iniciado responde 409. Requiere token.",
+    responses=errors({404: "La inscripción no existe.", 409: "Las inscripciones están cerradas (el torneo ya empezó)."}, auth=True),
+)
+def delete_registration(registration_id: int, db: Session = Depends(get_db)):
+    registration = db.get(Registration, registration_id)
+    if not registration:
+        raise HTTPException(status_code=404, detail="Inscripción no encontrada")
+    require_tournament_status(
+        registration.category.tournament, TournamentStatus.DRAFT, "Las inscripciones están cerradas: el torneo ya empezó"
+    )
+    db.delete(registration)
+    db.commit()
+    return Response(status_code=204)

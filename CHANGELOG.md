@@ -11,6 +11,11 @@ funcionando sobre una base ya migrada.
 
 ## [Unreleased]
 
+### Added
+- **Retirar a un atleta de una categoría:** `DELETE /api/v1/registrations/{id}` (responde `204`) y un botón
+  «Retirar» con confirmación en cada fila de inscritos del admin. Solo con el torneo en `draft`; después
+  responde `409` y el botón no aparece.
+
 ### Changed
 - **Incompatible — importante para quien use la API:** el estado de un torneo ya no se cambia con
   `PATCH /api/v1/tournaments/{id}` (enviar `status` ahora responde `422`). Se usan dos acciones:

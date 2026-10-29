@@ -98,3 +98,33 @@ def test_registrations_are_closed_once_the_tournament_started(
 
     assert resp.status_code == 409
     assert resp.json()["detail"] == "Las inscripciones están cerradas: el torneo ya empezó"
+
+
+def test_delete_registration_frees_the_athlete(client, athlete, category):
+    payload = {"athlete_id": athlete["id"], "category_id": category["id"]}
+    registration = client.post("/api/v1/registrations", json=payload).json()
+
+    resp = client.delete(f"/api/v1/registrations/{registration['id']}")
+
+    assert resp.status_code == 204
+    assert client.get(f"/api/v1/registrations?category_id={category['id']}").json() == []
+    assert client.post("/api/v1/registrations", json=payload).status_code == 201
+
+
+def test_delete_missing_registration_404(client):
+    assert client.delete("/api/v1/registrations/999").status_code == 404
+
+
+@pytest.mark.parametrize("status", ["in_progress", "finished"])
+def test_registrations_cannot_be_deleted_once_the_tournament_started(
+    client, athlete, category, tournament, status, set_tournament_status
+):
+    registration = client.post(
+        "/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]}
+    ).json()
+    set_tournament_status(client, tournament["id"], status)
+
+    resp = client.delete(f"/api/v1/registrations/{registration['id']}")
+
+    assert resp.status_code == 409
+    assert resp.json()["detail"] == "Las inscripciones están cerradas: el torneo ya empezó"
