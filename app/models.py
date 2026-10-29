@@ -8,8 +8,8 @@ from app.database import Base
 
 
 class TournamentStatus(str, enum.Enum):
-    """Estado del torneo: `draft` (borrador, se arman categorías e inscripciones), `in_progress` (en curso)
-    y `finished` (finalizado)."""
+    """Estado del torneo: `draft` (borrador: se crean las categorías y se inscribe a los atletas),
+    `in_progress` (en curso: ya no se crean categorías ni se inscribe) y `finished` (finalizado)."""
 
     DRAFT = "draft"
     IN_PROGRESS = "in_progress"

@@ -40,6 +40,8 @@ de uso en `README.md` — este archivo no repite ese contenido, solo apunta a é
 - `app/services/eligibility.py` — `category_mismatch`: regla de género/peso de un atleta contra una
   categoría; la usan la inscripción y la edición de atletas (`PATCH /athletes`, que retira de las
   categorías de torneos en borrador donde ya no encaja, con confirmación). No duplicarla.
+- `app/api/lifecycle.py` — reglas de estado del torneo (`require_tournament_status`; 409): categorías e
+  inscripciones solo en `draft`. Toda regla nueva de estado va acá, no repetida en cada endpoint.
 - `app/web/admin.py` / `app/web/admin/` — pantalla admin (login por sesión,
   `SessionMiddleware`). **Sus handlers llaman directo a las funciones de `app/api/*.py`** (ej.
   `create_club_api = create_club`) en vez de reimplementar validaciones de negocio — son

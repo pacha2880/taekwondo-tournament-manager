@@ -3,10 +3,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.athletes import get_athlete_or_404
+from app.api.lifecycle import require_tournament_status
 from app.api_docs import TAG_REGISTRATIONS, errors
 from app.auth import ADMIN_ONLY
 from app.database import get_db
-from app.models import Category, Registration
+from app.models import Category, Registration, TournamentStatus
 from app.schemas import RegistrationCreate, RegistrationRead
 from app.services.eligibility import category_mismatch
 
@@ -19,14 +20,17 @@ router = APIRouter(prefix="/api/v1/registrations", tags=[TAG_REGISTRATIONS])
     status_code=201,
     dependencies=ADMIN_ONLY,
     summary="Inscribir un atleta en una categoría",
-    description="Reglas: el género del atleta debe coincidir con el de la categoría (422); su peso debe estar dentro de `min_weight`/`max_weight` si la categoría los define (422); no puede inscribirse dos veces en la misma categoría (409) ni en más de una categoría del mismo torneo (409). Requiere token.",
-    responses=errors({404: "El atleta o la categoría no existe.", 409: "El atleta ya está inscrito en esa categoría o en otra del mismo torneo."}, auth=True),
+    description="Reglas: el torneo debe estar en `draft`: al pasar a `in_progress` las inscripciones se cierran (409); el género del atleta debe coincidir con el de la categoría (422); su peso debe estar dentro de `min_weight`/`max_weight` si la categoría los define (422); no puede inscribirse dos veces en la misma categoría (409) ni en más de una categoría del mismo torneo (409). Requiere token.",
+    responses=errors({404: "El atleta o la categoría no existe.", 409: "Las inscripciones están cerradas (el torneo ya empezó), o el atleta ya está inscrito en esa categoría o en otra del mismo torneo."}, auth=True),
 )
 def create_registration(payload: RegistrationCreate, db: Session = Depends(get_db)):
     athlete = get_athlete_or_404(db, payload.athlete_id)
     category = db.get(Category, payload.category_id)
     if not category:
         raise HTTPException(status_code=404, detail="Categoría no encontrada")
+    require_tournament_status(
+        category.tournament, TournamentStatus.DRAFT, "Las inscripciones están cerradas: el torneo ya empezó"
+    )
     mismatch = category_mismatch(athlete.gender, athlete.weight_kg, category)
     if mismatch:
         raise HTTPException(status_code=422, detail=mismatch)

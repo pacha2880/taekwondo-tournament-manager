@@ -128,18 +128,19 @@ Una regla por commit, cada una con sus tests. Las validaciones viven del lado de
 solo del admin), así que aplican también a cualquier consumidor directo de `/api/v1/...`,
 consistente con el resto del proyecto.
 
-- [ ] Una vez generado el bracket de una categoría, bloquear nuevas inscripciones a esa
-      categoría (`create_registration` en `app/api/registrations.py`, chequeando si
-      `Category` ya tiene `Bracket` — 409, mismo criterio que `BracketAlreadyExists`). Es una
-      regla a nivel de categoría, independiente del estado del torneo (`TournamentStatus`):
-      dos categorías del mismo torneo pueden estar en momentos distintos (una con llave ya
-      generada, otra todavía recibiendo inscripciones). En el admin, el botón "Generar llave"
-      necesita un popup de confirmación explicando que después de esto no se puede inscribir
-      a nadie más en esa categoría.
+Se implementa en 4 partes revisables: **1** se cierra la preparación (inscripciones, categorías, no
+volver atrás), **2** se habilita el torneo en curso (llaves y rounds), **3** cierre del torneo, **4** vista
+pública. La versión se sube al final, con las cuatro.
+
+- [x] **(Parte 1)** Las inscripciones se cierran al pasar el torneo a «en curso»: `create_registration`
+      responde 409 si el torneo no está en `draft`. Reemplaza la idea original de bloquear por llave
+      generada: como las llaves solo se generan con el torneo en curso (Parte 2), una categoría con llave
+      ya tiene las inscripciones cerradas, y todo el ciclo depende de una sola cosa, el estado del torneo.
+      Ver `docs/DECISIONS.md`, 2026-10-27.
 - [ ] No permitir cargar resultados de rounds (`record_round` en `app/services/scoring.py`)
       mientras el torneo está en `DRAFT` — mensaje pidiendo pasar el torneo a "en curso"
       primero.
-- [ ] Solo permitir crear categorías (`create_category` en `app/api/categories.py`) mientras
+- [x] **(Parte 1)** Solo permitir crear categorías (`create_category` en `app/api/categories.py`) mientras
       el torneo está en `DRAFT` — no "bloqueado en en curso", sino "solo permitido en
       DRAFT", para cubrir también el caso de un torneo ya `FINISHED`.
 - [ ] Solo permitir generar la llave de una categoría (`create_bracket`/`generate_bracket`)

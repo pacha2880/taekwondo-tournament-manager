@@ -515,3 +515,23 @@ cambia. Es una regla para todo formulario nuevo del admin; los de editar ya lo h
 alcanza con el número fijo y la confirmación con los puntos a la vista. Corregir un round obligaría a
 reabrir el combate y a deshacer el avance del ganador, que es el cambio con más riesgo de dejar datos
 inconsistentes; se reabre solo si el uso real lo pide.
+
+## 2026-10-27 — Ciclo de vida del torneo, parte 1: el estado manda (0.6.0)
+
+**Las inscripciones se cierran por el estado del torneo, no por la llave.** El backlog planteaba bloquear las
+inscripciones de una categoría en cuanto tuviera llave. Se cambió por una regla única: `create_registration` y
+`create_category` solo funcionan con el torneo en `draft` (409 si no). Motivo: las llaves solo se generan con el
+torneo en curso (para que el sorteo sea un evento público, no algo que pasó a escondidas), así que una
+categoría con llave ya tiene las inscripciones cerradas, y toda la lógica depende de un único dato. Cada estado
+queda con un significado claro: `draft` = preparación (categorías, inscripciones, ediciones de género/peso con
+retiro), `in_progress` = lista congelada, llaves y resultados, `finished` = resultados definitivos.
+
+**Costos aceptados.** Una vez que el torneo pasa a «en curso» no se puede inscribir a nadie más, ni siquiera en
+una categoría que todavía no tiene llave, y como no se vuelve atrás tampoco hay forma de reabrir las
+inscripciones. Por eso el cambio de estado pide confirmación en el admin avisando que cierra la preparación.
+Si hace falta, más adelante se puede agregar «reabrir inscripciones» solo cuando no exista ninguna llave.
+
+**Dónde vive.** `require_tournament_status` está en `app/api/lifecycle.py`,
+junto a la API y no en `app/services/`, porque lanza `HTTPException` (los servicios no dependen de FastAPI).
+En el admin, cuando el torneo ya empezó, los formularios de crear categoría e inscribir se reemplazan por un
+aviso en vez de dejar que fallen.

@@ -42,6 +42,9 @@
   </div>
   <div class="col-md-6">
     <h2 class="h5">Crear categoría</h2>
+    {% if tournament.status != "draft" %}
+    <p class="text-muted">Ya no se pueden crear categorías porque el torneo ya empezó.</p>
+    {% else %}
     <form method="post" action="/admin/torneos/{{ tournament.id }}/categorias" data-confirm="Crear categoría">
       <div class="mb-2">
         <label class="form-label">Nombre del rango de edad</label>
@@ -87,6 +90,7 @@
       </div>
       <button type="submit" class="btn btn-primary">Crear</button>
     </form>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

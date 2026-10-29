@@ -80,6 +80,11 @@ está inscrito:
 Los dos `409` solo se distinguen por el texto. Lo práctico es mostrar `detail` al usuario y ofrecer
 "confirmar" una vez: si la petición confirmada vuelve a dar `409`, el cambio no es posible.
 
+## Ciclo de vida de un torneo
+
+Mientras el torneo está en `draft` se crean las categorías y se inscribe a los atletas. Al pasar a
+`in_progress` esas dos cosas se cierran: `POST /categories` y `POST /registrations` responden `409`.
+
 ## Errores
 
 Los errores responden `{"detail": "mensaje en español"}`, pensado para mostrarlo tal cual:
@@ -89,7 +94,7 @@ Los errores responden `{"detail": "mensaje en español"}`, pensado para mostrarl
 | `400` | Falta algo previo para poder hacerlo | generar una llave con menos de 2 inscritos; cargar un round sin los dos atletas definidos |
 | `401` | Falta el token, es inválido o venció | volver a iniciar sesión |
 | `404` | No existe | id inexistente; llave todavía no sorteada |
-| `409` | Choca con datos existentes o con el estado actual | nombre de club o CI repetido; atleta ya inscrito en esa u otra categoría del torneo; llave ya generada; combate ya terminado; edición de atleta (ver arriba) |
+| `409` | Choca con datos existentes o con el estado actual | nombre de club o CI repetido; atleta ya inscrito en esa u otra categoría del torneo; llave ya generada; combate ya terminado; torneo que ya empezó; edición de atleta (ver arriba) |
 | `422` | No cumple una regla, o el cuerpo no tiene el formato esperado | atleta que no encaja en la categoría; round empatado; fecha inválida |
 
 En los `422` de formato (campo faltante, tipo incorrecto), `detail` no es un texto sino una **lista** con

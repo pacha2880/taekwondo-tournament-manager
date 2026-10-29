@@ -1,3 +1,6 @@
+import pytest
+
+
 def test_create_category_requires_existing_tournament(client):
     resp = client.post(
         "/api/v1/categories",
@@ -56,3 +59,23 @@ def test_create_category_rejects_min_age_greater_than_max_age(client, tournament
         },
     )
     assert resp.status_code == 422
+
+
+@pytest.mark.parametrize("status", ["in_progress", "finished"])
+def test_categories_cannot_be_created_once_the_tournament_started(client, tournament, status):
+    client.patch(f"/api/v1/tournaments/{tournament['id']}", json={"status": status})
+
+    resp = client.post(
+        "/api/v1/categories",
+        json={
+            "tournament_id": tournament["id"],
+            "gender": "male",
+            "age_label": "Cadete",
+            "min_age": 12,
+            "belt_group": "color",
+            "weight_label": "Libre",
+        },
+    )
+
+    assert resp.status_code == 409
+    assert resp.json()["detail"] == "Ya no se pueden crear categorías: el torneo ya empezó"

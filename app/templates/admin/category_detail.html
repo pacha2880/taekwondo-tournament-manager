@@ -32,7 +32,9 @@
 
     {% if not bracket %}
     <h2 class="h5">Inscribir atleta</h2>
-    {% if available_athletes %}
+    {% if tournament.status != "draft" %}
+    <p class="text-muted mb-4">Las inscripciones están cerradas porque el torneo ya empezó.</p>
+    {% elif available_athletes %}
     <form method="post" action="/admin/categorias/{{ category.id }}/inscripciones" class="mb-4" data-confirm="Inscribir atleta">
       <div class="mb-2 d-flex gap-2">
         <select name="athlete_id" class="form-select" aria-label="Atleta" required>

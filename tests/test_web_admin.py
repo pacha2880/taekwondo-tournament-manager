@@ -551,3 +551,29 @@ def test_round_form_keeps_the_typed_points_when_it_fails(client, club, category,
     assert resp.status_code == 400
     assert "empate" in resp.text
     assert resp.text.count('value="7"') == 2
+
+
+def test_category_form_is_replaced_by_a_notice_once_the_tournament_started(client, tournament):
+    _login(client)
+    page_url = f"/admin/torneos/{tournament['id']}"
+
+    before = client.get(page_url).text
+    client.patch(f"/api/v1/tournaments/{tournament['id']}", json={"status": "in_progress"})
+    after = client.get(page_url).text
+
+    assert 'data-confirm="Crear categoría"' in before
+    assert 'data-confirm="Crear categoría"' not in after
+    assert "Ya no se pueden crear categorías porque el torneo ya empezó" in after
+
+
+def test_registration_form_is_replaced_by_a_notice_once_the_tournament_started(client, athlete, category, tournament):
+    _login(client)
+    page_url = f"/admin/categorias/{category['id']}"
+
+    before = client.get(page_url).text
+    client.patch(f"/api/v1/tournaments/{tournament['id']}", json={"status": "in_progress"})
+    after = client.get(page_url).text
+
+    assert 'data-confirm="Inscribir atleta"' in before
+    assert 'data-confirm="Inscribir atleta"' not in after
+    assert "Las inscripciones están cerradas porque el torneo ya empezó" in after

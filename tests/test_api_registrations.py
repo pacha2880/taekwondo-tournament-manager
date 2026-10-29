@@ -1,3 +1,6 @@
+import pytest
+
+
 def test_register_athlete_in_category(client, athlete, category):
     resp = client.post(
         "/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]}
@@ -83,3 +86,13 @@ def test_athlete_in_second_category_of_same_tournament_rejected(client, athlete,
         json={"athlete_id": athlete["id"], "category_id": other_category["id"]},
     )
     assert resp.status_code == 409
+
+
+@pytest.mark.parametrize("status", ["in_progress", "finished"])
+def test_registrations_are_closed_once_the_tournament_started(client, athlete, category, tournament, status):
+    client.patch(f"/api/v1/tournaments/{tournament['id']}", json={"status": status})
+
+    resp = client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
+
+    assert resp.status_code == 409
+    assert resp.json()["detail"] == "Las inscripciones están cerradas: el torneo ya empezó"
