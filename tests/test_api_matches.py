@@ -1,6 +1,6 @@
-def test_match_not_ready_rejects_round_score(client, club, category, register_n_athletes):
+def test_match_not_ready_rejects_round_score(client, club, category, register_n_athletes, generate_bracket):
     register_n_athletes(client, club, category, 5)
-    bracket = client.post(f"/api/v1/categories/{category['id']}/bracket").json()
+    bracket = generate_bracket(client, category).json()
     not_ready = next(
         m
         for m in bracket["matches"]
@@ -14,9 +14,9 @@ def test_match_not_ready_rejects_round_score(client, club, category, register_n_
     assert resp.status_code == 400
 
 
-def test_tied_round_rejected(client, club, category, register_n_athletes):
+def test_tied_round_rejected(client, club, category, register_n_athletes, generate_bracket):
     register_n_athletes(client, club, category, 2)
-    match = client.post(f"/api/v1/categories/{category['id']}/bracket").json()["matches"][0]
+    match = generate_bracket(client, category).json()["matches"][0]
 
     resp = client.post(
         f"/api/v1/matches/{match['id']}/rounds",
@@ -25,9 +25,9 @@ def test_tied_round_rejected(client, club, category, register_n_athletes):
     assert resp.status_code == 422
 
 
-def test_rounds_are_numbered_by_the_server_in_the_order_they_are_loaded(client, club, category, register_n_athletes):
+def test_rounds_are_numbered_by_the_server_in_the_order_they_are_loaded(client, club, category, register_n_athletes, generate_bracket):
     register_n_athletes(client, club, category, 2)
-    match = client.post(f"/api/v1/categories/{category['id']}/bracket").json()["matches"][0]
+    match = generate_bracket(client, category).json()["matches"][0]
     url = f"/api/v1/matches/{match['id']}/rounds"
 
     numbers = [
@@ -38,9 +38,9 @@ def test_rounds_are_numbered_by_the_server_in_the_order_they_are_loaded(client, 
     assert numbers == [1, 2, 3]
 
 
-def test_match_finishes_after_two_round_wins(client, club, category, register_n_athletes):
+def test_match_finishes_after_two_round_wins(client, club, category, register_n_athletes, generate_bracket):
     register_n_athletes(client, club, category, 2)
-    match = client.post(f"/api/v1/categories/{category['id']}/bracket").json()["matches"][0]
+    match = generate_bracket(client, category).json()["matches"][0]
 
     client.post(
         f"/api/v1/matches/{match['id']}/rounds",
@@ -58,9 +58,9 @@ def test_match_finishes_after_two_round_wins(client, club, category, register_n_
     assert len(finished["round_scores"]) == 2
 
 
-def test_match_can_go_to_a_third_round(client, club, category, register_n_athletes):
+def test_match_can_go_to_a_third_round(client, club, category, register_n_athletes, generate_bracket):
     register_n_athletes(client, club, category, 2)
-    match = client.post(f"/api/v1/categories/{category['id']}/bracket").json()["matches"][0]
+    match = generate_bracket(client, category).json()["matches"][0]
 
     client.post(
         f"/api/v1/matches/{match['id']}/rounds",
@@ -83,9 +83,9 @@ def test_match_can_go_to_a_third_round(client, club, category, register_n_athlet
     assert finished["winner_id"] == match["athlete_blue_id"]
 
 
-def test_finished_match_rejects_more_rounds(client, club, category, register_n_athletes):
+def test_finished_match_rejects_more_rounds(client, club, category, register_n_athletes, generate_bracket):
     register_n_athletes(client, club, category, 2)
-    match = client.post(f"/api/v1/categories/{category['id']}/bracket").json()["matches"][0]
+    match = generate_bracket(client, category).json()["matches"][0]
     client.post(
         f"/api/v1/matches/{match['id']}/rounds",
         json={"red_points": 10, "blue_points": 5},
@@ -102,9 +102,9 @@ def test_finished_match_rejects_more_rounds(client, club, category, register_n_a
     assert resp.status_code == 409
 
 
-def test_winner_propagates_to_next_round(client, club, category, register_n_athletes):
+def test_winner_propagates_to_next_round(client, club, category, register_n_athletes, generate_bracket):
     register_n_athletes(client, club, category, 4)
-    bracket = client.post(f"/api/v1/categories/{category['id']}/bracket").json()
+    bracket = generate_bracket(client, category).json()
     semis = [m for m in bracket["matches"] if m["round_number"] == 1]
     final = next(m for m in bracket["matches"] if m["round_number"] == 2)
 
@@ -128,3 +128,17 @@ def test_winner_propagates_to_next_round(client, club, category, register_n_athl
 def test_get_missing_match_404(client):
     resp = client.get("/api/v1/matches/999")
     assert resp.status_code == 404
+
+
+def test_rounds_are_rejected_once_the_tournament_finished(client, club, category, tournament, register_n_athletes, generate_bracket):
+    register_n_athletes(client, club, category, 2)
+    match = generate_bracket(client, category).json()["matches"][0]
+    url = f"/api/v1/matches/{match['id']}/rounds"
+    for _ in range(2):
+        client.post(url, json={"red_points": 10, "blue_points": 5})
+    client.post(f"/api/v1/tournaments/{tournament['id']}/finish")
+
+    resp = client.post(url, json={"red_points": 10, "blue_points": 5})
+
+    assert resp.status_code == 409
+    assert resp.json()["detail"] == "Solo se pueden cargar resultados con el torneo en curso"

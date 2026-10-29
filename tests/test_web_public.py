@@ -46,9 +46,9 @@ def test_category_detail_missing_404(client):
     assert resp.status_code == 404
 
 
-def test_category_detail_shows_bracket_with_athlete_names(client, club, category, register_n_athletes):
+def test_category_detail_shows_bracket_with_athlete_names(client, club, category, register_n_athletes, generate_bracket):
     athletes = register_n_athletes(client, club, category, 2)
-    client.post(f"/api/v1/categories/{category['id']}/bracket")
+    generate_bracket(client, category)
 
     resp = client.get(f"/categorias/{category['id']}")
     assert resp.status_code == 200
@@ -58,10 +58,10 @@ def test_category_detail_shows_bracket_with_athlete_names(client, club, category
 
 
 def test_category_detail_shows_round_scores_after_match_finishes(
-    client, club, category, register_n_athletes
+    client, club, category, register_n_athletes, generate_bracket
 ):
     register_n_athletes(client, club, category, 2)
-    match = client.post(f"/api/v1/categories/{category['id']}/bracket").json()["matches"][0]
+    match = generate_bracket(client, category).json()["matches"][0]
     client.post(
         f"/api/v1/matches/{match['id']}/rounds",
         json={"red_points": 12, "blue_points": 5},

@@ -49,6 +49,9 @@
     <p class="text-muted mb-4">No quedan atletas para inscribir en esta categoría.</p>
     {% endif %}
 
+    {% if tournament.status == "draft" %}
+    <p class="text-muted">Para generar la llave primero hay que iniciar el torneo (eso cierra las inscripciones).</p>
+    {% else %}
     <form method="post" action="/admin/categorias/{{ category.id }}/llave" data-confirm="Generar llave"
           data-confirm-note="Se sorteará la llave de esta categoría con los atletas inscritos.">
       <button type="submit" class="btn btn-success" {% if registrations|length < 2 %}disabled{% endif %}>
@@ -58,6 +61,7 @@
       <span class="text-muted small">(hacen falta al menos 2 inscritos)</span>
       {% endif %}
     </form>
+    {% endif %}
     {% endif %}
   </div>
 

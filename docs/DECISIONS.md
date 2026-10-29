@@ -553,3 +553,20 @@ torneo. Una categoría sin llave con 0 o 1 inscritos no bloquea el cierre (no ha
 junto a la API y no en `app/services/`, porque lanzan `HTTPException` (los servicios no dependen de FastAPI).
 En el admin, cuando el torneo ya empezó, los formularios de crear categoría e inscribir se reemplazan por un
 aviso en vez de dejar que fallen.
+
+## 2026-10-29 — Ciclo de vida del torneo, parte 2: llaves y resultados solo en curso (0.6.0)
+
+**Sortear y puntuar solo con el torneo en curso.** `create_bracket` y `create_round_score` exigen
+`in_progress` (409 si no). Para las llaves, el motivo es que el sorteo sea un evento público y que el orden
+quede forzado: primero se cierra la preparación (`/start`), recién después se sortea. Para los resultados es
+una **red de seguridad**: con la regla de las llaves no puede haber combates en un torneo en borrador, y
+`/finish` exige que todos los combates hayan terminado, así que hoy no hay forma de llegar a esa
+respuesta por la API; se mantiene porque cuesta una línea, da un mensaje claro y protege datos que pudieran
+venir de antes de esta regla. La comprobación va antes que las demás (después del 404), así que sobre un torneo
+finalizado el mensaje es el del estado y no el de «el combate ya terminó».
+
+**Cierra el hueco de la 0.4.0.** `PATCH /athletes` retira a un atleta de las categorías de torneos en borrador
+sin mirar si tienen llave; como ahora un torneo en borrador nunca tiene llave, ese caso ya no puede ocurrir.
+
+**Tests.** `generate_bracket` (`tests/conftest.py`) inicia el torneo si sigue en borrador y sortea la llave,
+para que cada test no repita esa preparación; los tests que ya iniciaban el torneo a mano quedan como estaban.

@@ -42,7 +42,7 @@ de uso en `README.md` — este archivo no repite ese contenido, solo apunta a é
   categorías de torneos en borrador donde ya no encaja, con confirmación). No duplicarla.
 - `app/api/lifecycle.py` — reglas de estado del torneo (`require_tournament_status`, `require_all_matches_played`;
   409). El estado cambia solo con `POST /tournaments/{id}/start` y `/finish` (nunca con `PATCH`) y no vuelve
-  atrás; categorías e inscripciones solo en `draft`.
+  atrás; categorías e inscripciones solo en `draft`; llaves y resultados solo en `in_progress`.
   Toda regla nueva de estado va acá, no repetida en cada endpoint.
 - `app/web/admin.py` / `app/web/admin/` — pantalla admin (login por sesión,
   `SessionMiddleware`). **Sus handlers llaman directo a las funciones de `app/api/*.py`** (ej.

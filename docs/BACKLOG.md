@@ -142,13 +142,13 @@ pública. La versión se sube al final, con las cuatro.
       antes del deploy. En el admin, el selector se reemplaza por un solo botón según el estado:
       «Cerrar inscripciones e iniciar torneo» y «Finalizar torneo», cada uno con confirmación que
       avisa que es irreversible. Ver `docs/DECISIONS.md`, 2026-10-27.
-- [ ] No permitir cargar resultados de rounds (`record_round` en `app/services/scoring.py`)
+- [x] **(Parte 2)** No permitir cargar resultados de rounds (`record_round` en `app/services/scoring.py`)
       mientras el torneo está en `DRAFT` — mensaje pidiendo pasar el torneo a "en curso"
       primero.
 - [x] **(Parte 1)** Solo permitir crear categorías (`create_category` en `app/api/categories.py`) mientras
       el torneo está en `DRAFT` — no "bloqueado en en curso", sino "solo permitido en
       DRAFT", para cubrir también el caso de un torneo ya `FINISHED`.
-- [ ] Solo permitir generar la llave de una categoría (`create_bracket`/`generate_bracket`)
+- [x] **(Parte 2)** Solo permitir generar la llave de una categoría (`create_bracket`/`generate_bracket`)
       una vez el torneo está `IN_PROGRESS`, no en `DRAFT`. Motivo: que el sorteo sea un
       evento público — no algo que ya pasó en secreto antes de que el torneo apareciera en
       la pantalla pública (recordá que `DRAFT` se oculta de la lista). De paso resuelve la

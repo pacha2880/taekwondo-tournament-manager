@@ -23,6 +23,10 @@ funcionando sobre una base ya migrada.
 - En el admin, cuando el torneo ya empezó, los formularios de crear categoría e inscribir atleta se
   reemplazan por un aviso. El selector de estado se reemplaza por un solo botón según el estado
   («Cerrar inscripciones e iniciar torneo» o «Finalizar torneo»), con confirmación que avisa que es irreversible.
+- **Importante para quien use la API:** las llaves (`POST /api/v1/categories/{id}/bracket`) y los resultados
+  (`POST /api/v1/matches/{id}/rounds`) solo se aceptan con el torneo en curso; con el torneo en `draft` o
+  `finished` responden `409`. Hay que iniciar el torneo antes de sortear.
+- En el admin, con el torneo todavía en borrador, el botón «Generar llave» se reemplaza por un aviso.
 
 ## [0.5.0] - 2026-10-26
 

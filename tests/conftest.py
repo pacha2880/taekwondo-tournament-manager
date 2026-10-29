@@ -124,6 +124,19 @@ def set_tournament_status():
 
 
 @pytest.fixture()
+def generate_bracket():
+    """Sortea la llave de la categoría, iniciando antes el torneo si todavía está en borrador."""
+
+    def _generate(client, category):
+        tournament_url = f"/api/v1/tournaments/{category['tournament_id']}"
+        if client.get(tournament_url).json()["status"] == "draft":
+            assert client.post(f"{tournament_url}/start").status_code == 200
+        return client.post(f"/api/v1/categories/{category['id']}/bracket")
+
+    return _generate
+
+
+@pytest.fixture()
 def register_n_athletes():
     def _register(client, club, category, n, weight_kg=40):
         registrations = []

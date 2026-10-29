@@ -162,6 +162,9 @@ def test_full_admin_workflow_creates_bracket_and_scores_a_match(client):
         )
         assert resp.status_code == 303
 
+    start_resp = client.post(f"/admin/torneos/{tournament_id}/iniciar", follow_redirects=False)
+    assert start_resp.status_code == 303
+
     bracket_resp = client.post(f"/admin/categorias/{category_id}/llave", follow_redirects=False)
     assert bracket_resp.status_code == 303
 
@@ -415,9 +418,9 @@ def _athlete_json(club):
     }
 
 
-def test_round_form_shows_the_next_round_number_without_an_editable_field(client, club, category, register_n_athletes):
+def test_round_form_shows_the_next_round_number_without_an_editable_field(client, club, category, register_n_athletes, generate_bracket):
     register_n_athletes(client, club, category, 2)
-    match = client.post(f"/api/v1/categories/{category['id']}/bracket").json()["matches"][0]
+    match = generate_bracket(client, category).json()["matches"][0]
     _login(client)
     page_url = f"/admin/categorias/{category['id']}"
 
@@ -540,9 +543,9 @@ def test_registration_form_keeps_the_selected_athlete_when_it_fails(client, club
     assert f'<option value="{heavy["id"]}" selected>' in resp.text
 
 
-def test_round_form_keeps_the_typed_points_when_it_fails(client, club, category, register_n_athletes):
+def test_round_form_keeps_the_typed_points_when_it_fails(client, club, category, register_n_athletes, generate_bracket):
     register_n_athletes(client, club, category, 2)
-    match = client.post(f"/api/v1/categories/{category['id']}/bracket").json()["matches"][0]
+    match = generate_bracket(client, category).json()["matches"][0]
     _login(client)
 
     # un round no puede empatar
@@ -607,3 +610,29 @@ def test_finish_with_matches_to_play_shows_why(client, club, category, tournamen
 
     assert resp.status_code == 400
     assert "Quedan combates por jugar en: Cadete Hasta 45kg" in resp.text
+
+
+def test_generate_bracket_button_is_replaced_by_a_notice_until_the_tournament_starts(
+    client, club, category, tournament, register_n_athletes
+):
+    register_n_athletes(client, club, category, 2)
+    _login(client)
+    page_url = f"/admin/categorias/{category['id']}"
+
+    before = client.get(page_url).text
+    client.post(f"/api/v1/tournaments/{tournament['id']}/start")
+    after = client.get(page_url).text
+
+    assert 'data-confirm="Generar llave"' not in before
+    assert "primero hay que iniciar el torneo" in before
+    assert 'data-confirm="Generar llave"' in after
+
+
+def test_generating_a_bracket_before_the_tournament_starts_shows_the_reason(client, club, category, register_n_athletes):
+    register_n_athletes(client, club, category, 2)
+    _login(client)
+
+    resp = client.post(f"/admin/categorias/{category['id']}/llave")
+
+    assert resp.status_code == 400
+    assert "Solo se puede generar la llave con el torneo en curso" in resp.text

@@ -30,10 +30,10 @@ def test_tournament_detail_shows_spanish_category_labels(client, tournament, cat
 
 
 def test_category_detail_shows_spanish_labels_pending_and_finished(
-    client, club, category, register_n_athletes
+    client, club, category, register_n_athletes, generate_bracket
 ):
     register_n_athletes(client, club, category, 2)
-    match = client.post(f"/api/v1/categories/{category['id']}/bracket").json()["matches"][0]
+    match = generate_bracket(client, category).json()["matches"][0]
 
     resp = client.get(f"/categorias/{category['id']}")
     assert "Masculino" in resp.text
@@ -53,9 +53,9 @@ def test_category_detail_shows_spanish_labels_pending_and_finished(
     assert "Finalizado" in resp.text
 
 
-def test_category_detail_shows_spanish_bye_label(client, club, category, register_n_athletes):
+def test_category_detail_shows_spanish_bye_label(client, club, category, register_n_athletes, generate_bracket):
     register_n_athletes(client, club, category, 5)
-    client.post(f"/api/v1/categories/{category['id']}/bracket")
+    generate_bracket(client, category)
 
     resp = client.get(f"/categorias/{category['id']}")
     assert "Pase directo" in resp.text

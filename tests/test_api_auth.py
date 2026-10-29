@@ -184,9 +184,9 @@ def test_public_reads_work_without_a_token(anon_client, club, tournament, catego
     assert anon_client.get(f"/api/v1/categories/{category['id']}").status_code == 200
 
 
-def test_bracket_and_match_are_public(anon_client, client, club, category, register_n_athletes):
+def test_bracket_and_match_are_public(anon_client, client, club, category, register_n_athletes, generate_bracket):
     register_n_athletes(client, club, category, 2)
-    bracket = client.post(f"/api/v1/categories/{category['id']}/bracket").json()
+    bracket = generate_bracket(client, category).json()
     match_id = bracket["matches"][0]["id"]
 
     assert anon_client.get(f"/api/v1/categories/{category['id']}/bracket").status_code == 200
