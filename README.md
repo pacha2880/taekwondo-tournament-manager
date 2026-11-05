@@ -85,7 +85,9 @@ Sigue [Semantic Versioning](https://semver.org/lang/es/). La versión vive en
 Todo el trabajo se hace en **`dev`**, con commits chicos (uno por sub-paso) y probando ahí.
 Nada llega a producción hasta que se abre un pull request **`dev` → `main`**, lo que se hace
 cuando se juntaron suficientes cambios para una versión. Render despliega desde `main`; el CI
-(GitHub Actions) corre `pytest` en cada push a `main`/`dev` y en cada PR a `main`.
+(GitHub Actions) corre `pytest` en cada push a `main`/`dev` y en cada PR a `main`. En cada PR a
+`main`, Claude deja además una revisión como comentarios (`claude-review.yml`, secreto
+`CLAUDE_CODE_OAUTH_TOKEN`); no bloquea el merge.
 
 ### Para publicar una versión nueva
 
