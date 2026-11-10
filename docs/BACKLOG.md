@@ -187,22 +187,21 @@ existentes).
 
 ## 0.7.0 — Campeones
 
-- [ ] Generar llave con un solo atleta inscrito (ganador directo, sin combate) — hoy
-      `build_first_round_slots` exige mínimo 2 (`NotEnoughAthletes`). Tiene sentido de
-      dominio (categoría con un solo competidor, se le otorga el primer lugar sin pelear),
-      pero **requiere una decisión de modelo, no es solo bajar un número**: con `size=1`,
-      `num_rounds = size.bit_length() - 1 = 0`, así que el loop de `generate_bracket` que
-      crea `Match` nunca corre — el bracket quedaría con `matches=[]`, sin ningún lugar donde
-      guardar "quién ganó" (hoy esa info vive siempre en `Match.winner_id`). Hay que decidir
-      entre: (a) un `Match` artificial de un solo lado, ya `FINISHED`, sin combate real, o
-      (b) un campo de "campeón por default" en `Bracket`/`Category` fuera del modelo de
-      `Match`. Se conecta con la duda de "Decisiones pendientes" sobre categorías sin bracket
-      para el chequeo de `FINISHED` — un bracket de 1 solo atleta tiene el mismo problema (0
-      matches) para saber si "ya terminó".
-- [ ] Mostrar un ícono de corona 👑 junto al nombre del campeón de cada categoría (el ganador
-      del último match del bracket) en la pantalla pública y en el admin — para **cualquier**
-      campeón, no solo el caso de categoría con un solo inscrito. Va después del ítem
-      anterior porque depende de cómo se defina "campeón".
+- [ ] Categoría con un solo inscrito: ese atleta **ya es el campeón**, sin combate y sin llave. No
+      se genera llave (`build_first_round_slots` sigue exigiendo mínimo 2, `NotEnoughAthletes`) ni
+      se inventa un `Match` artificial: el campeón se deduce de la única inscripción, sin cambios de
+      modelo. En la página pública y en el admin, la categoría muestra a ese atleta como campeón en
+      lugar de la llave. Encaja con `finish`, que ya ignora las categorías sin llave con 0 o 1
+      inscritos.
+- [ ] Al iniciar el torneo, avisar qué categorías tienen **un solo inscrito**, por si el admin quiere
+      corregir algo antes (inscribir a alguien más, mover al atleta de categoría) — después de
+      iniciarlo las inscripciones se cierran y ese atleta queda campeón sin pelear. En el admin, la
+      lista aparece junto al botón «Cerrar inscripciones e iniciar torneo» y en su confirmación. Es
+      un aviso, no un bloqueo: `POST /tournaments/{id}/start` no cambia.
+- [ ] Mostrar un ícono de corona 👑 junto al nombre del campeón de cada categoría en la pantalla
+      pública y en el admin: el ganador del último match de la llave o, en una categoría con un solo
+      inscrito, ese atleta. Va después de los dos ítems anteriores porque depende de cómo se
+      define "campeón".
 - [ ] Ranking de clubes por puntos de medalla en la pantalla pública — oro=7, plata=3,
       bronce=1, categoría sin pelea=1 (valores reales de la convocatoria de Copa Diamante;
       dejar configurables por si otro torneo usa otra escala). Depende de los dos ítems
@@ -211,11 +210,7 @@ existentes).
       (2do = perdedor de la final, 3er = ¿ambos perdedores de semifinal, como es común en
       taekwondo, o se juega un 3er puesto?).
 
-## 0.8.0 — En vivo
-
-- [ ] Auto-refresh en vivo de la pantalla pública (polling con htmx), en vez de recargar manual.
-
-## 0.9.0 — Grados de cinturón y estatura (datos ampliados de atleta y categoría)
+## 0.8.0 — Grados de cinturón y estatura (datos ampliados de atleta y categoría)
 
 Dos cambios de modelo que salen directo del pedido real de Abel Bravo (ver
 `confidencial/reporte-analisis.md`, carpeta ignorada por git, no vinculado a ningún commit).
@@ -231,6 +226,50 @@ Dos cambios de modelo que salen directo del pedido real de Abel Bravo (ver
 - [ ] `Athlete.height_cm` (estatura, nullable) + `Category.min_height`/`max_height`
       (opcionales, mismo patrón que `min_weight`/`max_weight`) — la categoría Festival (hasta
       9 años) empareja por estatura en vez de peso.
+
+## 0.9.0 — Inscripción por planilla Excel (varios competidores de un club a la vez)
+
+Hoy cada atleta se crea y se inscribe uno por uno en el admin. Un club suele llegar con varios
+competidores juntos: la idea es que el admin descargue una planilla `.xlsx`, el club la llene y el admin la
+suba para crear e inscribir a todos de una vez. Los detalles se afinan con el usuario al empezar esta
+versión; abajo, las partes y las reglas candidatas que hay que confirmar entonces.
+
+- [ ] **(Parte 1) Descargar la planilla** de un torneo en `draft`: una fila por competidor con los datos
+      del atleta (nombre, CI, fecha de nacimiento, género, cinturón, peso) y la categoría, más una hoja de
+      instrucciones. Valores con lista desplegable donde se pueda (género en español, categorías del
+      torneo), para evitar errores de escritura.
+- [ ] **(Parte 2) Subir y revisar sin guardar:** se lee el archivo y se muestra una vista previa fila por
+      fila: atleta nuevo, atleta ya existente o error (con número de fila y el motivo en español). Todavía
+      no se escribe nada en la base.
+- [ ] **(Parte 3) Confirmar:** se crean los atletas que faltan y las inscripciones, reusando
+      `create_athlete`/`create_registration` de `app/api/` (igual que hace el admin hoy), así las
+      validaciones de negocio no se duplican.
+- [ ] **(Parte 4, a decidir)** Exponerlo también en `/api/v1` para el frontend externo, o dejarlo solo en
+      el admin.
+
+Reglas candidatas (a confirmar con el usuario al empezar, no antes):
+
+- **Estado del torneo:** solo en `draft`, con `require_tournament_status` (las inscripciones ya se cierran
+  al iniciar el torneo).
+- **Club:** ¿un club por planilla, elegido al descargarla o al subirla? `Athlete.club_id` es fijo: ¿qué
+  pasa si la planilla trae un atleta que ya existe en otro club? ¿Error, o se permite cambiarlo de club?
+- **Atleta ya existente:** se reconoce por CI. ¿Y los que no tienen CI (niños)? ¿Por nombre + fecha de
+  nacimiento, o siempre se crean nuevos (riesgo de duplicados)? Si existe pero cambió algún dato (peso,
+  cinturón), ¿se actualiza, se ignora o se marca como error?
+- **Categoría:** ¿la elige el club en la planilla, o el sistema la sugiere a partir de género, edad,
+  peso y cinturón? La regla de elegibilidad vive en `category_mismatch` (`app/services/eligibility.py`);
+  no duplicarla. Si encaja en más de una categoría, ¿quién decide?
+- **Todo o nada vs. parcial:** ¿una fila con error frena toda la planilla, o se inscriben las válidas y
+  se informan las demás? En cualquier caso, la confirmación corre en una sola transacción.
+- **Duplicados:** el mismo atleta dos veces en la planilla, o ya inscrito en otra categoría del torneo
+  (hoy `create_registration` responde 409).
+- **Formato del archivo:** solo `.xlsx` (nueva dependencia, probablemente `openpyxl`); fechas que llegan
+  como fecha o como texto, pesos con coma decimal, género escrito en español; límite de filas y de tamaño.
+- **Privacidad y seguridad:** solo admin (hay fechas de nacimiento y pesos de menores); el archivo se
+  procesa en memoria y no se guarda; si la planilla viene precargada con datos, cuidar las celdas que
+  empiecen con `=` (inyección de fórmulas).
+- **Quién la llena:** ¿el club la completa por su cuenta y el admin la sube, o algún día el club la sube
+  directo (necesitaría cuentas por club, algo que hoy no existe)?
 
 ## Más adelante / sin versión asignada
 
@@ -270,3 +309,4 @@ Dos cambios de modelo que salen directo del pedido real de Abel Bravo (ver
       crear el endpoint agregado todavía — no hay frontend separado hoy, sería especular
       sobre un caso de uso que no existe.
 - [ ] (agregar acá cualquier otra idea que surja durante el desarrollo)
+- [ ] Auto-refresh en vivo de la pantalla pública (polling con htmx), en vez de recargar manual.
