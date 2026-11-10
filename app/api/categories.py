@@ -42,10 +42,10 @@ def create_category(payload: CategoryCreate, db: Session = Depends(get_db)):
     responses=errors(),
 )
 def list_categories(tournament_id: int | None = None, db: Session = Depends(get_db)):
-    stmt = select(Category).options(selectinload(Category.bracket))
+    query = select(Category).options(selectinload(Category.bracket))
     if tournament_id is not None:
-        stmt = stmt.where(Category.tournament_id == tournament_id)
-    return db.scalars(stmt).all()
+        query = query.where(Category.tournament_id == tournament_id)
+    return db.scalars(query).all()
 
 
 @router.get(

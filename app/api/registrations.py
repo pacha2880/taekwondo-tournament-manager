@@ -71,10 +71,10 @@ def create_registration(payload: RegistrationCreate, db: Session = Depends(get_d
     responses=errors(auth=True),
 )
 def list_registrations(category_id: int | None = None, db: Session = Depends(get_db)):
-    stmt = select(Registration).options(selectinload(Registration.category).selectinload(Category.bracket))
+    query = select(Registration).options(selectinload(Registration.category).selectinload(Category.bracket))
     if category_id is not None:
-        stmt = stmt.where(Registration.category_id == category_id)
-    return db.scalars(stmt).all()
+        query = query.where(Registration.category_id == category_id)
+    return db.scalars(query).all()
 
 
 @router.delete(

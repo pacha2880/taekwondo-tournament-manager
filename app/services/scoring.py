@@ -26,6 +26,8 @@ def _rounds_won(db: Session, match_id: int, athlete_id: int) -> int:
 
 
 def record_round(db: Session, match: Match, red_points: int, blue_points: int) -> RoundScore:
+    """Registra un round (no puede empatar). El combate pasa a FINISHED, y el ganador avanza,
+    recién al llegar a `category.rounds_to_win` rounds ganados."""
     if match.athlete_red_id is None or match.athlete_blue_id is None:
         raise MatchNotReady("El combate todavía no tiene ambos atletas definidos")
     if match.status == MatchStatus.FINISHED:

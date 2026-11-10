@@ -85,10 +85,10 @@ def resolve_athlete_names(db: Session, matches: list[Match], with_club: bool = F
     }
     if not athlete_ids:
         return {}
-    stmt = select(Athlete).where(Athlete.id.in_(athlete_ids))
+    query = select(Athlete).where(Athlete.id.in_(athlete_ids))
     if with_club:
-        stmt = stmt.options(joinedload(Athlete.club))
-    return {a.id: f"{a.name} ({a.club.name})" if with_club else a.name for a in db.scalars(stmt)}
+        query = query.options(joinedload(Athlete.club))
+    return {a.id: f"{a.name} ({a.club.name})" if with_club else a.name for a in db.scalars(query)}
 
 
 def advance_winner(db: Session, match: Match) -> None:
