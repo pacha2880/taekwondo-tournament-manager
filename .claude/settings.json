@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "ask": [
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git tag:*)",
+      "Read(./confidencial/**)"
+    ],
+    "deny": [
+      "Bash(git checkout main*)",
+      "Bash(git switch main*)",
+      "Bash(git push origin main*)",
+      "Bash(git push origin dev:main*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/bloquear-pytest-base-dev.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
