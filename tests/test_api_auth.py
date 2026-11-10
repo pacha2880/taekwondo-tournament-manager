@@ -182,7 +182,7 @@ def test_public_reads_work_without_a_token(anon_client, club, tournament, catego
     assert anon_client.get(f"/api/v1/clubs/{club['id']}").status_code == 200
     assert anon_client.get("/api/v1/tournaments").status_code == 200
     assert anon_client.get(f"/api/v1/tournaments/{tournament['id']}").status_code == 200
-    assert anon_client.get("/api/v1/categories").status_code == 200
+    assert anon_client.get("/api/v1/categories", params={"tournament_id": tournament["id"]}).status_code == 200
     assert anon_client.get(f"/api/v1/categories/{category['id']}").status_code == 200
 
 

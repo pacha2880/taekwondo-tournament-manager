@@ -27,6 +27,10 @@ def test_list_categories_filtered_by_tournament(client, category, tournament):
     assert len(resp.json()) == 1
 
 
+def test_list_categories_requires_the_tournament(client):
+    assert client.get("/api/v1/categories").status_code == 422
+
+
 def test_create_category_rejects_min_weight_greater_than_max_weight(client, tournament):
     resp = client.post(
         "/api/v1/categories",

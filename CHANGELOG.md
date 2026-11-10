@@ -17,6 +17,9 @@ funcionando sobre una base ya migrada.
   responde `409` y el botón no aparece.
 
 ### Changed
+- **Incompatible — importante para quien use la API:** los listados ya no devuelven datos de todos los torneos
+  juntos. `GET /api/v1/categories` exige `tournament_id`, y `GET /api/v1/registrations` exige `category_id` o
+  el nuevo `tournament_id` (si se envían los dos se aplican ambos filtros). Sin el filtro responden `422`.
 - **Incompatible — importante para quien use la API:** el estado de un torneo ya no se cambia con
   `PATCH /api/v1/tournaments/{id}` (enviar `status` ahora responde `422`). Se usan dos acciones:
   `POST /api/v1/tournaments/{id}/start` (de `draft` a `in_progress`) y `POST /api/v1/tournaments/{id}/finish`

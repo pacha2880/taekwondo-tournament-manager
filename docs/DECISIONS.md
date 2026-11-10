@@ -600,3 +600,17 @@ endpoint con dos formas según la autenticación es fácil de romper. El esquema
 `athlete_id`, `name` y `club`, así que no hay forma de filtrar datos sensibles por error; la consulta vive en
 `app/services/registrants.py` y la comparten la API y la página pública. El costo es una llamada más en la página
 de categoría del frontend; si algún día pesa, se puede sumar un endpoint agregado del detalle de categoría.
+
+## 2026-11-10 — Listados de categorías e inscripciones siempre filtrados
+
+**Sin filtro no servían.** `GET /categories` y `GET /registrations` devolvían, sin parámetros, los datos de todos
+los torneos de la historia: una lista que nadie necesita, que crece con cada torneo y que no se pagina. Ahora el
+filtro es obligatorio, aunque rompa a quien llamaba sin él: dentro de `0.x` la API puede cambiar, y es mejor
+cortarlo antes de que el frontend externo dependa de eso.
+
+**Dos formas de exigirlo.** En categorías hay un solo filtro, así que `tournament_id` es un parámetro requerido:
+FastAPI responde el 422 y `/docs` lo marca como obligatorio, lo que les sirve a los generadores de clientes. En
+inscripciones vale cualquiera de los dos (`category_id` o `tournament_id`), y eso OpenAPI no lo puede expresar,
+así que la comprobación está en el endpoint, con un mensaje en español. Se agregó `tournament_id` a inscripciones
+para que «todos los inscritos de un torneo» no obligue a una llamada por categoría.
+

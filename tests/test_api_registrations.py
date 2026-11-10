@@ -129,3 +129,22 @@ def test_registrations_cannot_be_deleted_once_the_tournament_started(
     assert resp.status_code == 409
     assert resp.json()["detail"] == "Las inscripciones están cerradas: el torneo ya empezó"
 
+
+def test_list_registrations_requires_a_category_or_tournament_filter(client):
+    resp = client.get("/api/v1/registrations")
+
+    assert resp.status_code == 422
+    assert resp.json()["detail"] == "Falta el filtro: enviar `category_id` o `tournament_id`"
+
+
+def test_list_registrations_by_tournament_excludes_other_tournaments(client, athlete, category, tournament):
+    client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
+    other_tournament = client.post(
+        "/api/v1/tournaments", json={"name": "Copa Otra", "date": "2026-12-01", "location": "La Paz"}
+    ).json()
+
+    mine = client.get("/api/v1/registrations", params={"tournament_id": tournament["id"]}).json()
+    other = client.get("/api/v1/registrations", params={"tournament_id": other_tournament["id"]}).json()
+
+    assert [r["athlete"]["id"] for r in mine] == [athlete["id"]]
+    assert other == []
