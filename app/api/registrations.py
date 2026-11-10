@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.api.athletes import get_athlete_or_404
 from app.api.lifecycle import require_tournament_status
@@ -71,7 +71,7 @@ def create_registration(payload: RegistrationCreate, db: Session = Depends(get_d
     responses=errors(auth=True),
 )
 def list_registrations(category_id: int | None = None, db: Session = Depends(get_db)):
-    stmt = select(Registration)
+    stmt = select(Registration).options(selectinload(Registration.category).selectinload(Category.bracket))
     if category_id is not None:
         stmt = stmt.where(Registration.category_id == category_id)
     return db.scalars(stmt).all()

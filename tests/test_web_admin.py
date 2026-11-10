@@ -200,7 +200,7 @@ def test_dashboard_colors_each_tournament_status_badge(client, set_tournament_st
 
     html = client.get("/admin").text
 
-    assert '<span class="badge bg-secondary">Borrador</span>' in html
+    assert '<span class="badge bg-secondary">Inscripciones abiertas</span>' in html
     assert '<span class="badge bg-primary">En curso</span>' in html
     assert '<span class="badge bg-success">Finalizado</span>' in html
 
@@ -666,3 +666,11 @@ def test_generating_a_bracket_before_the_tournament_starts_shows_the_reason(clie
 
     assert resp.status_code == 400
     assert "Solo se puede generar la llave con el torneo en curso" in resp.text
+
+
+def test_admin_bracket_shows_each_athlete_with_their_club(client, club, category, register_n_athletes, generate_bracket):
+    register_n_athletes(client, club, category, 2)
+    generate_bracket(client, category)
+    _login(client)
+
+    assert "Atleta 0 (Dojang Central)" in client.get(f"/admin/categorias/{category['id']}").text

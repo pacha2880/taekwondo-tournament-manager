@@ -32,6 +32,15 @@ funcionando sobre una base ya migrada.
   (`POST /api/v1/matches/{id}/rounds`) solo se aceptan con el torneo en curso; con el torneo en `draft` o
   `finished` responden `409`. Hay que iniciar el torneo antes de sortear.
 - En el admin, con el torneo todavía en borrador, el botón «Generar llave» se reemplaza por un aviso.
+- En la página pública de una categoría sin llave (con inscripciones abiertas, o en curso antes del sorteo)
+  se muestra la lista de inscritos: solo nombre y club.
+- **Nuevo en la API:** `GET /api/v1/categories/{id}/registrants`, público, con los inscritos de la categoría
+  (solo `athlete_id`, `name` y `club`), y el campo `has_bracket` en las categorías para saber si mostrar la
+  llave o la lista de inscritos. Son agregados: no rompen nada.
+- En las llaves, del sitio público y del admin, el club de cada atleta aparece entre paréntesis junto a su
+  nombre. La API sigue devolviendo solo el nombre.
+- El estado `draft` se muestra como «Inscripciones abiertas» en lugar de «Borrador» (solo el texto; el valor
+  `draft` de la API no cambia).
 
 ## [0.5.0] - 2026-10-26
 

@@ -25,7 +25,7 @@ def get_tournament_or_404(db: Session, tournament_id: int) -> Tournament:
     status_code=201,
     dependencies=ADMIN_ONLY,
     summary="Crear un torneo",
-    description="Crea un torneo en estado `draft` (borrador). Requiere token.",
+    description="Crea un torneo en estado `draft` (inscripciones abiertas). Requiere token.",
     responses=errors(auth=True),
 )
 def create_tournament(payload: TournamentCreate, db: Session = Depends(get_db)):

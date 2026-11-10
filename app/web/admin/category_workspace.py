@@ -41,7 +41,7 @@ def _category_detail_context(db: Session, category_id: int) -> dict:
     rounds = []
     athletes: dict[int, str] = {}
     if bracket:
-        athletes = resolve_athlete_names(db, bracket.matches)
+        athletes = resolve_athlete_names(db, bracket.matches, with_club=True)
         matches_by_round = defaultdict(list)
         for match in bracket.matches:
             matches_by_round[match.round_number].append(match)

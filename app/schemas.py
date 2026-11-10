@@ -195,6 +195,20 @@ class CategoryRead(CategoryBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int = Field(description="Identificador de la categoría.")
+    has_bracket: bool = Field(
+        description="Si la categoría ya tiene la llave generada. Mientras es `false`, lo que se muestra al público es "
+        "la lista de inscritos (`GET /categories/{id}/registrants`)."
+    )
+
+
+class RegistrantRead(BaseModel):
+    """Inscrito de una categoría, solo con datos públicos: sin CI, fecha de nacimiento ni peso."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    athlete_id: int = Field(description="Id del atleta.")
+    name: str = Field(description="Nombre del atleta.", examples=["Mateo Quispe Mamani"])
+    club: str = Field(description="Nombre del club del atleta.", examples=["Dojang Central"])
 
 
 class RoundScoreCreate(BaseModel):

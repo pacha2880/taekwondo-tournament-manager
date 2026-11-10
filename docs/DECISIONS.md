@@ -570,3 +570,33 @@ sin mirar si tienen llave; como ahora un torneo en borrador nunca tiene llave, e
 
 **Tests.** `generate_bracket` (`tests/conftest.py`) inicia el torneo si sigue en borrador y sortea la llave,
 para que cada test no repita esa preparación; los tests que ya iniciaban el torneo a mano quedan como estaban.
+
+## 2026-10-29 — Ciclo de vida del torneo, parte 4: vista pública (0.6.0, revisada el 2026-11-02)
+
+**Los borradores se muestran, con su lista de inscritos.** Primero se implementó ocultarlos del sitio público
+(404), para que nada se viera antes del sorteo, pero se cambió antes de liberar la versión: mientras las
+inscripciones están abiertas, lo útil para el público es saber quién está inscrito. La página pública de una
+categoría sin llave (en `draft`, o en curso antes del sorteo) muestra una tabla con nombre y club de los
+inscritos; con llave, la llave. **Privacidad:** solo nombre y club, nunca CI, fecha de nacimiento ni peso (hay
+menores; es la misma regla que mantiene `GET /athletes` detrás de token). El sorteo sigue siendo un evento
+público porque las llaves solo se generan con el torneo en curso.
+
+**El club entre paréntesis en las llaves** («Mateo Quispe (Dojang Norte)»), en el sitio público y en el admin,
+sale de `resolve_athlete_names(..., with_club=True)`: la misma consulta en lote, con el club cargado en la misma
+consulta, así no aparece una segunda resolución de nombres. La API sigue devolviendo solo el nombre en
+`athlete_red_name` y compañía; sumar el club a la API queda para cuando el frontend externo lo pida.
+
+**`draft` se muestra como «Inscripciones abiertas».** Solo cambia el texto traducido (`app/web/labels.py`) y la
+prosa de la documentación de la API; el valor `draft` y el identificador del enum no cambian. El nombre describe
+lo que de verdad se puede hacer en ese estado (crear categorías, inscribir y retirar atletas) en vez de sugerir
+que el torneo es un borrador sin publicar.
+
+**La lista de inscritos también en la API (2026-11-02).** Para que el frontend externo pueda mostrar lo mismo que
+el sitio, se agregó `GET /categories/{id}/registrants` (público) y el campo `has_bracket` en `CategoryRead`. Se
+descartó ampliar `GET /bracket` con una bandera `generated` y la lista de inscritos: habría cambiado su contrato
+(hoy responde 404 sin llave, y eso está documentado), habría vuelto opcionales los campos de la llave y mezclaba
+dos recursos. También se descartó que `GET /registrations` respondiera datos recortados sin token: el mismo
+endpoint con dos formas según la autenticación es fácil de romper. El esquema `RegistrantRead` tiene **solo**
+`athlete_id`, `name` y `club`, así que no hay forma de filtrar datos sensibles por error; la consulta vive en
+`app/services/registrants.py` y la comparten la API y la página pública. El costo es una llamada más en la página
+de categoría del frontend; si algún día pesa, se puede sumar un endpoint agregado del detalle de categoría.

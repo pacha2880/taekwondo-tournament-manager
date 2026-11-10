@@ -79,3 +79,11 @@ def test_bracket_is_only_generated_with_the_tournament_in_progress(
 
     assert resp.status_code == 409
     assert resp.json()["detail"] == "Solo se puede generar la llave con el torneo en curso"
+
+
+def test_bracket_api_returns_athlete_names_without_the_club(client, club, category, register_n_athletes, generate_bracket):
+    register_n_athletes(client, club, category, 2)
+
+    match = generate_bracket(client, category).json()["matches"][0]
+
+    assert {match["athlete_red_name"], match["athlete_blue_name"]} == {"Atleta 0", "Atleta 1"}

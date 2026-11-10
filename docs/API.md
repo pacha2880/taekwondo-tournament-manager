@@ -15,7 +15,8 @@ de ejemplo.
 
 ## Acceso
 
-Lecturas **públicas**: torneos, categorías, clubes, llaves y combates. Todo `POST`/`PATCH` y las
+Lecturas **públicas**: torneos, categorías, clubes, llaves, combates y la lista de inscritos de cada
+categoría (solo nombre y club). Todo `POST`/`PATCH` y las
 lecturas de **atletas e inscripciones** piden `Authorization: Bearer <token>` (esas respuestas
 incluyen fecha de nacimiento y peso, y hay menores). El token se obtiene en
 `POST /api/v1/auth/login` (formulario con `username` y `password`), dura 8 horas y no se renueva solo:
@@ -32,8 +33,10 @@ Para una vista pública alcanza con tres llamadas, todas sin token:
 
 1. `GET /api/v1/tournaments` — la lista de torneos.
 2. `GET /api/v1/categories?tournament_id={id}` — las categorías de un torneo.
-3. `GET /api/v1/categories/{id}/bracket` — la llave de una categoría. Responde **`404` mientras no se
-   haya sorteado**: tratarlo como "todavía sin llave", no como un error.
+3. Según el campo `has_bracket` de la categoría:
+   - `true`: `GET /api/v1/categories/{id}/bracket` — la llave.
+   - `false`: `GET /api/v1/categories/{id}/registrants` — los inscritos, solo con nombre y club, ordenados por
+     nombre. (La llave responde `404` mientras no se haya sorteado.)
 
 Las listas no se paginan: devuelven todos los elementos.
 
@@ -94,6 +97,11 @@ paso):
   definitivos. Exige que no queden combates por jugar: si falta alguno responde `409` y `detail` nombra las
   categorías pendientes.
 
+Las lecturas públicas (`GET /tournaments`, `GET /categories`…) devuelven torneos en cualquier estado,
+incluidos los `draft`. El sitio público del proyecto también los muestra: mientras una categoría no tiene
+llave, su página lista a los inscritos (solo nombre y club). Desde la API se arma lo mismo con `has_bracket`
+y `/registrants` (ver «Recorrer los datos»).
+
 ## Errores
 
 Los errores responden `{"detail": "mensaje en español"}`, pensado para mostrarlo tal cual:
@@ -116,7 +124,7 @@ Viajan en inglés; para mostrarlos al usuario, esta es la traducción que usa la
 
 | Campo | Valor | Se muestra como |
 |---|---|---|
-| `status` de un torneo | `draft` / `in_progress` / `finished` | Borrador / En curso / Finalizado |
+| `status` de un torneo | `draft` / `in_progress` / `finished` | Inscripciones abiertas / En curso / Finalizado |
 | `status` de un combate | `pending` / `bye` / `finished` | Pendiente / Pase directo / Finalizado |
 | `gender` | `male` / `female` | Masculino / Femenino |
 | `belt_group` | `color` / `black` | Cinturón de color / Cinturón negro |

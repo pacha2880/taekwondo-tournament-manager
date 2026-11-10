@@ -134,7 +134,7 @@ def get_athlete(athlete_id: int, db: Session = Depends(get_db)):
         "Modifica solo los campos que se envían (un `null` en un campo que no sea `ci` se ignora). `ci` con "
         "`null` o texto vacío lo borra. Si el cambio de **género o peso** afecta inscripciones: en un torneo "
         "en curso se rechaza (409) si el atleta deja de cumplir las reglas de su categoría; en un torneo en "
-        "borrador, si el atleta deja de cumplir las reglas de la "
+        "`draft` (inscripciones abiertas), si el atleta deja de cumplir las reglas de la "
         "categoría hay que confirmar con `confirm_withdrawal=true`, y entonces se lo retira de ella (sin la "
         "confirmación responde 409 con las categorías afectadas y no cambia nada); en un torneo finalizado se "
         "permite y la inscripción no se toca. Requiere token."
@@ -153,7 +153,7 @@ def update_athlete(
     payload: AthleteUpdate,
     confirm_withdrawal: bool = Query(
         default=False,
-        description="Confirma que el atleta sea retirado de las categorías de torneos en borrador donde ya no encaja.",
+        description="Confirma que el atleta sea retirado de las categorías de torneos en `draft` (inscripciones abiertas) donde ya no encaja.",
     ),
     db: Session = Depends(get_db),
 ):

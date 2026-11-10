@@ -8,7 +8,7 @@ sesiones de SQLAlchemy. `generate_bracket` es la única función que persiste.
 import random
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models import Athlete, Bracket, Category, Match, MatchStatus, Registration
 
@@ -73,9 +73,10 @@ def build_first_round_slots(
     return [seed_to_athlete[seed] for seed in order]
 
 
-def resolve_athlete_names(db: Session, matches: list[Match]) -> dict[int, str]:
+def resolve_athlete_names(db: Session, matches: list[Match], with_club: bool = False) -> dict[int, str]:
     """Nombres de los atletas referenciados (rojo/azul/ganador) en `matches`, en una sola
-    consulta batch -- evita N+1 queries al mostrar una llave o un combate."""
+    consulta batch -- evita N+1 queries al mostrar una llave o un combate. Con `with_club`,
+    «Nombre (Club)» para las vistas HTML; la API devuelve solo el nombre."""
     athlete_ids = {
         athlete_id
         for match in matches
@@ -84,7 +85,10 @@ def resolve_athlete_names(db: Session, matches: list[Match]) -> dict[int, str]:
     }
     if not athlete_ids:
         return {}
-    return {a.id: a.name for a in db.scalars(select(Athlete).where(Athlete.id.in_(athlete_ids)))}
+    stmt = select(Athlete).where(Athlete.id.in_(athlete_ids))
+    if with_club:
+        stmt = stmt.options(joinedload(Athlete.club))
+    return {a.id: f"{a.name} ({a.club.name})" if with_club else a.name for a in db.scalars(stmt)}
 
 
 def advance_winner(db: Session, match: Match) -> None:

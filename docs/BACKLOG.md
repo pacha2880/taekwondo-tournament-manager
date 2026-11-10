@@ -169,17 +169,24 @@ pública. La versión se sube al final, con las cuatro.
       si no, un bracket con cualquier bye bloquearía el torneo para siempre. **Decidido:** una
       categoría sin llave bloquea si tiene 2 o más inscritos (hay combates sin jugar) y se ignora si
       tiene 0 o 1 (la de 1 la resuelve la 0.7.0).
-- [ ] Ocultar los torneos en estado `DRAFT` de la lista principal de la pantalla pública (`/`).
-      Queda abierta la pregunta de si también hay que bloquear el acceso directo a
-      `/torneos/{id}`/`/categorias/{id}` de un torneo en borrador (hoy no miran `status` para
-      nada), para no depender de "seguridad por oscuridad". Va al final de esta versión: para
-      entonces el admin ya completa todo el flujo sin depender de la vista pública.
-- [ ] Label de `TournamentStatus.DRAFT` — hoy se traduce como "Borrador"
+- [x] **(Parte 4)** Los torneos en `draft` **sí** se muestran en las páginas públicas (en la lista de
+      inicio, con el estado «Inscripciones abiertas», y con sus páginas de torneo y de categoría). En la
+      página de una categoría, mientras no se haya generado la llave (en `draft` y también en curso antes
+      del sorteo), se muestra la **lista de inscritos** como una tabla simple con **nombre y club**. Una
+      vez generada la llave, se muestra la llave como hasta ahora. **Privacidad:** solo nombre y club;
+      nunca CI, fecha de nacimiento ni peso del atleta (hay menores; es la misma regla que mantiene
+      `GET /athletes` detrás de token). Reemplaza la idea anterior de ocultar los borradores con 404.
+- [x] **(Parte 4)** La API ofrece lo mismo para el frontend externo: `GET /categories/{id}/registrants`
+      (público, solo `athlete_id`, `name` y `club`) y `has_bracket` en la categoría. Se eligió un endpoint
+      propio en vez de ampliar `GET /bracket` (que habría cambiado su contrato: hoy responde 404 sin llave).
+- [x] **(Parte 4)** En la vista de las llaves, el club de cada atleta aparece entre paréntesis junto a su
+      nombre, por ejemplo «Mateo Quispe (Dojang Norte)».
+- [x] **(Parte 4)** Label de `TournamentStatus.DRAFT` — hoy se traduce como "Borrador"
       (`app/web/labels.py`), pero describe más específicamente el período en que se pueden
       crear categorías e inscribir atletas. Evaluar cambiar el label a algo como
       "Inscripciones" o "Inscripciones abiertas" — **solo el texto traducido**, no el
       identificador interno del enum (`DRAFT` se queda en inglés como está, ver sección
-      Idioma de `CLAUDE.md`).
+      Idioma de `CLAUDE.md`). **Decidido:** «Inscripciones abiertas».
 
 Nota de compatibilidad: el torneo de demo que ya está en producción está `FINISHED`, así que
 las reglas nuevas no lo afectan (solo se aplican al intentar una acción, no invalidan datos

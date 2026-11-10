@@ -16,6 +16,7 @@ PUBLIC_ENDPOINTS = {
     ("GET", "/api/v1/categories"),
     ("GET", "/api/v1/categories/{category_id}"),
     ("GET", "/api/v1/categories/{category_id}/bracket"),
+    ("GET", "/api/v1/categories/{category_id}/registrants"),
     ("GET", "/api/v1/matches/{match_id}"),
 }
 

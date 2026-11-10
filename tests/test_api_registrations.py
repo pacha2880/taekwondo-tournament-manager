@@ -128,3 +128,4 @@ def test_registrations_cannot_be_deleted_once_the_tournament_started(
 
     assert resp.status_code == 409
     assert resp.json()["detail"] == "Las inscripciones están cerradas: el torneo ya empezó"
+

@@ -17,6 +17,21 @@
 
 {% if not bracket %}
 <p class="text-muted">La llave para esta categoría todavía no ha sido generada.</p>
+{% if registrants %}
+<h2 class="h5 mt-4">Inscritos ({{ registrants|length }})</h2>
+<table class="table table-sm">
+  <thead>
+    <tr><th>Nombre</th><th>Club</th></tr>
+  </thead>
+  <tbody>
+    {% for registrant in registrants %}
+    <tr><td>{{ registrant.name }}</td><td>{{ registrant.club }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="text-muted">Todavía no hay inscritos.</p>
+{% endif %}
 {% else %}
 {% for round_number, round_matches in rounds %}
 <h2 class="h5 mt-4">Ronda {{ round_number }}</h2>

@@ -8,7 +8,7 @@ from app.database import Base
 
 
 class TournamentStatus(str, enum.Enum):
-    """Estado del torneo: `draft` (borrador: se crean las categorías y se inscribe a los atletas),
+    """Estado del torneo: `draft` (inscripciones abiertas: se crean las categorías y se inscribe a los atletas),
     `in_progress` (en curso: ya no se crean categorías ni se inscribe) y `finished` (finalizado). El estado
     solo avanza en ese orden; no se vuelve a uno anterior."""
 
@@ -114,6 +114,10 @@ class Category(Base):
     bracket: Mapped["Bracket | None"] = relationship(
         back_populates="category", cascade="all, delete-orphan"
     )
+
+    @property
+    def has_bracket(self) -> bool:
+        return self.bracket is not None
 
 
 class Registration(Base):

@@ -20,7 +20,7 @@ def test_no_raw_enum_value_in_templates():
 
 def test_home_shows_spanish_status_label(client, tournament):
     resp = client.get("/")
-    assert "Borrador" in resp.text
+    assert "Inscripciones abiertas" in resp.text
 
 
 def test_tournament_detail_shows_spanish_category_labels(client, tournament, category):
