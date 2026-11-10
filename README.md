@@ -46,11 +46,19 @@ Alembic automáticamente al arrancar — ver `docker-entrypoint.sh`). Queda en
 (`taekwondo`/`taekwondo` para la DB, `admin`/`admin` para el panel admin) — son solo para
 desarrollo local, no usar en producción.
 
-Para correr los tests contra esta Postgres en vez de SQLite (con los contenedores arriba):
+Para correr los tests contra esta Postgres en vez de SQLite (con los contenedores arriba). La suite
+borra todas las tablas al empezar, así que usa su propia base `taekwondo_test`, nunca `taekwondo`
+(la de desarrollo). Crearla una sola vez:
 
 ```bash
-DATABASE_URL="postgresql+psycopg://taekwondo:taekwondo@localhost:5432/taekwondo" pytest -v
+docker compose exec db createdb -U taekwondo taekwondo_test
 ```
+
+```bash
+DATABASE_URL="postgresql+psycopg://taekwondo:taekwondo@localhost:5432/taekwondo_test" pytest -v
+```
+
+En el día a día no hace falta: el CI la corre en cada PR a `main` (ver Versionado).
 
 `docker compose down` para parar (el volumen `pgdata` persiste los datos entre reinicios).
 
@@ -85,9 +93,11 @@ Sigue [Semantic Versioning](https://semver.org/lang/es/). La versión vive en
 Todo el trabajo se hace en **`dev`**, con commits chicos (uno por sub-paso) y probando ahí.
 Nada llega a producción hasta que se abre un pull request **`dev` → `main`**, lo que se hace
 cuando se juntaron suficientes cambios para una versión. Render despliega desde `main`; el CI
-(GitHub Actions) corre `pytest` en cada push a `main`/`dev` y en cada PR a `main`. En cada PR a
-`main`, Claude deja además una revisión como comentarios (`claude-review.yml`, secreto
-`CLAUDE_CODE_OAUTH_TOKEN`); no bloquea el merge.
+(GitHub Actions) corre `pytest` en cada push a `main`/`dev` y en cada PR a `main`; en el PR
+también `pytest-postgres`. Las migraciones de Alembic las valida el servicio `dev` de Render,
+que las corre contra Neon en cada push a `dev`. En cada PR a `main`, Claude deja además una
+revisión como comentarios (`claude-review.yml`, secreto `CLAUDE_CODE_OAUTH_TOKEN`); no bloquea
+el merge.
 
 ### Para publicar una versión nueva
 
@@ -96,7 +106,8 @@ cuando se juntaron suficientes cambios para una versión. Render despliega desde
 2. Cuando hay suficientes cambios, un último commit en `dev` sube `__version__` en
    `app/version.py` y mueve `[Unreleased]` a una sección nueva (un test verifica que ambos
    coincidan).
-3. Tests en verde contra SQLite y contra el Postgres de Docker (ver arriba), y CI verde en el PR.
+3. Tests en verde contra SQLite en local. En el PR, el CI corre `pytest` (SQLite) y
+   `pytest-postgres` (Postgres 16); el merge queda bloqueado si alguno falla.
 4. Pull request `dev` → `main` y **merge normal** (merge commit, sin squash ni rebase, para
    conservar los commits chicos por sub-paso y poder volver atrás con granularidad) — Render
    despliega solo al llegar a `main`.

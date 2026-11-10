@@ -16,3 +16,31 @@ jobs:
           python-version: "3.10"
       - run: pip install -r requirements.txt
       - run: pytest -v
+
+  # SQLite no controla el largo de String(n) ni aplica claves foráneas; producción es Postgres.
+  pytest-postgres:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: taekwondo
+          POSTGRES_PASSWORD: taekwondo
+          POSTGRES_DB: taekwondo_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U taekwondo"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql+psycopg://taekwondo:taekwondo@localhost:5432/taekwondo_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - run: pip install -r requirements.txt
+      - run: pytest -v
