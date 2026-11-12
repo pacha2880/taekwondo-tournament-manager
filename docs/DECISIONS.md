@@ -603,6 +603,8 @@ de categoría del frontend; si algún día pesa, se puede sumar un endpoint agre
 
 ## 2026-11-10 — Listados de categorías e inscripciones siempre filtrados
 
+**Revertida el 2026-11-12** (ver la entrada siguiente).
+
 **Sin filtro no servían.** `GET /categories` y `GET /registrations` devolvían, sin parámetros, los datos de todos
 los torneos de la historia: una lista que nadie necesita, que crece con cada torneo y que no se pagina. Ahora el
 filtro es obligatorio, aunque rompa a quien llamaba sin él: dentro de `0.x` la API puede cambiar, y es mejor
@@ -614,3 +616,18 @@ inscripciones vale cualquiera de los dos (`category_id` o `tournament_id`), y es
 así que la comprobación está en el endpoint, con un mensaje en español. Se agregó `tournament_id` a inscripciones
 para que «todos los inscritos de un torneo» no obligue a una llamada por categoría.
 
+## 2026-11-12 — Filtros de los listados otra vez opcionales
+
+**El filtro obligatorio rompió al frontend externo.** Al desplegar en `dev`, el admin del frontend de Kike llamaba a
+`GET /registrations` sin filtro (para contar atletas por torneo y para el detalle de un torneo) y empezó a recibir
+`422`; hubo que hacer rollback del servicio `dev` en Render. La decisión anterior asumía que todavía nadie dependía
+del listado completo, y no era así.
+
+**Se vuelve a la forma compatible:** sin filtros, los dos listados devuelven todo, como en la `0.5.0`. Se mantiene
+el filtro nuevo `tournament_id` en inscripciones, que no rompe nada. Exigir el filtro sigue siendo la meta, pero en
+tres pasos (expandir → migrar → contraer): ofrecer el filtro, que el frontend lo use, y recién entonces volverlo
+obligatorio, avisando antes. Para el conteo de atletas por torneo el frontend necesita algo que hoy no existe (por
+ejemplo, un conteo en el torneo); hay que resolverlo antes de contraer.
+
+**Regla que queda:** `dev` es un entorno compartido con el frontend externo. Un cambio incompatible de la API se
+acuerda con Kike antes de llegar a `dev`, no después.

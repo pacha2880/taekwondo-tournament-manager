@@ -130,11 +130,13 @@ def test_registrations_cannot_be_deleted_once_the_tournament_started(
     assert resp.json()["detail"] == "Las inscripciones están cerradas: el torneo ya empezó"
 
 
-def test_list_registrations_requires_a_category_or_tournament_filter(client):
+def test_list_registrations_without_filters_returns_all(client, athlete, category):
+    client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
+
     resp = client.get("/api/v1/registrations")
 
-    assert resp.status_code == 422
-    assert resp.json()["detail"] == "Falta el filtro: enviar `category_id` o `tournament_id`"
+    assert resp.status_code == 200
+    assert [r["athlete"]["id"] for r in resp.json()] == [athlete["id"]]
 
 
 def test_list_registrations_by_tournament_excludes_other_tournaments(client, athlete, category, tournament):

@@ -38,9 +38,10 @@ Para una vista pública alcanza con tres llamadas, todas sin token:
    - `false`: `GET /api/v1/categories/{id}/registrants` — los inscritos, solo con nombre y club, ordenados por
      nombre. (La llave responde `404` mientras no se haya sorteado.)
 
-Las listas no se paginan: devuelven todos los elementos. Las de categorías e inscripciones siempre se piden
-filtradas, porque sin filtro mezclarían todos los torneos: `GET /categories` exige `tournament_id`, y
-`GET /registrations` (con token) exige `category_id` o `tournament_id`. Sin el filtro responden `422`.
+Las listas no se paginan: devuelven todos los elementos. Sin filtro, las de categorías e inscripciones mezclan
+todos los torneos, así que conviene pedirlas filtradas: `GET /categories?tournament_id=` y
+`GET /registrations?tournament_id=` o `?category_id=` (con token). Más adelante el filtro va a ser obligatorio;
+se avisará antes en el CHANGELOG.
 
 ## Cómo leer una llave
 

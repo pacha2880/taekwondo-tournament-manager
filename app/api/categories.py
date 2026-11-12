@@ -38,11 +38,13 @@ def create_category(payload: CategoryCreate, db: Session = Depends(get_db)):
     "",
     response_model=list[CategoryRead],
     summary="Listar categorías",
-    description="Devuelve las categorías del torneo indicado en `tournament_id` (obligatorio; sin él responde 422). Es público.",
+    description="Devuelve las categorías. Con el parámetro `tournament_id` devuelve solo las de ese torneo. Es público.",
     responses=errors(),
 )
-def list_categories(tournament_id: int, db: Session = Depends(get_db)):
-    query = select(Category).options(selectinload(Category.bracket)).where(Category.tournament_id == tournament_id)
+def list_categories(tournament_id: int | None = None, db: Session = Depends(get_db)):
+    query = select(Category).options(selectinload(Category.bracket))
+    if tournament_id is not None:
+        query = query.where(Category.tournament_id == tournament_id)
     return db.scalars(query).all()
 
 
