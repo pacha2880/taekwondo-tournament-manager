@@ -103,11 +103,6 @@ def test_same_number_with_a_different_complement_is_another_person(client, club)
     assert second.status_code == 201
 
 
-def _set_status(client, tournament, status):
-    resp = client.patch(f"/api/v1/tournaments/{tournament['id']}", json={"status": status})
-    assert resp.status_code == 200
-
-
 def _registrations(client, category):
     return client.get("/api/v1/registrations", params={"category_id": category["id"]}).json()
 
@@ -202,10 +197,10 @@ def test_confirmed_update_withdraws_the_athlete_from_the_categories_where_it_no_
 
 @pytest.mark.parametrize("change", [{"weight_kg": 50}, {"gender": "female"}])
 def test_update_that_no_longer_fits_is_rejected_while_the_tournament_is_in_progress(
-    client, athlete, category, tournament, change
+    client, athlete, category, tournament, set_tournament_status, change
 ):
     client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
-    _set_status(client, tournament, "in_progress")
+    set_tournament_status(client, tournament["id"], "in_progress")
     url = f"/api/v1/athletes/{athlete['id']}"
 
     resp = client.patch(url, params={"confirm_withdrawal": True}, json=change)
@@ -216,9 +211,11 @@ def test_update_that_no_longer_fits_is_rejected_while_the_tournament_is_in_progr
     assert len(_registrations(client, category)) == 1
 
 
-def test_update_that_still_fits_is_allowed_while_the_tournament_is_in_progress(client, athlete, category, tournament):
+def test_update_that_still_fits_is_allowed_while_the_tournament_is_in_progress(
+    client, athlete, category, tournament, set_tournament_status
+):
     client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
-    _set_status(client, tournament, "in_progress")
+    set_tournament_status(client, tournament["id"], "in_progress")
 
     resp = client.patch(f"/api/v1/athletes/{athlete['id']}", json={"weight_kg": 44})
 
@@ -227,9 +224,11 @@ def test_update_that_still_fits_is_allowed_while_the_tournament_is_in_progress(c
     assert len(_registrations(client, category)) == 1
 
 
-def test_other_fields_can_still_be_edited_while_the_tournament_is_in_progress(client, athlete, category, tournament):
+def test_other_fields_can_still_be_edited_while_the_tournament_is_in_progress(
+    client, athlete, category, tournament, set_tournament_status
+):
     client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
-    _set_status(client, tournament, "in_progress")
+    set_tournament_status(client, tournament["id"], "in_progress")
 
     resp = client.patch(
         f"/api/v1/athletes/{athlete['id']}",
@@ -241,10 +240,10 @@ def test_other_fields_can_still_be_edited_while_the_tournament_is_in_progress(cl
 
 
 def test_update_is_allowed_after_the_tournament_finished_and_keeps_the_registration(
-    client, athlete, category, tournament
+    client, athlete, category, tournament, set_tournament_status
 ):
     client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
-    _set_status(client, tournament, "finished")
+    set_tournament_status(client, tournament["id"], "finished")
 
     resp = client.patch(f"/api/v1/athletes/{athlete['id']}", json={"weight_kg": 50})
 
@@ -252,9 +251,11 @@ def test_update_is_allowed_after_the_tournament_finished_and_keeps_the_registrat
     assert len(_registrations(client, category)) == 1
 
 
-def test_only_draft_tournaments_withdraw_the_athlete(client, athlete, category, tournament):
+def test_only_draft_tournaments_withdraw_the_athlete(
+    client, athlete, category, tournament, set_tournament_status
+):
     client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
-    _set_status(client, tournament, "finished")
+    set_tournament_status(client, tournament["id"], "finished")
     next_tournament = client.post(
         "/api/v1/tournaments", json={"name": "Copa Siguiente", "date": "2027-03-01", "location": "La Paz"}
     ).json()

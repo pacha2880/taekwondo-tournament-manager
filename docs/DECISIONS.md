@@ -515,3 +515,119 @@ cambia. Es una regla para todo formulario nuevo del admin; los de editar ya lo h
 alcanza con el número fijo y la confirmación con los puntos a la vista. Corregir un round obligaría a
 reabrir el combate y a deshacer el avance del ganador, que es el cambio con más riesgo de dejar datos
 inconsistentes; se reabre solo si el uso real lo pide.
+
+## 2026-10-27 — Ciclo de vida del torneo, parte 1: el estado manda (0.6.0)
+
+**Las inscripciones se cierran por el estado del torneo, no por la llave.** El backlog planteaba bloquear las
+inscripciones de una categoría en cuanto tuviera llave. Se cambió por una regla única: `create_registration` y
+`create_category` solo funcionan con el torneo en `draft` (409 si no). Motivo: las llaves solo se generan con el
+torneo en curso (para que el sorteo sea un evento público, no algo que pasó a escondidas), así que una
+categoría con llave ya tiene las inscripciones cerradas, y toda la lógica depende de un único dato. Cada estado
+queda con un significado claro: `draft` = preparación (categorías, inscripciones, ediciones de género/peso con
+retiro), `in_progress` = lista congelada, llaves y resultados, `finished` = resultados definitivos.
+
+**Costos aceptados.** Una vez que el torneo pasa a «en curso» no se puede inscribir a nadie más, ni siquiera en
+una categoría que todavía no tiene llave, y como no se vuelve atrás tampoco hay forma de reabrir las
+inscripciones. Por eso el cambio de estado pide confirmación en el admin avisando que cierra la preparación.
+Si hace falta, más adelante se puede agregar «reabrir inscripciones» solo cuando no exista ninguna llave.
+
+**El estado cambia con acciones, no con `PATCH`.** `POST /tournaments/{id}/start` (solo desde `draft`) y
+`POST /tournaments/{id}/finish` (solo desde `in_progress`). Primero se probó un `PATCH {"status": ...}` que solo
+dejaba avanzar, pero «fijar un estado» escondía condiciones previas en un endpoint genérico y permitía saltar de
+`draft` a `finished`, un torneo que nunca se jugó. Con una acción por paso cada una tiene sus condiciones, sus
+errores y su documentación, y el admin muestra un solo botón según el estado («Cerrar inscripciones e iniciar
+torneo», «Finalizar torneo»). No se vuelve atrás: reabrir un torneo con llaves volvería a permitir categorías e
+inscripciones. Repetir una acción responde 409. `status` salió del `PATCH` (cambio incompatible, aceptado en
+`0.x`), que además rechaza campos desconocidos (422) para que un cliente viejo que mande `status` se entere en
+vez de que se ignore en silencio. Todos los bloqueos de estado responden 409, el mismo código que usa editar un
+atleta inscrito en un torneo en curso.
+
+**Para qué existe `finished`.** Las condiciones de `finish` ya garantizan que no queda nada por jugar (toda
+llave terminada, contando los `bye`, y toda categoría con 2 o más inscritos con su llave), así que no hace
+falta «congelar» nada más: cargar rounds o generar llaves ya es imposible, y el nombre, la fecha y el lugar se
+pueden seguir corrigiendo. Su efecto es comunicar que los resultados son **definitivos** (para el público y el
+frontend externo, «en curso» = pueden cambiar) y liberar la edición de atletas, que ya no quedan atados a ese
+torneo. Una categoría sin llave con 0 o 1 inscritos no bloquea el cierre (no hay nada que jugar).
+
+**Dónde vive.** `require_tournament_status` y `require_all_matches_played` están en `app/api/lifecycle.py`,
+junto a la API y no en `app/services/`, porque lanzan `HTTPException` (los servicios no dependen de FastAPI).
+En el admin, cuando el torneo ya empezó, los formularios de crear categoría e inscribir se reemplazan por un
+aviso en vez de dejar que fallen.
+
+## 2026-10-29 — Ciclo de vida del torneo, parte 2: llaves y resultados solo en curso (0.6.0)
+
+**Sortear y puntuar solo con el torneo en curso.** `create_bracket` y `create_round_score` exigen
+`in_progress` (409 si no). Para las llaves, el motivo es que el sorteo sea un evento público y que el orden
+quede forzado: primero se cierra la preparación (`/start`), recién después se sortea. Para los resultados es
+una **red de seguridad**: con la regla de las llaves no puede haber combates en un torneo en borrador, y
+`/finish` exige que todos los combates hayan terminado, así que hoy no hay forma de llegar a esa
+respuesta por la API; se mantiene porque cuesta una línea, da un mensaje claro y protege datos que pudieran
+venir de antes de esta regla. La comprobación va antes que las demás (después del 404), así que sobre un torneo
+finalizado el mensaje es el del estado y no el de «el combate ya terminó».
+
+**Cierra el hueco de la 0.4.0.** `PATCH /athletes` retira a un atleta de las categorías de torneos en borrador
+sin mirar si tienen llave; como ahora un torneo en borrador nunca tiene llave, ese caso ya no puede ocurrir.
+
+**Tests.** `generate_bracket` (`tests/conftest.py`) inicia el torneo si sigue en borrador y sortea la llave,
+para que cada test no repita esa preparación; los tests que ya iniciaban el torneo a mano quedan como estaban.
+
+## 2026-10-29 — Ciclo de vida del torneo, parte 4: vista pública (0.6.0, revisada el 2026-11-02)
+
+**Los borradores se muestran, con su lista de inscritos.** Primero se implementó ocultarlos del sitio público
+(404), para que nada se viera antes del sorteo, pero se cambió antes de liberar la versión: mientras las
+inscripciones están abiertas, lo útil para el público es saber quién está inscrito. La página pública de una
+categoría sin llave (en `draft`, o en curso antes del sorteo) muestra una tabla con nombre y club de los
+inscritos; con llave, la llave. **Privacidad:** solo nombre y club, nunca CI, fecha de nacimiento ni peso (hay
+menores; es la misma regla que mantiene `GET /athletes` detrás de token). El sorteo sigue siendo un evento
+público porque las llaves solo se generan con el torneo en curso.
+
+**El club entre paréntesis en las llaves** («Mateo Quispe (Dojang Norte)»), en el sitio público y en el admin,
+sale de `resolve_athlete_names(..., with_club=True)`: la misma consulta en lote, con el club cargado en la misma
+consulta, así no aparece una segunda resolución de nombres. La API sigue devolviendo solo el nombre en
+`athlete_red_name` y compañía; sumar el club a la API queda para cuando el frontend externo lo pida.
+
+**`draft` se muestra como «Inscripciones abiertas».** Solo cambia el texto traducido (`app/web/labels.py`) y la
+prosa de la documentación de la API; el valor `draft` y el identificador del enum no cambian. El nombre describe
+lo que de verdad se puede hacer en ese estado (crear categorías, inscribir y retirar atletas) en vez de sugerir
+que el torneo es un borrador sin publicar.
+
+**La lista de inscritos también en la API (2026-11-02).** Para que el frontend externo pueda mostrar lo mismo que
+el sitio, se agregó `GET /categories/{id}/registrants` (público) y el campo `has_bracket` en `CategoryRead`. Se
+descartó ampliar `GET /bracket` con una bandera `generated` y la lista de inscritos: habría cambiado su contrato
+(hoy responde 404 sin llave, y eso está documentado), habría vuelto opcionales los campos de la llave y mezclaba
+dos recursos. También se descartó que `GET /registrations` respondiera datos recortados sin token: el mismo
+endpoint con dos formas según la autenticación es fácil de romper. El esquema `RegistrantRead` tiene **solo**
+`athlete_id`, `name` y `club`, así que no hay forma de filtrar datos sensibles por error; la consulta vive en
+`app/services/registrants.py` y la comparten la API y la página pública. El costo es una llamada más en la página
+de categoría del frontend; si algún día pesa, se puede sumar un endpoint agregado del detalle de categoría.
+
+## 2026-11-10 — Listados de categorías e inscripciones siempre filtrados
+
+**Revertida el 2026-11-12** (ver la entrada siguiente).
+
+**Sin filtro no servían.** `GET /categories` y `GET /registrations` devolvían, sin parámetros, los datos de todos
+los torneos de la historia: una lista que nadie necesita, que crece con cada torneo y que no se pagina. Ahora el
+filtro es obligatorio, aunque rompa a quien llamaba sin él: dentro de `0.x` la API puede cambiar, y es mejor
+cortarlo antes de que el frontend externo dependa de eso.
+
+**Dos formas de exigirlo.** En categorías hay un solo filtro, así que `tournament_id` es un parámetro requerido:
+FastAPI responde el 422 y `/docs` lo marca como obligatorio, lo que les sirve a los generadores de clientes. En
+inscripciones vale cualquiera de los dos (`category_id` o `tournament_id`), y eso OpenAPI no lo puede expresar,
+así que la comprobación está en el endpoint, con un mensaje en español. Se agregó `tournament_id` a inscripciones
+para que «todos los inscritos de un torneo» no obligue a una llamada por categoría.
+
+## 2026-11-12 — Filtros de los listados otra vez opcionales
+
+**El filtro obligatorio rompió al frontend externo.** Al desplegar en `dev`, el admin del frontend de Kike llamaba a
+`GET /registrations` sin filtro (para contar atletas por torneo y para el detalle de un torneo) y empezó a recibir
+`422`; hubo que hacer rollback del servicio `dev` en Render. La decisión anterior asumía que todavía nadie dependía
+del listado completo, y no era así.
+
+**Se vuelve a la forma compatible:** sin filtros, los dos listados devuelven todo, como en la `0.5.0`. Se mantiene
+el filtro nuevo `tournament_id` en inscripciones, que no rompe nada. Exigir el filtro sigue siendo la meta, pero en
+tres pasos (expandir → migrar → contraer): ofrecer el filtro, que el frontend lo use, y recién entonces volverlo
+obligatorio, avisando antes. Para el conteo de atletas por torneo el frontend necesita algo que hoy no existe (por
+ejemplo, un conteo en el torneo); hay que resolverlo antes de contraer.
+
+**Regla que queda:** `dev` es un entorno compartido con el frontend externo. Un cambio incompatible de la API se
+acuerda con Kike antes de llegar a `dev`, no después.

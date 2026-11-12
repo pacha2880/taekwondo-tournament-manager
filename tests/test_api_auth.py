@@ -16,6 +16,7 @@ PUBLIC_ENDPOINTS = {
     ("GET", "/api/v1/categories"),
     ("GET", "/api/v1/categories/{category_id}"),
     ("GET", "/api/v1/categories/{category_id}/bracket"),
+    ("GET", "/api/v1/categories/{category_id}/registrants"),
     ("GET", "/api/v1/matches/{match_id}"),
 }
 
@@ -96,6 +97,7 @@ def test_issued_token_can_be_used_on_a_protected_endpoint(anon_client):
         ("patch", "/api/v1/tournaments/1"),
         ("post", "/api/v1/categories"),
         ("post", "/api/v1/registrations"),
+        ("delete", "/api/v1/registrations/1"),
         ("post", "/api/v1/categories/1/bracket"),
         ("post", "/api/v1/matches/1/rounds"),
         ("get", "/api/v1/athletes"),
@@ -184,9 +186,9 @@ def test_public_reads_work_without_a_token(anon_client, club, tournament, catego
     assert anon_client.get(f"/api/v1/categories/{category['id']}").status_code == 200
 
 
-def test_bracket_and_match_are_public(anon_client, client, club, category, register_n_athletes):
+def test_bracket_and_match_are_public(anon_client, client, club, category, register_n_athletes, generate_bracket):
     register_n_athletes(client, club, category, 2)
-    bracket = client.post(f"/api/v1/categories/{category['id']}/bracket").json()
+    bracket = generate_bracket(client, category).json()
     match_id = bracket["matches"][0]["id"]
 
     assert anon_client.get(f"/api/v1/categories/{category['id']}/bracket").status_code == 200

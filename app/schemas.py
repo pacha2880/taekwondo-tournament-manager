@@ -125,10 +125,11 @@ class TournamentCreate(TournamentBase):
 
 
 class TournamentUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     name: str | None = Field(default=None, description="Nuevo nombre. Si no se envía, no cambia.")
     date: datetime.date | None = Field(default=None, description="Nueva fecha (`YYYY-MM-DD`). Si no se envía, no cambia.")
     location: str | None = Field(default=None, description="Nuevo lugar. Si no se envía, no cambia.")
-    status: TournamentStatus | None = Field(default=None, description="Nuevo estado. Si no se envía, no cambia.")
 
 
 class TournamentRead(TournamentBase):
@@ -194,9 +195,28 @@ class CategoryRead(CategoryBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int = Field(description="Identificador de la categoría.")
+    has_bracket: bool = Field(
+        description="Si la categoría ya tiene la llave generada. Mientras es `false`, lo que se muestra al público es "
+        "la lista de inscritos (`GET /categories/{id}/registrants`)."
+    )
+
+
+class RegistrantRead(BaseModel):
+    """Inscrito de una categoría, solo con datos públicos: sin CI, fecha de nacimiento ni peso."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    athlete_id: int = Field(description="Id del atleta.")
+    name: str = Field(description="Nombre del atleta.", examples=["Mateo Quispe Mamani"])
+    club: str = Field(description="Nombre del club del atleta.", examples=["Dojang Central"])
 
 
 class RoundScoreCreate(BaseModel):
+    round_number: int = Field(
+        ge=1,
+        description="Número del round que se está cargando: el siguiente al último guardado (1 si no hay ninguno).",
+        examples=[1],
+    )
     red_points: int = Field(description="Puntos del lado rojo en este round.", examples=[12])
     blue_points: int = Field(description="Puntos del lado azul en este round.", examples=[5])
 
@@ -207,7 +227,7 @@ class RoundScoreRead(RoundScoreCreate):
     id: int = Field(description="Identificador del resultado del round.")
     match_id: int = Field(description="Id del combate al que pertenece el round.")
     round_number: int = Field(
-        description="Número del round dentro del combate, desde 1. Lo asigna el servidor en el orden en que se cargan.",
+        description="Número del round dentro del combate, desde 1.",
         examples=[1],
     )
     round_winner_id: int | None = Field(description="Atleta que ganó el round: el del lado con más puntos.")

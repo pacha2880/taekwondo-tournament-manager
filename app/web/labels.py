@@ -9,7 +9,7 @@ from app.models import BeltGroup, Discipline, Gender, MatchStatus, TournamentSta
 
 _LABELS: dict[type, dict] = {
     TournamentStatus: {
-        TournamentStatus.DRAFT: "Borrador",
+        TournamentStatus.DRAFT: "Inscripciones abiertas",
         TournamentStatus.IN_PROGRESS: "En curso",
         TournamentStatus.FINISHED: "Finalizado",
     },

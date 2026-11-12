@@ -11,6 +11,45 @@ funcionando sobre una base ya migrada.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-12
+
+### Added
+- **Retirar a un atleta de una categoría:** `DELETE /api/v1/registrations/{id}` (responde `204`) y un botón
+  «Retirar» con confirmación en cada fila de inscritos del admin. Solo con el torneo en `draft`; después
+  responde `409` y el botón no aparece.
+- `GET /api/v1/registrations` acepta el filtro `tournament_id` (todas las inscripciones de un torneo), combinable
+  con `category_id`. Es un agregado: sin filtros sigue devolviendo todas.
+
+### Changed
+- **Incompatible — importante para quien use la API:** el estado de un torneo ya no se cambia con
+  `PATCH /api/v1/tournaments/{id}` (enviar `status` ahora responde `422`). Se usan dos acciones:
+  `POST /api/v1/tournaments/{id}/start` (de `draft` a `in_progress`) y `POST /api/v1/tournaments/{id}/finish`
+  (de `in_progress` a `finished`, solo si no quedan combates por jugar). El estado no vuelve atrás: repetir
+  una acción o saltar un paso responde `409`.
+- **Incompatible — importante para quien use la API:** `POST /api/v1/matches/{id}/rounds` vuelve a exigir
+  `round_number`, que tiene que ser el siguiente al último round guardado; si no, responde `409` sin guardar
+  nada. Evita que un reenvío (la respuesta se perdió por mala señal) quede guardado como el round siguiente y
+  cierre el combate con un ganador equivocado.
+- **Importante para quien use la API:** las categorías y las inscripciones solo se crean mientras el torneo
+  está en `draft`; con el torneo ya iniciado, `POST /api/v1/categories` y `POST /api/v1/registrations`
+  responden `409`. Con esto, al pasar a «en curso» se cierra la preparación del torneo.
+- En el admin, cuando el torneo ya empezó, los formularios de crear categoría e inscribir atleta se
+  reemplazan por un aviso. El selector de estado se reemplaza por un solo botón según el estado
+  («Cerrar inscripciones e iniciar torneo» o «Finalizar torneo»), con confirmación que avisa que es irreversible.
+- **Importante para quien use la API:** las llaves (`POST /api/v1/categories/{id}/bracket`) y los resultados
+  (`POST /api/v1/matches/{id}/rounds`) solo se aceptan con el torneo en curso; con el torneo en `draft` o
+  `finished` responden `409`. Hay que iniciar el torneo antes de sortear.
+- En el admin, con el torneo todavía en borrador, el botón «Generar llave» se reemplaza por un aviso.
+- En la página pública de una categoría sin llave (con inscripciones abiertas, o en curso antes del sorteo)
+  se muestra la lista de inscritos: solo nombre y club.
+- **Nuevo en la API:** `GET /api/v1/categories/{id}/registrants`, público, con los inscritos de la categoría
+  (solo `athlete_id`, `name` y `club`), y el campo `has_bracket` en las categorías para saber si mostrar la
+  llave o la lista de inscritos. Son agregados: no rompen nada.
+- En las llaves, del sitio público y del admin, el club de cada atleta aparece entre paréntesis junto a su
+  nombre. La API sigue devolviendo solo el nombre.
+- El estado `draft` se muestra como «Inscripciones abiertas» en lugar de «Borrador» (solo el texto; el valor
+  `draft` de la API no cambia).
+
 ## [0.5.0] - 2026-10-26
 
 ### Added
@@ -144,7 +183,8 @@ https://taekwondo-tournament-manager.onrender.com.
 - `pool_pre_ping=True` en la conexión a la base de datos: Neon suspende el cómputo por
   inactividad y la primera conexión tras un rato inactivo pudo fallar con un error 500.
 
-[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.2.0...v0.3.0

@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.api.athletes import get_athlete_or_404
+from app.api.lifecycle import require_tournament_status
 from app.api_docs import TAG_REGISTRATIONS, errors
 from app.auth import ADMIN_ONLY
 from app.database import get_db
-from app.models import Category, Registration
+from app.models import Category, Registration, TournamentStatus
 from app.schemas import RegistrationCreate, RegistrationRead
 from app.services.eligibility import category_mismatch
 
@@ -19,14 +20,17 @@ router = APIRouter(prefix="/api/v1/registrations", tags=[TAG_REGISTRATIONS])
     status_code=201,
     dependencies=ADMIN_ONLY,
     summary="Inscribir un atleta en una categoría",
-    description="Reglas: el género del atleta debe coincidir con el de la categoría (422); su peso debe estar dentro de `min_weight`/`max_weight` si la categoría los define (422); no puede inscribirse dos veces en la misma categoría (409) ni en más de una categoría del mismo torneo (409). Requiere token.",
-    responses=errors({404: "El atleta o la categoría no existe.", 409: "El atleta ya está inscrito en esa categoría o en otra del mismo torneo."}, auth=True),
+    description="Reglas: el torneo debe estar en `draft`: al pasar a `in_progress` las inscripciones se cierran (409); el género del atleta debe coincidir con el de la categoría (422); su peso debe estar dentro de `min_weight`/`max_weight` si la categoría los define (422); no puede inscribirse dos veces en la misma categoría (409) ni en más de una categoría del mismo torneo (409). Requiere token.",
+    responses=errors({404: "El atleta o la categoría no existe.", 409: "Las inscripciones están cerradas (el torneo ya empezó), o el atleta ya está inscrito en esa categoría o en otra del mismo torneo."}, auth=True),
 )
 def create_registration(payload: RegistrationCreate, db: Session = Depends(get_db)):
     athlete = get_athlete_or_404(db, payload.athlete_id)
     category = db.get(Category, payload.category_id)
     if not category:
         raise HTTPException(status_code=404, detail="Categoría no encontrada")
+    require_tournament_status(
+        category.tournament, TournamentStatus.DRAFT, "Las inscripciones están cerradas: el torneo ya empezó"
+    )
     mismatch = category_mismatch(athlete.gender, athlete.weight_kg, category)
     if mismatch:
         raise HTTPException(status_code=422, detail=mismatch)
@@ -63,11 +67,35 @@ def create_registration(payload: RegistrationCreate, db: Session = Depends(get_d
     response_model=list[RegistrationRead],
     dependencies=ADMIN_ONLY,
     summary="Listar inscripciones",
-    description="Devuelve las inscripciones con los datos del atleta y de la categoría. Con el parámetro `category_id` devuelve solo las de esa categoría. Incluye fecha de nacimiento y peso de los atletas, por eso requiere token.",
+    description="Devuelve las inscripciones con los datos del atleta y de la categoría. Con `category_id` devuelve solo las de esa categoría y con `tournament_id` solo las de ese torneo; si se envían ambos, se aplican los dos filtros. Incluye fecha de nacimiento y peso de los atletas, por eso requiere token.",
     responses=errors(auth=True),
 )
-def list_registrations(category_id: int | None = None, db: Session = Depends(get_db)):
-    stmt = select(Registration)
+def list_registrations(
+    category_id: int | None = None, tournament_id: int | None = None, db: Session = Depends(get_db)
+):
+    query = select(Registration).options(selectinload(Registration.category).selectinload(Category.bracket))
     if category_id is not None:
-        stmt = stmt.where(Registration.category_id == category_id)
-    return db.scalars(stmt).all()
+        query = query.where(Registration.category_id == category_id)
+    if tournament_id is not None:
+        query = query.join(Registration.category).where(Category.tournament_id == tournament_id)
+    return db.scalars(query).all()
+
+
+@router.delete(
+    "/{registration_id}",
+    status_code=204,
+    dependencies=ADMIN_ONLY,
+    summary="Retirar a un atleta de una categoría",
+    description="Borra la inscripción. Solo mientras el torneo está en `draft`: con el torneo ya iniciado responde 409. Requiere token.",
+    responses=errors({404: "La inscripción no existe.", 409: "Las inscripciones están cerradas (el torneo ya empezó)."}, auth=True),
+)
+def delete_registration(registration_id: int, db: Session = Depends(get_db)):
+    registration = db.get(Registration, registration_id)
+    if not registration:
+        raise HTTPException(status_code=404, detail="Inscripción no encontrada")
+    require_tournament_status(
+        registration.category.tournament, TournamentStatus.DRAFT, "Las inscripciones están cerradas: el torneo ya empezó"
+    )
+    db.delete(registration)
+    db.commit()
+    return Response(status_code=204)

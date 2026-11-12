@@ -15,7 +15,8 @@ de ejemplo.
 
 ## Acceso
 
-Lecturas **públicas**: torneos, categorías, clubes, llaves y combates. Todo `POST`/`PATCH` y las
+Lecturas **públicas**: torneos, categorías, clubes, llaves, combates y la lista de inscritos de cada
+categoría (solo nombre y club). Todo `POST`/`PATCH` y las
 lecturas de **atletas e inscripciones** piden `Authorization: Bearer <token>` (esas respuestas
 incluyen fecha de nacimiento y peso, y hay menores). El token se obtiene en
 `POST /api/v1/auth/login` (formulario con `username` y `password`), dura 8 horas y no se renueva solo:
@@ -32,10 +33,15 @@ Para una vista pública alcanza con tres llamadas, todas sin token:
 
 1. `GET /api/v1/tournaments` — la lista de torneos.
 2. `GET /api/v1/categories?tournament_id={id}` — las categorías de un torneo.
-3. `GET /api/v1/categories/{id}/bracket` — la llave de una categoría. Responde **`404` mientras no se
-   haya sorteado**: tratarlo como "todavía sin llave", no como un error.
+3. Según el campo `has_bracket` de la categoría:
+   - `true`: `GET /api/v1/categories/{id}/bracket` — la llave.
+   - `false`: `GET /api/v1/categories/{id}/registrants` — los inscritos, solo con nombre y club, ordenados por
+     nombre. (La llave responde `404` mientras no se haya sorteado.)
 
-Las listas no se paginan: devuelven todos los elementos.
+Las listas no se paginan: devuelven todos los elementos. Sin filtro, las de categorías e inscripciones mezclan
+todos los torneos, así que conviene pedirlas filtradas: `GET /categories?tournament_id=` y
+`GET /registrations?tournament_id=` o `?category_id=` (con token). Más adelante el filtro va a ser obligatorio;
+se avisará antes en el CHANGELOG.
 
 ## Cómo leer una llave
 
@@ -54,8 +60,9 @@ La llave trae **todos los combates de todas las rondas** en una lista plana (`ma
    nadie haya peleado todavía.
 4. Un lado en `null` en una ronda posterior significa que ese atleta todavía no se conoce: espera el
    resultado de un combate anterior.
-5. `round_scores` trae el resultado de cada round cargado, numerado por el servidor (1, 2, 3…) en el
-   orden de carga. Un combate pasa a `finished` cuando un atleta gana `rounds_to_win` rounds de la
+5. `round_scores` trae el resultado de cada round cargado, en orden (1, 2, 3…). Al cargar un round se envía su
+   `round_number`, que tiene que ser el siguiente; si no, la API responde `409` sin guardar nada. Así, reenviar un
+   round cuya respuesta se perdió no lo guarda dos veces: al recibir ese `409`, volver a pedir el combate. Un combate pasa a `finished` cuando un atleta gana `rounds_to_win` rounds de la
    categoría (2 equivale a un combate al mejor de 3).
 
 Para mostrar nombres no hace falta pedir cada atleta: cada combate trae `athlete_red_name`,
@@ -80,6 +87,25 @@ está inscrito:
 Los dos `409` solo se distinguen por el texto. Lo práctico es mostrar `detail` al usuario y ofrecer
 "confirmar" una vez: si la petición confirmada vuelve a dar `409`, el cambio no es posible.
 
+## Ciclo de vida de un torneo
+
+El estado no se cambia con `PATCH` sino con dos acciones, y solo avanza (`409` si se repite una o se salta un
+paso):
+
+- `POST /api/v1/tournaments/{id}/start`: de `draft` a `in_progress`. Mientras el torneo está en `draft` se
+  crean las categorías y se inscribe (o se retira, con `DELETE /registrations/{id}`) a los atletas; al
+  iniciarlo esas cosas se cierran (`POST /categories`, `POST /registrations` y `DELETE /registrations/{id}`
+  responden `409`). Con el torneo en curso se generan las
+  llaves y se cargan los resultados; en `draft` o `finished` ambas cosas responden `409`.
+- `POST /api/v1/tournaments/{id}/finish`: de `in_progress` a `finished`, los resultados quedan como
+  definitivos. Exige que no queden combates por jugar: si falta alguno responde `409` y `detail` nombra las
+  categorías pendientes.
+
+Las lecturas públicas (`GET /tournaments`, `GET /categories`…) devuelven torneos en cualquier estado,
+incluidos los `draft`. El sitio público del proyecto también los muestra: mientras una categoría no tiene
+llave, su página lista a los inscritos (solo nombre y club). Desde la API se arma lo mismo con `has_bracket`
+y `/registrants` (ver «Recorrer los datos»).
+
 ## Errores
 
 Los errores responden `{"detail": "mensaje en español"}`, pensado para mostrarlo tal cual:
@@ -89,7 +115,7 @@ Los errores responden `{"detail": "mensaje en español"}`, pensado para mostrarl
 | `400` | Falta algo previo para poder hacerlo | generar una llave con menos de 2 inscritos; cargar un round sin los dos atletas definidos |
 | `401` | Falta el token, es inválido o venció | volver a iniciar sesión |
 | `404` | No existe | id inexistente; llave todavía no sorteada |
-| `409` | Choca con datos existentes o con el estado actual | nombre de club o CI repetido; atleta ya inscrito en esa u otra categoría del torneo; llave ya generada; combate ya terminado; edición de atleta (ver arriba) |
+| `409` | Choca con datos existentes o con el estado actual | nombre de club o CI repetido; atleta ya inscrito en esa u otra categoría del torneo; llave ya generada; combate ya terminado; round que no es el siguiente; torneo que ya empezó o que todavía tiene combates por jugar; edición de atleta (ver arriba) |
 | `422` | No cumple una regla, o el cuerpo no tiene el formato esperado | atleta que no encaja en la categoría; round empatado; fecha inválida |
 
 En los `422` de formato (campo faltante, tipo incorrecto), `detail` no es un texto sino una **lista** con
@@ -102,7 +128,7 @@ Viajan en inglés; para mostrarlos al usuario, esta es la traducción que usa la
 
 | Campo | Valor | Se muestra como |
 |---|---|---|
-| `status` de un torneo | `draft` / `in_progress` / `finished` | Borrador / En curso / Finalizado |
+| `status` de un torneo | `draft` / `in_progress` / `finished` | Inscripciones abiertas / En curso / Finalizado |
 | `status` de un combate | `pending` / `bye` / `finished` | Pendiente / Pase directo / Finalizado |
 | `gender` | `male` / `female` | Masculino / Femenino |
 | `belt_group` | `color` / `black` | Cinturón de color / Cinturón negro |
@@ -139,7 +165,7 @@ curl -s -X POST $BASE/api/v1/registrations -H "$AUTH" -H "$JSON" -d '{"athlete_i
 curl -s -X POST $BASE/api/v1/categories/1/bracket -H "$AUTH"
 curl -s $BASE/api/v1/categories/1/bracket
 
-# 5) Cargar un round: solo los puntos; el servidor lo numera y no admite empates
+# 5) Cargar un round: su número (el siguiente) y los puntos; no admite empates
 curl -s -X POST $BASE/api/v1/matches/1/rounds -H "$AUTH" -H "$JSON" \
-  -d '{"red_points": 12, "blue_points": 5}'
+  -d '{"round_number": 1, "red_points": 12, "blue_points": 5}'
 ```

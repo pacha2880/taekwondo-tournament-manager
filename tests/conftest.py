@@ -113,6 +113,46 @@ def athlete(client, club):
 
 
 @pytest.fixture()
+def set_tournament_status():
+    def _set(client, tournament_id, status):
+        actions = {"draft": [], "in_progress": ["start"], "finished": ["start", "finish"]}[status]
+        for action in actions:
+            resp = client.post(f"/api/v1/tournaments/{tournament_id}/{action}")
+            assert resp.status_code == 200, resp.json()
+
+    return _set
+
+
+@pytest.fixture()
+def generate_bracket():
+    """Sortea la llave de la categoría, iniciando antes el torneo si todavía está en borrador."""
+
+    def _generate(client, category):
+        tournament_url = f"/api/v1/tournaments/{category['tournament_id']}"
+        if client.get(tournament_url).json()["status"] == "draft":
+            assert client.post(f"{tournament_url}/start").status_code == 200
+        return client.post(f"/api/v1/categories/{category['id']}/bracket")
+
+    return _generate
+
+
+@pytest.fixture()
+def score_rounds():
+    """Carga rounds seguidos en un combate, numerados desde 1; cada uno es (puntos rojo, puntos azul)."""
+
+    def _score(client, match_id, *scores):
+        return [
+            client.post(
+                f"/api/v1/matches/{match_id}/rounds",
+                json={"round_number": n, "red_points": red, "blue_points": blue},
+            )
+            for n, (red, blue) in enumerate(scores, start=1)
+        ]
+
+    return _score
+
+
+@pytest.fixture()
 def register_n_athletes():
     def _register(client, club, category, n, weight_kg=40):
         registrations = []

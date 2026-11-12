@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Bracket, Category, Tournament
 from app.services.brackets import resolve_athlete_names
+from app.services.registrants import list_registrants
 from app.web.templating import templates
 
 router = APIRouter(tags=["public"])
@@ -39,7 +40,7 @@ def category_detail(category_id: int, request: Request, db: Session = Depends(ge
     rounds = []
     athletes: dict[int, str] = {}
     if bracket:
-        athletes = resolve_athlete_names(db, bracket.matches)
+        athletes = resolve_athlete_names(db, bracket.matches, with_club=True)
 
         matches_by_round = defaultdict(list)
         for match in bracket.matches:
@@ -48,6 +49,8 @@ def category_detail(category_id: int, request: Request, db: Session = Depends(ge
             (round_number, sorted(matches, key=lambda m: m.slot))
             for round_number, matches in sorted(matches_by_round.items())
         ]
+
+    registrants = [] if bracket else list_registrants(db, category_id)
 
     return templates.TemplateResponse(
         request,
@@ -58,5 +61,6 @@ def category_detail(category_id: int, request: Request, db: Session = Depends(ge
             "bracket": bracket,
             "rounds": rounds,
             "athletes": athletes,
+            "registrants": registrants,
         },
     )

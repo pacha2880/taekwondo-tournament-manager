@@ -162,6 +162,9 @@ def test_full_admin_workflow_creates_bracket_and_scores_a_match(client):
         )
         assert resp.status_code == 303
 
+    start_resp = client.post(f"/admin/torneos/{tournament_id}/iniciar", follow_redirects=False)
+    assert start_resp.status_code == 303
+
     bracket_resp = client.post(f"/admin/categorias/{category_id}/llave", follow_redirects=False)
     assert bracket_resp.status_code == 303
 
@@ -171,13 +174,13 @@ def test_full_admin_workflow_creates_bracket_and_scores_a_match(client):
 
     score_resp = client.post(
         f"/admin/combates/{match_id}/rounds",
-        data={"red_points": "12", "blue_points": "5"},
+        data={"round_number": "1", "red_points": "12", "blue_points": "5"},
         follow_redirects=False,
     )
     assert score_resp.status_code == 303
     score_resp = client.post(
         f"/admin/combates/{match_id}/rounds",
-        data={"red_points": "9", "blue_points": "3"},
+        data={"round_number": "2", "red_points": "9", "blue_points": "3"},
         follow_redirects=False,
     )
     assert score_resp.status_code == 303
@@ -187,17 +190,17 @@ def test_full_admin_workflow_creates_bracket_and_scores_a_match(client):
     assert "Ganador:" in category_page.text
 
 
-def test_dashboard_colors_each_tournament_status_badge(client):
+def test_dashboard_colors_each_tournament_status_badge(client, set_tournament_status):
     for name, status in (("T1", "draft"), ("T2", "in_progress"), ("T3", "finished")):
         created = client.post(
             "/api/v1/tournaments", json={"name": name, "date": "2026-11-15", "location": "La Paz"}
         ).json()
-        client.patch(f"/api/v1/tournaments/{created['id']}", json={"status": status})
+        set_tournament_status(client, created["id"], status)
     _login(client)
 
     html = client.get("/admin").text
 
-    assert '<span class="badge bg-secondary">Borrador</span>' in html
+    assert '<span class="badge bg-secondary">Inscripciones abiertas</span>' in html
     assert '<span class="badge bg-primary">En curso</span>' in html
     assert '<span class="badge bg-success">Finalizado</span>' in html
 
@@ -350,7 +353,7 @@ def test_edit_athlete_in_a_tournament_in_progress_shows_the_reason_without_a_con
 ):
     _login(client)
     client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
-    client.patch(f"/api/v1/tournaments/{tournament['id']}", json={"status": "in_progress"})
+    client.post(f"/api/v1/tournaments/{tournament['id']}/start")
 
     resp = client.post(f"/admin/atletas/{athlete['id']}/editar", data=_edit_athlete_form(athlete, weight_kg="50"))
 
@@ -415,19 +418,19 @@ def _athlete_json(club):
     }
 
 
-def test_round_form_shows_the_next_round_number_without_an_editable_field(client, club, category, register_n_athletes):
+def test_round_form_shows_the_next_round_number_without_an_editable_field(client, club, category, register_n_athletes, generate_bracket):
     register_n_athletes(client, club, category, 2)
-    match = client.post(f"/api/v1/categories/{category['id']}/bracket").json()["matches"][0]
+    match = generate_bracket(client, category).json()["matches"][0]
     _login(client)
     page_url = f"/admin/categorias/{category['id']}"
 
     first = client.get(page_url).text
-    client.post(f"/admin/combates/{match['id']}/rounds", data={"red_points": "10", "blue_points": "5"})
+    client.post(f"/admin/combates/{match['id']}/rounds", data={"round_number": "1", "red_points": "10", "blue_points": "5"})
     second = client.get(page_url).text
 
     assert 'data-confirm="Cargar round 1"' in first
     assert 'data-confirm-note="Una vez cargado, el resultado de un round no se puede editar."' in first
-    assert 'name="round_number"' not in first
+    assert '<input type="hidden" name="round_number" value="1">' in first
     assert 'data-confirm="Cargar round 2"' in second
 
 
@@ -540,14 +543,134 @@ def test_registration_form_keeps_the_selected_athlete_when_it_fails(client, club
     assert f'<option value="{heavy["id"]}" selected>' in resp.text
 
 
-def test_round_form_keeps_the_typed_points_when_it_fails(client, club, category, register_n_athletes):
+def test_round_form_keeps_the_typed_points_when_it_fails(client, club, category, register_n_athletes, generate_bracket):
     register_n_athletes(client, club, category, 2)
-    match = client.post(f"/api/v1/categories/{category['id']}/bracket").json()["matches"][0]
+    match = generate_bracket(client, category).json()["matches"][0]
     _login(client)
 
     # un round no puede empatar
-    resp = client.post(f"/admin/combates/{match['id']}/rounds", data={"red_points": "7", "blue_points": "7"})
+    resp = client.post(f"/admin/combates/{match['id']}/rounds", data={"round_number": "1", "red_points": "7", "blue_points": "7"})
 
     assert resp.status_code == 400
     assert "empate" in resp.text
     assert resp.text.count('value="7"') == 2
+
+
+def test_category_form_is_replaced_by_a_notice_once_the_tournament_started(client, tournament):
+    _login(client)
+    page_url = f"/admin/torneos/{tournament['id']}"
+
+    before = client.get(page_url).text
+    client.post(f"/api/v1/tournaments/{tournament['id']}/start")
+    after = client.get(page_url).text
+
+    assert 'data-confirm="Crear categoría"' in before
+    assert 'data-confirm="Crear categoría"' not in after
+    assert "Ya no se pueden crear categorías porque el torneo ya empezó" in after
+
+
+def test_registration_form_is_replaced_by_a_notice_once_the_tournament_started(client, athlete, category, tournament):
+    _login(client)
+    page_url = f"/admin/categorias/{category['id']}"
+
+    before = client.get(page_url).text
+    client.post(f"/api/v1/tournaments/{tournament['id']}/start")
+    after = client.get(page_url).text
+
+    assert 'data-confirm="Inscribir atleta"' in before
+    assert 'data-confirm="Inscribir atleta"' not in after
+    assert "Las inscripciones están cerradas porque el torneo ya empezó" in after
+
+
+def test_withdraw_button_is_offered_only_while_the_tournament_is_in_draft(client, athlete, category, tournament):
+    _login(client)
+    page_url = f"/admin/categorias/{category['id']}"
+    registration = client.post(
+        "/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]}
+    ).json()
+    withdraw_url = f"{page_url}/inscripciones/{registration['id']}/retirar"
+
+    draft = client.get(page_url).text
+    client.post(f"/api/v1/tournaments/{tournament['id']}/start")
+    started = client.get(page_url).text
+    rejected = client.post(withdraw_url)  # el torneo ya empezó
+
+    assert f'action="{withdraw_url}"' in draft
+    assert withdraw_url not in started
+    assert rejected.status_code == 400
+    assert "Las inscripciones están cerradas" in rejected.text
+
+
+def test_withdraw_button_removes_the_athlete(client, athlete, category):
+    _login(client)
+    registration = client.post(
+        "/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]}
+    ).json()
+
+    resp = client.post(f"/admin/categorias/{category['id']}/inscripciones/{registration['id']}/retirar")
+
+    assert "Todavía no hay atletas inscritos" in resp.text
+
+
+def test_tournament_page_offers_only_the_next_step_of_its_lifecycle(client, tournament):
+    _login(client)
+    page_url = f"/admin/torneos/{tournament['id']}"
+
+    draft = client.get(page_url).text
+    started = client.post(f"{page_url}/iniciar", follow_redirects=False)
+    in_progress = client.get(page_url).text
+    finished = client.post(f"{page_url}/finalizar", follow_redirects=False)
+    final = client.get(page_url).text
+
+    assert f'action="{page_url}/iniciar"' in draft
+    assert "/finalizar" not in draft
+    assert started.status_code == 303
+    assert "/iniciar" not in in_progress
+    assert f'action="{page_url}/finalizar"' in in_progress
+    assert finished.status_code == 303
+    assert "/iniciar" not in final and "/finalizar" not in final
+
+
+def test_finish_with_matches_to_play_shows_why(client, club, category, tournament, register_n_athletes):
+    register_n_athletes(client, club, category, 2)
+    client.post(f"/api/v1/tournaments/{tournament['id']}/start")
+    _login(client)
+
+    resp = client.post(f"/admin/torneos/{tournament['id']}/finalizar")
+
+    assert resp.status_code == 400
+    assert "Quedan combates por jugar en: Cadete Hasta 45kg" in resp.text
+
+
+def test_generate_bracket_button_is_replaced_by_a_notice_until_the_tournament_starts(
+    client, club, category, tournament, register_n_athletes
+):
+    register_n_athletes(client, club, category, 2)
+    _login(client)
+    page_url = f"/admin/categorias/{category['id']}"
+
+    before = client.get(page_url).text
+    client.post(f"/api/v1/tournaments/{tournament['id']}/start")
+    after = client.get(page_url).text
+
+    assert 'data-confirm="Generar llave"' not in before
+    assert "primero hay que iniciar el torneo" in before
+    assert 'data-confirm="Generar llave"' in after
+
+
+def test_generating_a_bracket_before_the_tournament_starts_shows_the_reason(client, club, category, register_n_athletes):
+    register_n_athletes(client, club, category, 2)
+    _login(client)
+
+    resp = client.post(f"/admin/categorias/{category['id']}/llave")
+
+    assert resp.status_code == 400
+    assert "Solo se puede generar la llave con el torneo en curso" in resp.text
+
+
+def test_admin_bracket_shows_each_athlete_with_their_club(client, club, category, register_n_athletes, generate_bracket):
+    register_n_athletes(client, club, category, 2)
+    generate_bracket(client, category)
+    _login(client)
+
+    assert "Atleta 0 (Dojang Central)" in client.get(f"/admin/categorias/{category['id']}").text

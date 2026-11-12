@@ -22,8 +22,14 @@
     <h2 class="h5">Inscritos</h2>
     <ul class="list-group mb-3">
       {% for r in registrations %}
-      <li class="list-group-item">
-        {{ r.athlete.name }} <span class="text-muted small">&middot; {{ r.athlete.club.name }}</span>
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <span>{{ r.athlete.name }} <span class="text-muted small">&middot; {{ r.athlete.club.name }}</span></span>
+        {% if tournament.status == "draft" %}
+        <form method="post" action="/admin/categorias/{{ category.id }}/inscripciones/{{ r.id }}/retirar"
+              data-confirm="Retirar atleta" data-confirm-note="Se retirará a {{ r.athlete.name }} de esta categoría.">
+          <button type="submit" class="btn btn-sm btn-outline-danger">Retirar</button>
+        </form>
+        {% endif %}
       </li>
       {% else %}
       <li class="list-group-item text-muted">Todavía no hay atletas inscritos.</li>
@@ -32,7 +38,9 @@
 
     {% if not bracket %}
     <h2 class="h5">Inscribir atleta</h2>
-    {% if available_athletes %}
+    {% if tournament.status != "draft" %}
+    <p class="text-muted mb-4">Las inscripciones están cerradas porque el torneo ya empezó.</p>
+    {% elif available_athletes %}
     <form method="post" action="/admin/categorias/{{ category.id }}/inscripciones" class="mb-4" data-confirm="Inscribir atleta">
       <div class="mb-2 d-flex gap-2">
         <select name="athlete_id" class="form-select" aria-label="Atleta" required>
@@ -47,6 +55,9 @@
     <p class="text-muted mb-4">No quedan atletas para inscribir en esta categoría.</p>
     {% endif %}
 
+    {% if tournament.status == "draft" %}
+    <p class="text-muted">Para generar la llave primero hay que iniciar el torneo (eso cierra las inscripciones).</p>
+    {% else %}
     <form method="post" action="/admin/categorias/{{ category.id }}/llave" data-confirm="Generar llave"
           data-confirm-note="Se sorteará la llave de esta categoría con los atletas inscritos.">
       <button type="submit" class="btn btn-success" {% if registrations|length < 2 %}disabled{% endif %}>
@@ -56,6 +67,7 @@
       <span class="text-muted small">(hacen falta al menos 2 inscritos)</span>
       {% endif %}
     </form>
+    {% endif %}
     {% endif %}
   </div>
 
@@ -88,6 +100,7 @@
         <form method="post" action="/admin/combates/{{ m.id }}/rounds" class="row g-1 mt-2"
               data-confirm="Cargar round {{ next_round }}"
               data-confirm-note="Una vez cargado, el resultado de un round no se puede editar.">
+          <input type="hidden" name="round_number" value="{{ next_round }}">
           <div class="col-3 small text-muted align-self-center">Round {{ next_round }}</div>
           <div class="col-3">
             <input type="number" name="red_points" class="form-control form-control-sm"

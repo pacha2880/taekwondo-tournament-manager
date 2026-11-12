@@ -1,268 +1,163 @@
-# Backlog — Fase 9 (mejoras post-deploy)
+# Backlog
 
-Cosas que se nos van ocurriendo pero que deliberadamente no bloquean llegar a producción.
-Ordenadas en versiones (ver [`CHANGELOG.md`](../CHANGELOG.md) y la sección **Versionado** del
-`README.md`). El orden sale de tres pasadas de análisis: dependencias entre ítems, riesgo para
-lo que ya funciona en producción, y valor frente a esfuerzo.
+Lo aceptado y ordenado en versiones. Las versiones ya liberadas están en [`CHANGELOG.md`](../CHANGELOG.md).
 
-Reglas de cada versión: tests en verde contra SQLite **y** contra el Postgres de Docker;
-migraciones solo aditivas (columnas nuevas opcionales, nunca borrar ni renombrar) para que
-volver al tag anterior siga funcionando sobre una base ya migrada; tras el deploy, verificar
-`/health` (muestra la versión) y una página pública.
+## Cómo se usa
 
-## Decisiones pendientes
+- **Notion, [Cambios posibles](https://app.notion.com/p/542c165c4b604d2aa3901cd55d86d24c):** pedidos del cliente e
+  ideas por decidir, con el texto original de cada reunión. Lo leen el cliente y el equipo del frontend.
+- **Este archivo:** solo lo aceptado, en versiones y con el detalle técnico. Cada ítem enlaza a su fila de Notion;
+  la fila pasa a «Aceptado» y anota la versión. El texto no se copia de un lado al otro.
+- **[`DECISIONS.md`](DECISIONS.md):** el porqué de cada decisión técnica.
 
-- **Categoría sin llave y cierre del torneo.** ¿Una categoría sin llave bloquea pasar el torneo
-  a `FINISHED`? Propuesta: sí si tiene 2 o más inscritos (hay combates sin jugar); se ignora si
-  tiene 0 o 1 (lo resuelve la 0.7.0).
-- **Asignación de área/cancha por categoría.** Un torneo real corre varias categorías en
-  paralelo en distintas áreas (viene de la planilla física de control, campo "AREA"). Falta
-  decidir: ¿una entidad `Area` propia (nombre/número), o alcanza con que el admin indique
-  cuántas áreas tiene el torneo al crearlo y las asigne por categoría? ¿Asignación manual, o
-  alguna regla automática? Ver ítem en "Más adelante".
+Reglas de cada versión: `pytest` en verde (SQLite en local; Postgres lo corre el CI del PR); migraciones solo
+aditivas; los cambios incompatibles de la API se juntan en la versión y se le avisan al frontend externo antes del
+merge. **Solo API:** el admin y las páginas públicas en HTML quedan congelados; las funciones nuevas las muestra el
+frontend externo.
 
-## 0.1.0 — Versionado
+## Ciclo de vida objetivo del torneo
 
-- [x] `app/version.py`, número de versión en la esquina de cada página y en `/health`,
-      `CHANGELOG.md`.
-- [x] `pool_pre_ping=True` en `app/database.py`: Neon suspende el cómputo por inactividad y la
-      primera conexión tras un rato podía fallar con un 500. Se commiteó antes del commit de
-      versión, así que quedó dentro del tag `v0.1.0` (no hizo falta una `0.1.1`).
+**En preparación** (oculto; el admin arma las categorías) → **Inscripciones abiertas** (cada competidor se inscribe;
+se cierran solas en la fecha límite) → **Pesaje** (la lista de inscritos se hace pública) → **En curso** (todas las
+llaves juntas) → **Finalizado**.
 
-## 0.2.0 — API protegida (login con JWT)
+La 0.6.0 deja tres de esos estados (inscripciones abiertas, en curso, finalizado); la 0.9.0 agrega los otros dos.
 
-El agujero de seguridad estaba en producción: ningún endpoint de la API exigía autenticación,
-así que cualquiera que abriera `/docs` podía crear y modificar datos. Esta versión lo cierra y
-no toca la base de datos. Rompe a los consumidores que escribían sin token (por diseño).
+## 0.6.0 — Ciclo de vida del torneo
 
-- [x] `POST /api/v1/auth/login` (formulario OAuth2, mismo usuario y clave del admin) que
-      devuelve un JWT HS256 de 8 horas, sin renovación automática.
-- [x] Todo POST y PATCH de `/api/v1` exige `Authorization: Bearer <token>`.
-- [x] Privacidad: `GET` de atletas e inscripciones también exigen token (devuelven fecha de
-      nacimiento y peso, y hay menores). Siguen públicos: torneos, categorías, clubes, llaves
-      y combates (solo nombres).
-- [x] Un test recorre el esquema OpenAPI y falla si un endpoint nuevo queda sin protección y
-      no está en la lista explícita de endpoints públicos.
-- [x] Aviso en los logs al arrancar si `SECRET_KEY` mide menos de 32 bytes (solo con
-      `APP_ENV=production`; no imprime el valor ni impide arrancar). Más adelante, cuando se hayan
-      verificado las claves de dev y producción, se puede endurecer a que la app se niegue a
-      arrancar con una clave corta.
-- [x] Incluye tres mejoras de admin que ya estaban hechas: el selector de inscripción excluye a
-      los ya inscritos, botón "Torneos" en la navbar y colores por estado del torneo.
+Terminada en `dev`; falta liberarla. Detalle en el `CHANGELOG.md`.
 
-## 0.3.0 — API para frontends externos
+- [x] El estado cambia con `POST /tournaments/{id}/start` y `/finish`, y no vuelve atrás.
+- [x] Categorías e inscripciones solo con inscripciones abiertas; llaves y resultados solo en curso.
+- [x] Retirar a un atleta de una categoría mientras las inscripciones están abiertas.
+- [x] Lista pública de inscritos (nombre y club), club en las llaves y la etiqueta «Inscripciones abiertas».
+- [x] **Rounds sin duplicados:** `POST /matches/{id}/rounds` exige `round_number`, que tiene que ser el siguiente;
+      si no, `409` sin guardar nada. Un reenvío del celular (la respuesta se perdió por mala señal) ya no queda
+      guardado como el round siguiente cerrando el combate con un ganador equivocado. Sin migración.
 
-Pedido real: un amigo va a construir un frontend separado (otra tecnología) contra esta API;
-primero solo lectura (torneos y llaves) y enseguida administración. Orden de trabajo dentro de la
-versión: primero CORS (es lo que lo bloquea), después la documentación, de menos a más trabajo.
-Nada de esto cambia cómo se comporta la API.
+## 0.7.0 — Grados y categorías
 
-- [x] CORS configurable con la variable `CORS_ORIGINS` (lista separada por comas). Sin definirla
-      no se permite ningún origen. En producción debe negarse a arrancar si contiene `*`. Sin
-      cookies: el token viaja en la cabecera `Authorization`.
+Va primero porque la inscripción pública (0.10.0) necesita saber en qué categorías encaja cada atleta.
 
-### Documentación de `/docs` (Swagger)
+- [ ] **Grado del atleta** como valor fijo: 10mo Kup … 1er Kup y Dan. Reemplaza el `belt_rank` de texto libre
+      (la columna vieja se conserva). [Notion](https://app.notion.com/p/415fae3be03b8102b61fea28aee098df)
+- [ ] **Grupos de grado por torneo**, con rangos editables (hoy Principiantes 10mo–6to Kup, Novatos 5to–2do,
+      Avanzados 1er Kup y Dan). Reemplazan a `BeltGroup` (color/negro) en la categoría.
+- [ ] **Plantillas de categorías editables**: edades, grupos de grado y divisiones de peso por edad y género. Al
+      crear un torneo se copian y se ajustan para ese torneo. La primera plantilla es la Copa Diamante 2026.
+      [Notion](https://app.notion.com/p/415fae3be03b81aa9986d21e5029fd1c)
+- [ ] **Editar categorías** mientras el torneo no empezó.
+- [ ] **Edad por año de nacimiento** (Art. 4 del reglamento WT), no por fecha exacta.
+- [ ] **Estatura del atleta**, opcional. Ninguna categoría filtra por estatura.
+      [Notion](https://app.notion.com/p/415fae3be03b8109bdd6decce78ad733)
+- [ ] **Atletas que encajan en una categoría**, reusando `category_mismatch`: el admin que inscribe ve solo a
+      quienes la API aceptaría (issue
+      [#78](https://github.com/ArtesanoWeb/taekwondo-tournament-web/issues/78) del frontend).
+      [Notion](https://app.notion.com/p/415fae3be03b81f5addfe9ad07cec61a)
+- [ ] **Categorías en las que encaja un atleta**, la consulta inversa y con la misma regla: la usa la inscripción
+      pública de la 0.10.0.
 
-**Decidido:** todo en español —descripciones y nombres de los grupos (`tags`): Torneos,
-Categorías, Atletas, Clubes, Inscripciones, Llaves, Combates, Autenticación, Sistema—, y en inglés
-solo los identificadores (rutas, campos, valores de enums). Los grupos se fijan ahora porque muchos
-generadores de clientes los usan para nombrar clases, y renombrarlos después rompería ese código.
-Detalle completo del porqué en `docs/DECISIONS.md` (entrada 2026-10-16). Cinco pasos:
+## 0.8.0 — Campeones y ranking
 
-- [x] **1. Limpiar `/docs`.** Sacar las páginas HTML del esquema (`include_in_schema=False` en
-      los routers `public` y `admin`); `operationId` limpios (`create_club`, `list_tournaments`…)
-      con `generate_unique_id_function` — los nombres de las funciones ya son únicos entre
-      routers; título y versión leídos de `app/version.py` en vez de escritos a mano.
-- [x] **2. Descripción general** en la cabecera de `/docs` (Markdown, corta): qué es la API,
-      cómo usar el botón **Authorize**, formato de errores (los de negocio vienen como `detail`
-      en español; los 422 de validación, en el formato estándar de Pydantic), que el primer
-      request tarda en el plan gratis, y que en `0.x` algo puede cambiar.
-- [x] **3. Cada endpoint** con `summary`, descripción corta y `responses` con los errores reales
-      (`401`, `404`, `409`, `422`). Los grupos (`openapi_tags`) con una explicación cada uno.
-- [x] **4. Los campos que no se explican solos**, con `Field(description=..., examples=[...])`
-      en `schemas.py`, y el significado de cada valor de los enums (`male`/`female`,
-      `pending`/`bye`/`finished`, `draft`/`in_progress`/`finished`…). Son unos 45 campos: el
-      contador del esquema da 125 porque cuenta los repetidos entre `Create`/`Read`, pero las
-      descripciones se escriben una sola vez en las clases `*Base` y se heredan.
-- [x] **5. Test guardián**, igual que el de autenticación: falla si una operación de `/api/v1`
-      queda sin `summary` o sin `description`, para que la documentación no se pudra cuando
-      alguien agregue un endpoint nuevo.
-- [x] **Extra, al final: `docs/API.md`**, corto — cómo leer una llave (`round_number`, `slot`,
-      rojo/azul, `next_match_id`, pases directos) y un ejemplo de flujo con `curl`. No duplica lo
-      que ya dice `/docs`; lo enlaza.
+- [ ] Categoría con un solo inscrito: ese atleta es campeón sin pelea, sin llave ni combate artificial.
+- [ ] Al iniciar el torneo, tabla aparte con las categorías de un solo inscrito.
+      [Notion](https://app.notion.com/p/415fae3be03b81728aefc395fb241292)
+- [ ] Podio: oro el ganador de la final, plata el que perdió la final y **un solo bronce**, el semifinalista que
+      perdió con el campeón. No hay combate por el bronce.
+      [Notion](https://app.notion.com/p/415fae3be03b81b088fae8cc4f877e8a)
+- [ ] Ranking de clubes: oro 7, plata 3, bronce 1 y categoría sin pelea 1, configurable por torneo.
+      [Notion](https://app.notion.com/p/415fae3be03b817fb311feac5e158ed2)
 
-## 0.4.0 — Datos de atletas y clubes (única migración de esquema, aditiva)
+## 0.9.0 — Ciclo nuevo y pesaje
 
-Va antes del ciclo de vida a propósito: es la migración más simple, y sirve de ensayo del
-camino commit → push → deploy → migración → rollback antes de los cambios de comportamiento.
-También la necesita el frontend externo en su etapa de administración: hoy la API no tiene
-edición de atletas ni de clubes, así que cada ítem de editar se hace **en la API y en el admin**.
+Cambia el comportamiento de la API: va marcado como incompatible en el CHANGELOG.
 
-- [x] Campo CI (documento de identidad) **opcional** (hay niños sin CI, confirmado con el cliente) y
-      único cuando se informa, con formato `^\d{5,9}(?:-[0-9A-Z]{2})?$` (5 a 9 dígitos y complemento
-      opcional; sin lugar de expedición). Los atletas ya cargados quedan sin CI.
-- [x] Editar atleta (API y admin). Reglas al cambiar género o peso con inscripciones: torneo en
-      curso lo bloquea si deja de encajar; en borrador retira de las categorías donde ya no encaja, con confirmación;
-      finalizado lo permite. Ver `docs/DECISIONS.md`, 2026-10-24.
-- [x] Buscar atleta por CI o por nombre (admin y `GET /athletes?q=`), sin distinguir mayúsculas ni tildes.
-- [x] Editar club (API y admin).
+- [ ] **Estado «En preparación»** (`draft`, el valor que ya existe): pasa a ser el inicial y cambia de
+      significado. El torneo no se ve en público y el admin arma las categorías; todavía no se inscribe a nadie.
+      [Notion](https://app.notion.com/p/415fae3be03b818fa550dabd0c34074a)
+- [ ] **Estado «Inscripciones abiertas»** (`registration_open`, valor nuevo): se llega desde En preparación cuando
+      el admin abre las inscripciones, con una acción nueva como `start` y `finish`. Las categorías quedan como
+      vienen de En preparación. Se inscribe y se retira como hoy en `draft` (`category_mismatch`, una categoría por
+      torneo, `confirm_withdrawal`); llaves y resultados siguen dando `409`. El público ve el torneo, pero **no la
+      lista de inscritos**: hoy `GET /categories/{id}/registrants` la muestra y el frontend externo la usa, así que
+      ocultarla se acuerda antes con Kike. Se sale solo por la fecha límite, hacia Pesaje. Falta decidir si el
+      admin puede seguir yendo directo a En curso con `POST .../start`.
+- [ ] **Migración de los torneos en `draft`**: pasan a `registration_open`, para que los que ya existen (también el
+      torneo demo de producción) sigan visibles y aceptando inscripciones. Las reglas de `app/api/lifecycle.py` y los
+      textos de `es_label` pasan de `draft` a `registration_open`.
+- [ ] **Fecha límite de inscripción** (guardada en UTC, mostrada en hora de Bolivia). Pasada la fecha, el torneo
+      queda en Pesaje solo. El estado se calcula al consultarlo con una función pura del torneo y la hora; leer no
+      escribe en la base, y no hace falta un cron.
+- [ ] **Estado «Pesaje»**: se cierran las inscripciones y la lista de inscritos se hace pública (hasta entonces
+      está oculta). El admin pasa a En curso a mano. [Notion](https://app.notion.com/p/415fae3be03b81568bd7f3cfcc2df971)
+- [ ] **Pesaje con segundo intento**: el admin anota el peso; si no entra en la categoría, hay un segundo pesaje;
+      si tampoco entra o no se presenta, queda descalificado (DSQ, Art. 16 de WT). No se lo pasa a otra categoría.
+      [Notion](https://app.notion.com/p/415fae3be03b8125a671c9bf214adff8)
+- [ ] **Todas las llaves juntas al pasar a En curso.** Desaparece la generación por categoría. El descalificado
+      va en la llave y pierde su combate sin pelear. [Notion](https://app.notion.com/p/415fae3be03b81e59b41cdd9c6196e7f)
+- [ ] **Sorteo separando clubes en la primera ronda**: dos atletas del mismo club no se enfrentan en la primera
+      ronda, salvo que no se pueda evitar. Desde la segunda ronda no importa.
+- [ ] **Festival (hasta 9 años)**: categoría sin llave ni división de peso; se muestra como lista con nombre y
+      club. [Notion](https://app.notion.com/p/415fae3be03b81909a7ee26f2cd969c4)
 
-## 0.5.0 — Admin más seguro, parte B (un cambio chico de API; sin cambios de base de datos)
+## 0.10.0 — Cuentas e inscripción pública
 
-La parte A (selector filtrado, botón "Torneos", colores de estado) salió en la 0.2.0.
+Por etapas: el login actual del admin sigue funcionando hasta que Firebase esté probado.
 
-- [x] El número de round deja de ser un dato que se envía: `POST /matches/{id}/rounds` recibe solo
-      `red_points` y `blue_points` y el servidor numera los rounds (1, 2, 3…). Cierra el hueco de la
-      API (se podía cargar el round 5 sin el 1) y el formulario del admin muestra el número fijo.
-- [x] Ventana de confirmación con los datos antes de enviar cada formulario POST del admin (crear
-      club, atleta, torneo, categoría; inscribir; generar llave; cargar round; editar atleta y
-      club; cambiar el estado del torneo; cerrar sesión). La de rounds avisa que no se pueden editar
-      después. Un test falla si un formulario nuevo no la declara.
-- [x] Cuando un formulario del admin falla (CI repetido, rango inválido…), se vuelve a mostrar con
-      todo lo que se había escrito en vez de vaciarse. Es una regla para todo formulario nuevo.
+- [ ] **Cuentas con Firebase Auth.** La API verifica el token de Firebase; los roles (admin, competidor) se
+      guardan en nuestra base. [Notion](https://app.notion.com/p/415fae3be03b818d925eff564e07b1e8)
+- [ ] **Una cuenta maneja uno o varios atletas**: normalmente el propio; a veces un tutor maneja los de sus hijos.
+- [ ] **Inscripción pública**: con inscripciones abiertas, la cuenta elige entre las categorías en las que el
+      atleta encaja (0.7.0). Queda inscrito al enviarla; el admin puede retirarlo mientras sigan abiertas.
+- [ ] **Club de una lista**: el competidor elige entre los clubes existentes; si el suyo falta, lo crea el admin.
+- [ ] **Foto de perfil** en Cloudflare R2: la base guarda solo la clave del archivo, el frontend la sube con una
+      URL firmada, y la ven solo la cuenta y el admin. [Notion](https://app.notion.com/p/415fae3be03b81f9aca6fe1b1d8f62f8)
+- [ ] **El admin pasa a Firebase** y se retira el login propio.
 
-## 0.6.0 — Ciclo de vida del torneo (cambia el comportamiento de la API)
+## 0.11.0 — Poomsae y las dos modalidades
 
-Es un conjunto de reglas que se apoyan unas en otras; no tienen sentido aplicadas a medias.
-Una regla por commit, cada una con sus tests. Las validaciones viven del lado de la API (no
-solo del admin), así que aplican también a cualquier consumidor directo de `/api/v1/...`,
-consistente con el resto del proyecto.
+Al final, cuando todo el ciclo funcione con kyorugi.
 
-- [ ] Una vez generado el bracket de una categoría, bloquear nuevas inscripciones a esa
-      categoría (`create_registration` en `app/api/registrations.py`, chequeando si
-      `Category` ya tiene `Bracket` — 409, mismo criterio que `BracketAlreadyExists`). Es una
-      regla a nivel de categoría, independiente del estado del torneo (`TournamentStatus`):
-      dos categorías del mismo torneo pueden estar en momentos distintos (una con llave ya
-      generada, otra todavía recibiendo inscripciones). En el admin, el botón "Generar llave"
-      necesita un popup de confirmación explicando que después de esto no se puede inscribir
-      a nadie más en esa categoría.
-- [ ] No permitir cargar resultados de rounds (`record_round` en `app/services/scoring.py`)
-      mientras el torneo está en `DRAFT` — mensaje pidiendo pasar el torneo a "en curso"
-      primero.
-- [ ] Solo permitir crear categorías (`create_category` en `app/api/categories.py`) mientras
-      el torneo está en `DRAFT` — no "bloqueado en en curso", sino "solo permitido en
-      DRAFT", para cubrir también el caso de un torneo ya `FINISHED`.
-- [ ] Solo permitir generar la llave de una categoría (`create_bracket`/`generate_bracket`)
-      una vez el torneo está `IN_PROGRESS`, no en `DRAFT`. Motivo: que el sorteo sea un
-      evento público — no algo que ya pasó en secreto antes de que el torneo apareciera en
-      la pantalla pública (recordá que `DRAFT` se oculta de la lista). De paso resuelve la
-      duda de "generar todas las llaves automático al activar": no hace falta, porque el
-      admin sigue generando cada llave a mano, categoría por categoría, pero recién puede
-      hacerlo después de pasar a `en curso` — el orden queda forzado por esta regla, sin
-      necesidad de automatizar nada. Además cierra un hueco de la 0.4.0: `PATCH /athletes` retira
-      a un atleta de una categoría de un torneo en borrador sin mirar si ya tiene llave, porque con
-      esta regla un torneo en borrador nunca tendrá llave.
-- [ ] Solo se puede mover a `FINISHED` cuando **todos** los matches de **todas** las
-      categorías del torneo llegaron a un estado terminal. Ojo con el detalle: un bye nunca
-      pasa a `MatchStatus.FINISHED` (se queda en `BYE` para siempre, ver `app/models.py`),
-      así que la condición es `status in (FINISHED, BYE)` para cada match, no
-      `status == FINISHED` a secas — si no, un bracket con cualquier bye bloquearía el
-      torneo para siempre. Qué pasa con una categoría que nunca generó bracket: ver
-      "Decisiones pendientes".
-- [ ] El estado solo avanza: `DRAFT` → `IN_PROGRESS` → `FINISHED`, sin volver atrás (`409` si se
-      intenta). Pasar de estado es una promoción en el funcionamiento del torneo (cierra
-      inscripciones, habilita llaves, cierra resultados), no un dato que se corrige. `FINISHED`
-      además es inmutable: ningún otro campo del torneo se puede cambiar. En el admin, el selector
-      ofrece solo el estado siguiente y la confirmación (que ya existe desde la 0.5.0) avisa que es
-      irreversible.
-- [ ] Ocultar los torneos en estado `DRAFT` de la lista principal de la pantalla pública (`/`).
-      Queda abierta la pregunta de si también hay que bloquear el acceso directo a
-      `/torneos/{id}`/`/categorias/{id}` de un torneo en borrador (hoy no miran `status` para
-      nada), para no depender de "seguridad por oscuridad". Va al final de esta versión: para
-      entonces el admin ya completa todo el flujo sin depender de la vista pública.
-- [ ] Label de `TournamentStatus.DRAFT` — hoy se traduce como "Borrador"
-      (`app/web/labels.py`), pero describe más específicamente el período en que se pueden
-      crear categorías e inscribir atletas. Evaluar cambiar el label a algo como
-      "Inscripciones" o "Inscripciones abiertas" — **solo el texto traducido**, no el
-      identificador interno del enum (`DRAFT` se queda en inglés como está, ver sección
-      Idioma de `CLAUDE.md`).
+- [ ] **Poomsae**: categorías sin llave; una lista con el puntaje de cada competidor (hasta 4 decimales),
+      ordenada por puntaje. Modelo de resultado propio; no se reusan `Match` ni `RoundScore`.
+      [Notion](https://app.notion.com/p/415fae3be03b81a9b769d4ac7a91532d)
+- [ ] **Inscribirse en kyorugi y en poomsae** del mismo torneo: la regla «un atleta, una categoría por torneo» pasa
+      a ser por modalidad.
 
-Nota de compatibilidad: el torneo de demo que ya está en producción está `FINISHED`, así que
-las reglas nuevas no lo afectan (solo se aplican al intentar una acción, no invalidan datos
-existentes).
+## Más adelante / sin versión
 
-## 0.7.0 — Campeones
+- [ ] Mesa de inspección y estados del combate (pendiente → inspección → listo → en combate → terminado).
+      [Notion](https://app.notion.com/p/415fae3be03b8180a362fde6c857ac45)
+- [ ] Área de combate de cada categoría o combate (área 1, área 2…), cuando haya mesa de inspección.
+- [ ] Roles de pesaje e inspector; por ahora todo lo hace el admin.
+      [Notion](https://app.notion.com/p/415fae3be03b8164b7b5e59d660226c7)
+- [ ] Vista pública de los combates pendientes o siguientes.
+      [Notion](https://app.notion.com/p/415fae3be03b81e9abe9f1bb85380fdc)
+- [ ] Permitir editar un round ya cargado (ver `DECISIONS.md`, 2026-10-26: hoy no hace falta y es el cambio con
+      más riesgo de dejar datos inconsistentes).
+- [ ] Acta de resultados imprimible por categoría, a partir de la plantilla `.docx` de la planilla física.
+- [ ] Auto-refresh en vivo de la vista pública.
+- [ ] Reglamento público en la vista de visitantes.
+      [Notion](https://app.notion.com/p/415fae3be03b814682eec3c95ba1dd9b)
+- [ ] Fotos del torneo (sin definir). [Notion](https://app.notion.com/p/415fae3be03b81a085b8d1443e8cbcfd)
+- [ ] Link al sitio del club organizador (ej. `keumgangdelfines.com`, configurable) en la vista pública.
+- [ ] Adjuntar un PDF a la inscripción (el formulario del WordPress lo pide para Festival y poomsae). Se reevalúa
+      con la 0.10.0, que ya trae almacenamiento de archivos.
+- [ ] Evitar atletas duplicados sin CI (niños) creados dos veces: el CI único de la 0.4.0 solo cubre a quien lo
+      informa.
+- [ ] Endpoint que junte la página de detalle de categoría (categoría, inscritos y llave en un request), si el
+      frontend externo lo pide.
 
-- [ ] Generar llave con un solo atleta inscrito (ganador directo, sin combate) — hoy
-      `build_first_round_slots` exige mínimo 2 (`NotEnoughAthletes`). Tiene sentido de
-      dominio (categoría con un solo competidor, se le otorga el primer lugar sin pelear),
-      pero **requiere una decisión de modelo, no es solo bajar un número**: con `size=1`,
-      `num_rounds = size.bit_length() - 1 = 0`, así que el loop de `generate_bracket` que
-      crea `Match` nunca corre — el bracket quedaría con `matches=[]`, sin ningún lugar donde
-      guardar "quién ganó" (hoy esa info vive siempre en `Match.winner_id`). Hay que decidir
-      entre: (a) un `Match` artificial de un solo lado, ya `FINISHED`, sin combate real, o
-      (b) un campo de "campeón por default" en `Bracket`/`Category` fuera del modelo de
-      `Match`. Se conecta con la duda de "Decisiones pendientes" sobre categorías sin bracket
-      para el chequeo de `FINISHED` — un bracket de 1 solo atleta tiene el mismo problema (0
-      matches) para saber si "ya terminó".
-- [ ] Mostrar un ícono de corona 👑 junto al nombre del campeón de cada categoría (el ganador
-      del último match del bracket) en la pantalla pública y en el admin — para **cualquier**
-      campeón, no solo el caso de categoría con un solo inscrito. Va después del ítem
-      anterior porque depende de cómo se defina "campeón".
-- [ ] Ranking de clubes por puntos de medalla en la pantalla pública — oro=7, plata=3,
-      bronce=1, categoría sin pelea=1 (valores reales de la convocatoria de Copa Diamante;
-      dejar configurables por si otro torneo usa otra escala). Depende de los dos ítems
-      anteriores y de algo que hoy no existe: el bracket solo guarda el ganador final
-      (`Match.winner_id` de la final), no 2do/3er lugar — hay que decidir cómo derivarlos
-      (2do = perdedor de la final, 3er = ¿ambos perdedores de semifinal, como es común en
-      taekwondo, o se juega un 3er puesto?).
+## Preguntas abiertas para Abel
 
-## 0.8.0 — En vivo
+- En poomsae, ¿un competidor se anota en varias formas o categorías del mismo torneo?
 
-- [ ] Auto-refresh en vivo de la pantalla pública (polling con htmx), en vez de recargar manual.
+## Descartado
 
-## 0.9.0 — Grados de cinturón y estatura (datos ampliados de atleta y categoría)
-
-Dos cambios de modelo que salen directo del pedido real de Abel Bravo (ver
-`confidencial/reporte-analisis.md`, carpeta ignorada por git, no vinculado a ningún commit).
-
-- [ ] Reemplazar `BeltGroup` (hoy un enum fijo `COLOR`/`BLACK`) por un catálogo de **grados**
-      (10mo Kup ... 1er Kup, Danes) editable, y **divisiones** editables que agrupan rangos de
-      esos grados (ej. Principiantes = 10mo-6to Kup, Novatos = 5to-2do Kup, Avanzados = 1er
-      Kup y Danes) — configurables por torneo, no hardcodeadas, mismo principio que ya se usa
-      para `weight_label`. Requiere diseño de modelo, no es una migración simple: `Athlete`
-      necesita un grado individual, `Category` sigue agrupando por división (no por grado
-      suelto), y hay que decidir cómo conviven las divisiones de un torneo viejo (ej. el de
-      producción, ya `FINISHED`) con el catálogo nuevo.
-- [ ] `Athlete.height_cm` (estatura, nullable) + `Category.min_height`/`max_height`
-      (opcionales, mismo patrón que `min_weight`/`max_weight`) — la categoría Festival (hasta
-      9 años) empareja por estatura en vez de peso.
-
-## Más adelante / sin versión asignada
-
-- [ ] Permitir editar un round ya cargado. No es trivial: si es el round que cerró el combate,
-      hay que reabrirlo (volver a `pending`, revertir `winner_id`) y, si el ganador ya se
-      propagó a la siguiente ronda (`advance_winner`), también revertir esa propagación —
-      puede afectar en cascada otro combate ya en curso. Es el cambio con más riesgo de dejar
-      datos inconsistentes. Decidido en la 0.5.0 que por ahora no hace falta (ver
-      `docs/DECISIONS.md`, 2026-10-26); se reabre si el uso real lo pide.
-- [ ] Evitar atletas duplicados por doble clic en "Crear" (hoy no hay restricción de
-      unicidad en atletas; el campo CI único de la 0.4.0 lo resuelve de raíz).
-- [ ] Área/cancha asignada a cada categoría o bracket, para torneos que corren varias en
-      paralelo (viene de la planilla física de control). Diseño sin decidir — ver "Decisiones
-      pendientes".
-- [ ] Acta de resultados imprimible por categoría (1er/2do/3er lugar + club, firmas), a partir
-      de una plantilla `.docx` base — refleja el formato de la planilla física de control que
-      ya usan en los torneos. Depende de tener 2do/3er lugar derivados (ver ranking de clubes
-      en la 0.7.0).
-- [ ] Adjuntar documentación (PDF) a una inscripción — el formulario real de Copa Diamante lo
-      pide para ciertas modalidades. Necesita almacenamiento de archivos (hoy no hay ninguno
-      en el proyecto). Baja prioridad hasta confirmar que hace falta en el sistema nuevo, no
-      solo en el formulario viejo.
-- [ ] Fecha de cierre de inscripciones por categoría/torneo, independiente de si ya se generó
-      la llave (hoy la única forma de cerrar inscripciones es generar la llave, ver 0.6.0).
-      Baja prioridad.
-- [ ] Link al sitio del club organizador (ej. `keumgangdelfines.com`, configurable) en un
-      lugar visible de la pantalla pública — pie de página o detalle del torneo.
-- [ ] Integración con el sistema de inscripciones externo del club (hoy un formulario en
-      WordPress): un endpoint que reciba inscripciones desde ahí en vez de cargarlas a mano en
-      el admin. Idea especulativa, sin diseño — evaluar solo si de verdad hace falta
-      reemplazar el formulario actual.
-- [ ] Si algún día se construye un frontend separado (SPA) que consuma solo `/api/v1/...`:
-      analizar si hace falta un endpoint agregado para la página de detalle de categoría. Hoy
-      `_category_detail_context` (`app/web/admin/category_workspace.py`) junta categoría +
-      torneo + inscripciones + todos los atletas + bracket en una sola función Python; un
-      frontend desacoplado tendría que hacer 5 requests HTTP separados para lo mismo. No
-      crear el endpoint agregado todavía — no hay frontend separado hoy, sería especular
-      sobre un caso de uso que no existe.
-- [ ] (agregar acá cualquier otra idea que surja durante el desarrollo)
+- **Inscripción por planilla Excel** (era la 0.9.0): Abel prefiere que cada uno se inscriba con su cuenta.
+  [Notion](https://app.notion.com/p/415fae3be03b813eac58feed16593865)
+- **Estatura mínima y máxima en la categoría** (era la 0.8.0): las categorías nunca se dividen por estatura.
+- **Grados editables** (era la 0.8.0): los grados son fijos; lo editable son los grupos.
+- **Fusionar categorías de peso contiguas** (Art. 6.1.1 de WT): la categoría de un solo inscrito queda campeón sin
+  pelea.
+- **Integración con el WordPress del club**: los dos sistemas quedan separados.

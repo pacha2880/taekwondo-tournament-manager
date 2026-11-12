@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.api.brackets import create_bracket as create_bracket_api
 from app.api.matches import create_round_score as create_round_score_api
 from app.api.registrations import create_registration as create_registration_api
+from app.api.registrations import delete_registration as delete_registration_api
 from app.database import get_db
 from app.models import Athlete, Bracket, Category, Match, Registration
 from app.schemas import RegistrationCreate, RoundScoreCreate
@@ -40,7 +41,7 @@ def _category_detail_context(db: Session, category_id: int) -> dict:
     rounds = []
     athletes: dict[int, str] = {}
     if bracket:
-        athletes = resolve_athlete_names(db, bracket.matches)
+        athletes = resolve_athlete_names(db, bracket.matches, with_club=True)
         matches_by_round = defaultdict(list)
         for match in bracket.matches:
             matches_by_round[match.round_number].append(match)
@@ -103,6 +104,11 @@ def create_registration_view(
     )
 
 
+@router.post("/categorias/{category_id}/inscripciones/{registration_id}/retirar")
+def delete_registration_view(category_id: int, registration_id: int, request: Request, db: Session = Depends(get_db)):
+    return _submit_and_redirect(request, db, category_id, lambda: delete_registration_api(registration_id, db))
+
+
 @router.post("/categorias/{category_id}/llave")
 def create_bracket_view(category_id: int, request: Request, db: Session = Depends(get_db)):
     return _submit_and_redirect(request, db, category_id, lambda: create_bracket_api(category_id, db))
@@ -112,6 +118,7 @@ def create_bracket_view(category_id: int, request: Request, db: Session = Depend
 def create_round_score_view(
     match_id: int,
     request: Request,
+    round_number: int = Form(...),
     red_points: int = Form(...),
     blue_points: int = Form(...),
     db: Session = Depends(get_db),
@@ -120,7 +127,7 @@ def create_round_score_view(
     if not match:
         raise HTTPException(status_code=404, detail="Combate no encontrado")
     category_id = match.bracket.category_id
-    payload = RoundScoreCreate(red_points=red_points, blue_points=blue_points)
+    payload = RoundScoreCreate(round_number=round_number, red_points=red_points, blue_points=blue_points)
     return _submit_and_redirect(
         request,
         db,

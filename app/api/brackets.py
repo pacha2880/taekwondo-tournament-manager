@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 from app.api_docs import TAG_BRACKETS, errors
 from app.auth import ADMIN_ONLY
 from app.database import get_db
-from app.models import Bracket, Category
+from app.api.lifecycle import require_tournament_status
+from app.models import Bracket, Category, TournamentStatus
 from app.schemas import BracketRead
 from app.services.brackets import (
     BracketAlreadyExists,
@@ -33,13 +34,16 @@ def _bracket_read(db: Session, bracket: Bracket) -> BracketRead:
     status_code=201,
     dependencies=ADMIN_ONLY,
     summary="Generar la llave de una categoría",
-    description="Sortea al azar a los inscritos en una llave de eliminación simple. Si el número de inscritos no es potencia de 2, se reparten pases directos (`bye`) en la primera ronda. Hacen falta al menos 2 inscritos y solo se puede generar una llave por categoría. Requiere token.",
-    responses=errors({400: "La categoría tiene menos de 2 inscritos.", 404: "La categoría no existe.", 409: "La categoría ya tiene una llave."}, auth=True),
+    description="Sortea al azar a los inscritos en una llave de eliminación simple. Si el número de inscritos no es potencia de 2, se reparten pases directos (`bye`) en la primera ronda. Solo se genera con el torneo en curso (409 si todavía está en `draft` o ya terminó). Hacen falta al menos 2 inscritos y solo se puede generar una llave por categoría. Requiere token.",
+    responses=errors({400: "La categoría tiene menos de 2 inscritos.", 404: "La categoría no existe.", 409: "El torneo no está en curso, o la categoría ya tiene una llave."}, auth=True),
 )
 def create_bracket(category_id: int, db: Session = Depends(get_db)):
     category = db.get(Category, category_id)
     if not category:
         raise HTTPException(status_code=404, detail="Categoría no encontrada")
+    require_tournament_status(
+        category.tournament, TournamentStatus.IN_PROGRESS, "Solo se puede generar la llave con el torneo en curso"
+    )
     try:
         bracket = generate_bracket(db, category)
     except BracketAlreadyExists as exc:

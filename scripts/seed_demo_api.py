@@ -154,11 +154,15 @@ def total_rounds(api, category_id: int) -> int:
 
 
 def record_rounds(api, rng: random.Random, match: dict, red_wins_round: list[bool]) -> None:
-    for red_wins in red_wins_round:
+    for round_number, red_wins in enumerate(red_wins_round, start=1):
         winner_points = rng.randint(6, 14)
         loser_points = rng.randint(0, winner_points - 1)
         red, blue = (winner_points, loser_points) if red_wins else (loser_points, winner_points)
-        api("POST", f"/api/v1/matches/{match['id']}/rounds", {"red_points": red, "blue_points": blue})
+        api(
+            "POST",
+            f"/api/v1/matches/{match['id']}/rounds",
+            {"round_number": round_number, "red_points": red, "blue_points": blue},
+        )
 
 
 def finish_match(api, rng: random.Random, match: dict) -> None:
@@ -233,7 +237,7 @@ def main() -> None:
     category_ids = [load_category(api, tournament_id, club_ids, entry) for entry in in_progress_entries]
 
     print("  Pasando el torneo a «en curso», sorteando las llaves y cargando resultados...")
-    api("PATCH", f"/api/v1/tournaments/{tournament_id}", {"status": "in_progress"})
+    api("POST", f"/api/v1/tournaments/{tournament_id}/start")
     match_rng = random.Random(7)
     for category_id, entry in zip(category_ids, in_progress_entries):
         api("POST", f"/api/v1/categories/{category_id}/bracket")
