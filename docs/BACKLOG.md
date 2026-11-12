@@ -50,8 +50,12 @@ Va primero porque la inscripción pública (0.10.0) necesita saber en qué categ
 - [ ] **Edad por año de nacimiento** (Art. 4 del reglamento WT), no por fecha exacta.
 - [ ] **Estatura del atleta**, opcional. Ninguna categoría filtra por estatura.
       [Notion](https://app.notion.com/p/415fae3be03b8109bdd6decce78ad733)
-- [ ] **Categorías en las que encaja un atleta**, reusando `category_mismatch`. Lo usan la inscripción y el
-      frontend al inscribir. [Notion](https://app.notion.com/p/415fae3be03b81f5addfe9ad07cec61a)
+- [ ] **Atletas que encajan en una categoría**, reusando `category_mismatch`: el admin que inscribe ve solo a
+      quienes la API aceptaría (issue
+      [#78](https://github.com/ArtesanoWeb/taekwondo-tournament-web/issues/78) del frontend).
+      [Notion](https://app.notion.com/p/415fae3be03b81f5addfe9ad07cec61a)
+- [ ] **Categorías en las que encaja un atleta**, la consulta inversa y con la misma regla: la usa la inscripción
+      pública de la 0.10.0.
 
 ## 0.8.0 — Campeones y ranking
 
