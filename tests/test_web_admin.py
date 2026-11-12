@@ -174,13 +174,13 @@ def test_full_admin_workflow_creates_bracket_and_scores_a_match(client):
 
     score_resp = client.post(
         f"/admin/combates/{match_id}/rounds",
-        data={"red_points": "12", "blue_points": "5"},
+        data={"round_number": "1", "red_points": "12", "blue_points": "5"},
         follow_redirects=False,
     )
     assert score_resp.status_code == 303
     score_resp = client.post(
         f"/admin/combates/{match_id}/rounds",
-        data={"red_points": "9", "blue_points": "3"},
+        data={"round_number": "2", "red_points": "9", "blue_points": "3"},
         follow_redirects=False,
     )
     assert score_resp.status_code == 303
@@ -425,12 +425,12 @@ def test_round_form_shows_the_next_round_number_without_an_editable_field(client
     page_url = f"/admin/categorias/{category['id']}"
 
     first = client.get(page_url).text
-    client.post(f"/admin/combates/{match['id']}/rounds", data={"red_points": "10", "blue_points": "5"})
+    client.post(f"/admin/combates/{match['id']}/rounds", data={"round_number": "1", "red_points": "10", "blue_points": "5"})
     second = client.get(page_url).text
 
     assert 'data-confirm="Cargar round 1"' in first
     assert 'data-confirm-note="Una vez cargado, el resultado de un round no se puede editar."' in first
-    assert 'name="round_number"' not in first
+    assert '<input type="hidden" name="round_number" value="1">' in first
     assert 'data-confirm="Cargar round 2"' in second
 
 
@@ -549,7 +549,7 @@ def test_round_form_keeps_the_typed_points_when_it_fails(client, club, category,
     _login(client)
 
     # un round no puede empatar
-    resp = client.post(f"/admin/combates/{match['id']}/rounds", data={"red_points": "7", "blue_points": "7"})
+    resp = client.post(f"/admin/combates/{match['id']}/rounds", data={"round_number": "1", "red_points": "7", "blue_points": "7"})
 
     assert resp.status_code == 400
     assert "empate" in resp.text

@@ -137,6 +137,22 @@ def generate_bracket():
 
 
 @pytest.fixture()
+def score_rounds():
+    """Carga rounds seguidos en un combate, numerados desde 1; cada uno es (puntos rojo, puntos azul)."""
+
+    def _score(client, match_id, *scores):
+        return [
+            client.post(
+                f"/api/v1/matches/{match_id}/rounds",
+                json={"round_number": n, "red_points": red, "blue_points": blue},
+            )
+            for n, (red, blue) in enumerate(scores, start=1)
+        ]
+
+    return _score
+
+
+@pytest.fixture()
 def register_n_athletes():
     def _register(client, club, category, n, weight_kg=40):
         registrations = []

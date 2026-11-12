@@ -52,19 +52,14 @@ def test_actions_require_an_existing_tournament(client):
     assert client.post("/api/v1/tournaments/999/finish").status_code == 404
 
 
-def _win_match(client, match_id):
-    for _ in range(2):  # rounds_to_win por defecto
-        client.post(f"/api/v1/matches/{match_id}/rounds", json={"red_points": 10, "blue_points": 5})
-
-
-def test_finish_is_rejected_while_a_bracket_has_matches_to_play(client, club, category, tournament, register_n_athletes):
+def test_finish_is_rejected_while_a_bracket_has_matches_to_play(client, club, category, tournament, register_n_athletes, score_rounds):
     register_n_athletes(client, club, category, 2)
     url = f"/api/v1/tournaments/{tournament['id']}"
     client.post(f"{url}/start")
     match = client.post(f"/api/v1/categories/{category['id']}/bracket").json()["matches"][0]
 
     before = client.post(f"{url}/finish")
-    _win_match(client, match["id"])
+    score_rounds(client, match["id"], (10, 5), (10, 5))
     after = client.post(f"{url}/finish")
 
     assert before.status_code == 409
@@ -72,7 +67,7 @@ def test_finish_is_rejected_while_a_bracket_has_matches_to_play(client, club, ca
     assert after.status_code == 200
 
 
-def test_finish_ignores_byes(client, club, category, tournament, register_n_athletes):
+def test_finish_ignores_byes(client, club, category, tournament, register_n_athletes, score_rounds):
     register_n_athletes(client, club, category, 3)
     url = f"/api/v1/tournaments/{tournament['id']}"
     client.post(f"{url}/start")
@@ -81,8 +76,8 @@ def test_finish_ignores_byes(client, club, category, tournament, register_n_athl
     [semifinal] = [m for m in matches if m["round_number"] == 1 and m["status"] == "pending"]
     [final] = [m for m in matches if m["next_match_id"] is None]
 
-    _win_match(client, semifinal["id"])
-    _win_match(client, final["id"])
+    score_rounds(client, semifinal["id"], (10, 5), (10, 5))
+    score_rounds(client, final["id"], (10, 5), (10, 5))
 
     assert client.get(f"/api/v1/matches/{bye['id']}").json()["status"] == "bye"
     assert client.post(f"{url}/finish").status_code == 200

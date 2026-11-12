@@ -30,7 +30,7 @@ def test_tournament_detail_shows_spanish_category_labels(client, tournament, cat
 
 
 def test_category_detail_shows_spanish_labels_pending_and_finished(
-    client, club, category, register_n_athletes, generate_bracket
+    client, club, category, register_n_athletes, generate_bracket, score_rounds
 ):
     register_n_athletes(client, club, category, 2)
     match = generate_bracket(client, category).json()["matches"][0]
@@ -40,14 +40,7 @@ def test_category_detail_shows_spanish_labels_pending_and_finished(
     assert "Cinturón de color" in resp.text
     assert "Pendiente" in resp.text
 
-    client.post(
-        f"/api/v1/matches/{match['id']}/rounds",
-        json={"red_points": 12, "blue_points": 5},
-    )
-    client.post(
-        f"/api/v1/matches/{match['id']}/rounds",
-        json={"red_points": 9, "blue_points": 3},
-    )
+    score_rounds(client, match["id"], (12, 5), (9, 3))
 
     resp = client.get(f"/categorias/{category['id']}")
     assert "Finalizado" in resp.text

@@ -60,8 +60,9 @@ La llave trae **todos los combates de todas las rondas** en una lista plana (`ma
    nadie haya peleado todavía.
 4. Un lado en `null` en una ronda posterior significa que ese atleta todavía no se conoce: espera el
    resultado de un combate anterior.
-5. `round_scores` trae el resultado de cada round cargado, numerado por el servidor (1, 2, 3…) en el
-   orden de carga. Un combate pasa a `finished` cuando un atleta gana `rounds_to_win` rounds de la
+5. `round_scores` trae el resultado de cada round cargado, en orden (1, 2, 3…). Al cargar un round se envía su
+   `round_number`, que tiene que ser el siguiente; si no, la API responde `409` sin guardar nada. Así, reenviar un
+   round cuya respuesta se perdió no lo guarda dos veces: al recibir ese `409`, volver a pedir el combate. Un combate pasa a `finished` cuando un atleta gana `rounds_to_win` rounds de la
    categoría (2 equivale a un combate al mejor de 3).
 
 Para mostrar nombres no hace falta pedir cada atleta: cada combate trae `athlete_red_name`,
@@ -114,7 +115,7 @@ Los errores responden `{"detail": "mensaje en español"}`, pensado para mostrarl
 | `400` | Falta algo previo para poder hacerlo | generar una llave con menos de 2 inscritos; cargar un round sin los dos atletas definidos |
 | `401` | Falta el token, es inválido o venció | volver a iniciar sesión |
 | `404` | No existe | id inexistente; llave todavía no sorteada |
-| `409` | Choca con datos existentes o con el estado actual | nombre de club o CI repetido; atleta ya inscrito en esa u otra categoría del torneo; llave ya generada; combate ya terminado; torneo que ya empezó o que todavía tiene combates por jugar; edición de atleta (ver arriba) |
+| `409` | Choca con datos existentes o con el estado actual | nombre de club o CI repetido; atleta ya inscrito en esa u otra categoría del torneo; llave ya generada; combate ya terminado; round que no es el siguiente; torneo que ya empezó o que todavía tiene combates por jugar; edición de atleta (ver arriba) |
 | `422` | No cumple una regla, o el cuerpo no tiene el formato esperado | atleta que no encaja en la categoría; round empatado; fecha inválida |
 
 En los `422` de formato (campo faltante, tipo incorrecto), `detail` no es un texto sino una **lista** con
@@ -164,7 +165,7 @@ curl -s -X POST $BASE/api/v1/registrations -H "$AUTH" -H "$JSON" -d '{"athlete_i
 curl -s -X POST $BASE/api/v1/categories/1/bracket -H "$AUTH"
 curl -s $BASE/api/v1/categories/1/bracket
 
-# 5) Cargar un round: solo los puntos; el servidor lo numera y no admite empates
+# 5) Cargar un round: su número (el siguiente) y los puntos; no admite empates
 curl -s -X POST $BASE/api/v1/matches/1/rounds -H "$AUTH" -H "$JSON" \
-  -d '{"red_points": 12, "blue_points": 5}'
+  -d '{"round_number": 1, "red_points": 12, "blue_points": 5}'
 ```

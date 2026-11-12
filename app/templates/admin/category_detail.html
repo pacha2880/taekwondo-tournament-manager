@@ -100,6 +100,7 @@
         <form method="post" action="/admin/combates/{{ m.id }}/rounds" class="row g-1 mt-2"
               data-confirm="Cargar round {{ next_round }}"
               data-confirm-note="Una vez cargado, el resultado de un round no se puede editar.">
+          <input type="hidden" name="round_number" value="{{ next_round }}">
           <div class="col-3 small text-muted align-self-center">Round {{ next_round }}</div>
           <div class="col-3">
             <input type="number" name="red_points" class="form-control form-control-sm"

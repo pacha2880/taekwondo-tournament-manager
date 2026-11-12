@@ -24,6 +24,10 @@ funcionando sobre una base ya migrada.
   `POST /api/v1/tournaments/{id}/start` (de `draft` a `in_progress`) y `POST /api/v1/tournaments/{id}/finish`
   (de `in_progress` a `finished`, solo si no quedan combates por jugar). El estado no vuelve atrás: repetir
   una acción o saltar un paso responde `409`.
+- **Incompatible — importante para quien use la API:** `POST /api/v1/matches/{id}/rounds` vuelve a exigir
+  `round_number`, que tiene que ser el siguiente al último round guardado; si no, responde `409` sin guardar
+  nada. Evita que un reenvío (la respuesta se perdió por mala señal) quede guardado como el round siguiente y
+  cierre el combate con un ganador equivocado.
 - **Importante para quien use la API:** las categorías y las inscripciones solo se crean mientras el torneo
   está en `draft`; con el torneo ya iniciado, `POST /api/v1/categories` y `POST /api/v1/registrations`
   responden `409`. Con esto, al pasar a «en curso» se cierra la preparación del torneo.
