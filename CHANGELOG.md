@@ -11,6 +11,8 @@ funcionando sobre una base ya migrada.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-12
+
 ### Added
 - **Retirar a un atleta de una categoría:** `DELETE /api/v1/registrations/{id}` (responde `204`) y un botón
   «Retirar» con confirmación en cada fila de inscritos del admin. Solo con el torneo en `draft`; después
@@ -181,7 +183,8 @@ https://taekwondo-tournament-manager.onrender.com.
 - `pool_pre_ping=True` en la conexión a la base de datos: Neon suspende el cómputo por
   inactividad y la primera conexión tras un rato inactivo pudo fallar con un error 500.
 
-[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.2.0...v0.3.0
