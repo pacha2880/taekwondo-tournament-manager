@@ -77,7 +77,7 @@ def test_create_athlete_requires_a_club_first(client):
 
 def test_admin_athlete_list_shows_the_ci_only_when_there_is_one(client, club):
     _login(client)
-    form = {"birth_date": "2012-01-01", "gender": "male", "belt_rank": "verde", "weight_kg": "40", "club_id": club["id"]}
+    form = {"birth_date": "2012-01-01", "gender": "male", "grade": "kup_6", "weight_kg": "40", "club_id": club["id"]}
     client.post("/admin/atletas", data={**form, "name": "Ana Con Cedula", "ci": "1234567"})
     client.post("/admin/atletas", data={**form, "name": "Beto Sin Cedula", "ci": "  "})
 
@@ -113,7 +113,7 @@ def test_full_admin_workflow_creates_bracket_and_scores_a_match(client):
             "name": "Atleta Uno",
             "birth_date": "2012-01-01",
             "gender": "male",
-            "belt_rank": "verde",
+            "grade": "kup_6",
             "weight_kg": "40",
             "club_id": club_id,
         },
@@ -126,7 +126,7 @@ def test_full_admin_workflow_creates_bracket_and_scores_a_match(client):
             "name": "Atleta Dos",
             "birth_date": "2012-01-01",
             "gender": "male",
-            "belt_rank": "verde",
+            "grade": "kup_6",
             "weight_kg": "40",
             "club_id": club_id,
         },
@@ -307,7 +307,7 @@ def _edit_athlete_form(athlete, **overrides):
         "ci": athlete["ci"] or "",
         "birth_date": athlete["birth_date"],
         "gender": athlete["gender"],
-        "belt_rank": athlete["belt_rank"],
+        "grade": athlete["grade"],
         "weight_kg": str(athlete["weight_kg"]),
         "club_id": str(athlete["club"]["id"]),
     }
@@ -320,9 +320,10 @@ def test_edit_athlete_page_is_linked_from_the_list_and_prefilled(client, athlete
     assert f'href="/admin/atletas/{athlete["id"]}/editar"' in client.get("/admin/atletas").text
     page = client.get(f"/admin/atletas/{athlete['id']}/editar").text
 
-    for field in ('value="Juan Perez"', 'value="1234567"', 'value="2012-05-01"', 'value="verde"', 'value="40.5"'):
+    for field in ('value="Juan Perez"', 'value="1234567"', 'value="2012-05-01"', 'value="40.5"'):
         assert field in page
     assert '<option value="male" selected>' in page
+    assert '<option value="kup_6" selected>' in page
     assert 'data-confirm="Guardar cambios del atleta"' in page
     assert f'<option value="{athlete["club"]["id"]}" selected>' in page
     assert client.get("/admin/atletas/999/editar").status_code == 404
@@ -412,7 +413,7 @@ def _athlete_json(club):
         "name": "X",
         "birth_date": "2012-01-01",
         "gender": "male",
-        "belt_rank": "verde",
+        "grade": "kup_6",
         "weight_kg": 40,
         "club_id": club["id"],
     }
@@ -459,7 +460,7 @@ def test_create_athlete_form_keeps_everything_typed_when_the_ci_is_taken(client,
             "ci": athlete["ci"],  # CI de otro atleta
             "birth_date": "2011-02-03",
             "gender": "female",
-            "belt_rank": "azul",
+            "grade": "kup_4",
             "weight_kg": "37.5",
             "club_id": club["id"],
         },
@@ -471,7 +472,7 @@ def test_create_athlete_form_keeps_everything_typed_when_the_ci_is_taken(client,
         'value="Otra Persona"',
         f'value="{athlete["ci"]}"',
         'value="2011-02-03"',
-        'value="azul"',
+        '<option value="kup_4" selected>',
         'value="37.5"',
         '<option value="female" selected>',
         f'<option value="{club["id"]}" selected>',
@@ -529,7 +530,7 @@ def test_registration_form_keeps_the_selected_athlete_when_it_fails(client, club
             "ci": "7777777",
             "birth_date": "2012-01-01",
             "gender": "male",
-            "belt_rank": "verde",
+            "grade": "kup_6",
             "weight_kg": 50,  # la categoría admite hasta 45 kg
             "club_id": club["id"],
         },

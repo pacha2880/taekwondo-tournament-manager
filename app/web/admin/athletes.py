@@ -52,7 +52,7 @@ def create_athlete_view(
     ci: str = Form(""),
     birth_date: str = Form(...),
     gender: str = Form(...),
-    belt_rank: str = Form(...),
+    grade: str = Form(...),
     weight_kg: float = Form(...),
     club_id: int = Form(...),
     db: Session = Depends(get_db),
@@ -63,14 +63,14 @@ def create_athlete_view(
             ci=ci,
             birth_date=birth_date,
             gender=gender,
-            belt_rank=belt_rank,
+            grade=grade,
             weight_kg=weight_kg,
             club_id=club_id,
         )
         create_athlete_api(payload, db)
     except (HTTPException, ValidationError) as exc:
         form = echo_form(
-            name=name, ci=ci, birth_date=birth_date, gender=gender, belt_rank=belt_rank, weight_kg=weight_kg, club_id=club_id
+            name=name, ci=ci, birth_date=birth_date, gender=gender, grade=grade, weight_kg=weight_kg, club_id=club_id
         )
         return _render_athletes(request, db, error_message(exc), status_code=400, form=form)
     return RedirectResponse(url="/admin/atletas", status_code=303)
@@ -107,7 +107,7 @@ def edit_athlete_view(request: Request, athlete_id: int, db: Session = Depends(g
         "ci": athlete.ci or "",
         "birth_date": athlete.birth_date.isoformat(),
         "gender": athlete.gender,
-        "belt_rank": athlete.belt_rank,
+        "grade": athlete.grade,
         "weight_kg": athlete.weight_kg,
         "club_id": athlete.club_id,
     }
@@ -122,7 +122,7 @@ def update_athlete_view(
     ci: str = Form(""),
     birth_date: str = Form(...),
     gender: str = Form(...),
-    belt_rank: str = Form(...),
+    grade: str = Form(...),
     weight_kg: float = Form(...),
     club_id: int = Form(...),
     confirm_withdrawal: bool = Form(False),
@@ -134,7 +134,7 @@ def update_athlete_view(
         "ci": ci,
         "birth_date": birth_date,
         "gender": gender,
-        "belt_rank": belt_rank,
+        "grade": grade,
         "weight_kg": weight_kg,
         "club_id": club_id,
     }

@@ -7,7 +7,7 @@ from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
 
-from app.models import BeltGroup, Discipline, Gender, MatchStatus, TournamentStatus
+from app.models import BeltGroup, Discipline, Gender, Grade, MatchStatus, TournamentStatus
 
 
 class ErrorResponse(BaseModel):
@@ -69,9 +69,7 @@ class AthleteBase(BaseModel):
     )
     birth_date: datetime.date = Field(description="Fecha de nacimiento (`YYYY-MM-DD`).", examples=["2012-03-14"])
     gender: Gender = Field(description="Género del atleta. Debe coincidir con el de la categoría en que se inscribe.")
-    belt_rank: str = Field(
-        description="Cinturón o grado, en texto libre.", examples=["verde", "negro 1er dan"]
-    )
+    grade: Grade = Field(description="Grado del atleta.", examples=["kup_6"])
     weight_kg: float = Field(description="Peso en kilogramos.", examples=[38.5])
     club_id: int = Field(description="Id del club al que pertenece. El club debe existir.")
 
@@ -97,7 +95,7 @@ class AthleteUpdate(BaseModel):
         default=None,
         description="Nuevo género. Si no se envía, no cambia. Ver las reglas con inscripciones en la operación.",
     )
-    belt_rank: str | None = Field(default=None, description="Nuevo cinturón o grado. Si no se envía, no cambia.")
+    grade: Grade | None = Field(default=None, description="Nuevo grado. Si no se envía, no cambia.")
     weight_kg: float | None = Field(
         default=None,
         description="Nuevo peso en kilogramos. Si no se envía, no cambia. Ver las reglas con inscripciones en la operación.",

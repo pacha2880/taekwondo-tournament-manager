@@ -16,7 +16,7 @@
         <div>{{ a.name }}
         <span class="text-muted small">
           &middot; {% if a.ci %}CI {{ a.ci }} &middot; {% endif %}{{ a.club.name }} &middot; {{ a.gender|es_label }} &middot; {{ a.weight_kg }}kg
-          &middot; {{ a.belt_rank }}
+          {% if a.grade %}&middot; {{ a.grade|es_label }}{% endif %}
         </span></div>
         <a href="/admin/atletas/{{ a.id }}/editar" class="btn btn-sm btn-outline-secondary">Editar</a>
       </li>
@@ -55,9 +55,12 @@
         </select>
       </div>
       <div class="mb-2">
-        <label class="form-label">Cinturón</label>
-        <input type="text" name="belt_rank" class="form-control" required value="{{ form.belt_rank }}"
-               placeholder="ej. verde, negro 1er dan">
+        <label class="form-label">Grado</label>
+        <select name="grade" class="form-select" required>
+          {% for value, label in grade_options %}
+          <option value="{{ value }}" {% if form.grade == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
       </div>
       <div class="mb-2">
         <label class="form-label">Peso (kg)</label>

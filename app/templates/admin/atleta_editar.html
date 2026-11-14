@@ -34,9 +34,12 @@
         </select>
       </div>
       <div class="mb-2">
-        <label class="form-label">Cinturón</label>
-        <input type="text" name="belt_rank" class="form-control" required value="{{ values.belt_rank }}"
-               placeholder="ej. verde, negro 1er dan">
+        <label class="form-label">Grado</label>
+        <select name="grade" class="form-select" required>
+          {% for value, label in grade_options %}
+          <option value="{{ value }}" {% if values.grade == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
       </div>
       <div class="mb-2">
         <label class="form-label">Peso (kg)</label>

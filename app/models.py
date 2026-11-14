@@ -2,7 +2,7 @@ import enum
 from datetime import date, datetime
 
 from sqlalchemy import Date, DateTime, Enum, Float, ForeignKey, Integer, String, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from app.database import Base
 
@@ -30,6 +30,23 @@ class Gender(str, enum.Enum):
 
     MALE = "male"
     FEMALE = "female"
+
+
+class Grade(str, enum.Enum):
+    """Grado del atleta, de menor a mayor: `kup_10` (10mo Kup, cinturón blanco) … `kup_1` (1er Kup, negro-rojo) y
+    `dan` (cinturón negro)."""
+
+    KUP_10 = "kup_10"
+    KUP_9 = "kup_9"
+    KUP_8 = "kup_8"
+    KUP_7 = "kup_7"
+    KUP_6 = "kup_6"
+    KUP_5 = "kup_5"
+    KUP_4 = "kup_4"
+    KUP_3 = "kup_3"
+    KUP_2 = "kup_2"
+    KUP_1 = "kup_1"
+    DAN = "dan"
 
 
 class BeltGroup(str, enum.Enum):
@@ -65,12 +82,21 @@ class Athlete(Base):
     ci: Mapped[str | None] = mapped_column(String(12), unique=True, index=True)
     birth_date: Mapped[date] = mapped_column(Date, nullable=False)
     gender: Mapped[Gender] = mapped_column(Enum(Gender), nullable=False)
+    # Reemplazado por `grade`; la columna se borra en la 1.0.0 (ver docs/DECISIONS.md, 2026-11-13).
     belt_rank: Mapped[str] = mapped_column(String(60), nullable=False)
+    # Nullable solo en la base, para que la 0.6.0 pueda seguir creando atletas si se vuelve atrás; la API lo exige.
+    grade: Mapped[Grade | None] = mapped_column(Enum(Grade), nullable=True)
     weight_kg: Mapped[float] = mapped_column(Float, nullable=False)
     club_id: Mapped[int] = mapped_column(ForeignKey("clubs.id"), nullable=False)
 
     club: Mapped["Club"] = relationship(back_populates="athletes")
     registrations: Mapped[list["Registration"]] = relationship(back_populates="athlete")
+
+    @validates("grade")
+    def _fill_legacy_belt_rank(self, _key, grade):
+        if grade is not None:
+            self.belt_rank = Grade(grade).value
+        return grade
 
 
 class Tournament(Base):

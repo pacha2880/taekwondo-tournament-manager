@@ -34,9 +34,9 @@ CLUB_NAMES = ["Dojang Prueba Norte", "Dojang Prueba Sur", "Dojang Prueba Este"]
 MALE_NAMES = ["Mateo", "Santiago", "Diego", "Luis", "Carlos", "Andrés", "Bruno", "Marcelo", "Sebastián", "Joaquín", "Rodrigo", "Gabriel"]
 FEMALE_NAMES = ["Valentina", "Camila", "Sofía", "Lucía", "Daniela", "Fernanda", "Paola", "Andrea", "Mariana", "Isabella", "Carla", "Gabriela"]
 SURNAMES = ["Quispe", "Mamani", "Flores", "Condori", "Rojas", "Vargas", "Gutiérrez", "Choque", "Pérez", "Fernández", "Torrico", "Salazar", "Arce", "Cabrera", "Villarroel", "Rivera"]
-BELTS = {
-    "color": ["blanco", "amarillo", "verde", "azul", "rojo"],
-    "black": ["negro 1er dan", "negro 2do dan", "negro 3er dan"],
+GRADES = {
+    "color": [f"kup_{n}" for n in range(10, 0, -1)],
+    "black": ["dan"],
 }
 
 # Qué se juega en cada llave, en orden:
@@ -77,7 +77,7 @@ def build_category(spec, rng: random.Random, used_cis: set[str]) -> dict:
                 "ci": ci,
                 "birth_date": date(rng.randint(*years), rng.randint(1, 12), rng.randint(1, 28)).isoformat(),
                 "gender": gender,
-                "belt_rank": rng.choice(BELTS[belt_group]),
+                "grade": rng.choice(GRADES[belt_group]),
                 "weight_kg": round(rng.uniform(*weights), 1),
                 "club": rng.choice(CLUB_NAMES),
                 "register": i < registered,

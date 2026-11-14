@@ -5,7 +5,7 @@ internos, no texto para mostrar. Este módulo es el único lugar donde se traduc
 plantillas nunca deben usar `.value` directo (ver CLAUDE.md) -- siempre `|es_label`.
 """
 
-from app.models import BeltGroup, Discipline, Gender, MatchStatus, TournamentStatus
+from app.models import BeltGroup, Discipline, Gender, Grade, MatchStatus, TournamentStatus
 
 _LABELS: dict[type, dict] = {
     TournamentStatus: {
@@ -19,6 +19,19 @@ _LABELS: dict[type, dict] = {
     Gender: {
         Gender.MALE: "Masculino",
         Gender.FEMALE: "Femenino",
+    },
+    Grade: {
+        Grade.KUP_10: "10mo Kup",
+        Grade.KUP_9: "9no Kup",
+        Grade.KUP_8: "8vo Kup",
+        Grade.KUP_7: "7mo Kup",
+        Grade.KUP_6: "6to Kup",
+        Grade.KUP_5: "5to Kup",
+        Grade.KUP_4: "4to Kup",
+        Grade.KUP_3: "3er Kup",
+        Grade.KUP_2: "2do Kup",
+        Grade.KUP_1: "1er Kup",
+        Grade.DAN: "Dan",
     },
     BeltGroup: {
         BeltGroup.COLOR: "Cinturón de color",

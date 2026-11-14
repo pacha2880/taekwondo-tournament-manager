@@ -11,6 +11,13 @@ funcionando sobre una base ya migrada.
 
 ## [Unreleased]
 
+### Changed
+- **Incompatible — importante para quien use la API:** los atletas tienen un **grado** fijo (`grade`: `kup_10` …
+  `kup_1` y `dan`) en lugar del cinturón en texto libre. `POST /api/v1/athletes` exige `grade` (sin él, o con un
+  valor que no está en la lista, responde `422`); `PATCH` lo acepta para cambiarlo. `belt_rank` deja de existir en
+  la API: ya no se devuelve, y si se envía se ignora. A los atletas que ya existían se les asignó un grado al azar.
+- En el admin, crear y editar atleta piden el grado con un selector en lugar del campo de texto «Cinturón».
+
 ### Fixed
 - **CORS permite `DELETE`:** desde el navegador, un frontend en otro dominio no podía retirar inscripciones
   (`DELETE /api/v1/registrations/{id}`, agregado en la 0.6.0): el navegador bloqueaba la llamada.

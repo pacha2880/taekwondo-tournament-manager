@@ -631,3 +631,22 @@ ejemplo, un conteo en el torneo); hay que resolverlo antes de contraer.
 
 **Regla que queda:** `dev` es un entorno compartido con el frontend externo. Un cambio incompatible de la API se
 acuerda con Kike antes de llegar a `dev`, no después.
+
+## 2026-11-13 — Grado fijo del atleta y cómo se retira `belt_rank` (0.7.0)
+
+**El grado pasa a ser un valor fijo** (`Grade`: `kup_10` … `kup_1`, `dan`), como pidió Abel: los grupos de grado
+(Principiantes, Novatos, Avanzados) que vienen después necesitan comparar grados, y un texto libre («verde», «negro
+1er dan») no se puede comparar. El orden del enum es el orden de los grados. Es obligatorio al crear un atleta,
+aunque eso rompa a quien no lo mande: sin grado, el atleta no se podría ubicar en ningún grupo.
+
+**`belt_rank` se retira en dos tiempos (expandir → contraer).** Dentro de `0.x` las migraciones solo agregan, para
+poder volver a un tag anterior sobre una base ya migrada. Por eso la columna queda en la base: la API y el código ya
+no la usan, y el modelo la llena con el valor del grado al crearlo o cambiarlo (la `0.6.0` la exige y la devuelve).
+Los atletas que ya existían conservan su texto original. La columna se borra en la `1.0.0`.
+
+**`grade` es nullable en la base y obligatorio en la API**, por la misma razón: si se vuelve a la `0.6.0`, esa versión
+crea atletas sin grado. A los que ya existían la migración les asignó un grado al azar (decisión del usuario: hoy solo
+hay datos de demo).
+
+**Un campo que ya no existe se ignora** (no responde `422`): es como se comportaba la API con cualquier campo
+desconocido, y cambiarlo ahora sería otro cambio incompatible sin un pedido real.
