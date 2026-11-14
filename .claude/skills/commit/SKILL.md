@@ -15,3 +15,11 @@ Solo con una orden directa y actual ("commiteá", "hacé el commit"). Si no la h
    `CHANGELOG.md` va en el mismo commit que el cambio.
 4. Push a `origin dev` solo si lo pidió. Si con eso se cierra una versión, proponer `/release`; si no, no
    mencionar tags.
+5. Si había un `git stash` guardado para aislar este cambio (`git stash list`), después del commit recuperarlo con
+   `git stash pop`. Si choca (típico en `CHANGELOG.md`), resolver dejando las dos partes y avisar.
+6. Después del push a `dev`, si cambió la API (algo nuevo o incompatible), sumar el aviso en la sección
+   «Avisos para el frontend (Kike)» de la página Taekwondo Torneos de Notion: versión, si es incompatible, y qué
+   tiene que cambiar el frontend. En la misma pasada, actualizar «Progreso» y «Siguiente paso» de la fila del
+   proyecto en Proyectos. Antes del push no: el aviso describe lo que ya está en el servicio `dev`. Un cambio
+   **incompatible** además se acuerda con Kike antes del push (ver `DECISIONS.md`, 2026-11-12: `dev` es un entorno
+   compartido con su frontend).
