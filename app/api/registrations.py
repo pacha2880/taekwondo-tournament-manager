@@ -67,13 +67,17 @@ def create_registration(payload: RegistrationCreate, db: Session = Depends(get_d
     response_model=list[RegistrationRead],
     dependencies=ADMIN_ONLY,
     summary="Listar inscripciones",
-    description="Devuelve las inscripciones con los datos del atleta y de la categoría. Con `category_id` devuelve solo las de esa categoría y con `tournament_id` solo las de ese torneo; si se envían ambos, se aplican los dos filtros. Incluye fecha de nacimiento y peso de los atletas, por eso requiere token.",
+    description="Devuelve las inscripciones con los datos del atleta y de la categoría, en el orden en que se hicieron. Con `category_id` devuelve solo las de esa categoría y con `tournament_id` solo las de ese torneo; si se envían ambos, se aplican los dos filtros. Incluye fecha de nacimiento y peso de los atletas, por eso requiere token.",
     responses=errors(auth=True),
 )
 def list_registrations(
     category_id: int | None = None, tournament_id: int | None = None, db: Session = Depends(get_db)
 ):
-    query = select(Registration).options(selectinload(Registration.category).selectinload(Category.bracket))
+    query = (
+        select(Registration)
+        .options(selectinload(Registration.category).selectinload(Category.bracket))
+        .order_by(Registration.id)
+    )
     if category_id is not None:
         query = query.where(Registration.category_id == category_id)
     if tournament_id is not None:

@@ -14,6 +14,8 @@ funcionando sobre una base ya migrada.
 ### Fixed
 - **CORS permite `DELETE`:** desde el navegador, un frontend en otro dominio no podía retirar inscripciones
   (`DELETE /api/v1/registrations/{id}`, agregado en la 0.6.0): el navegador bloqueaba la llamada.
+- `GET /api/v1/categories` y `GET /api/v1/registrations` devuelven siempre el mismo orden (el de creación). Antes
+  no tenían orden y en Postgres podía cambiar entre una llamada y otra.
 
 ## [0.6.0] - 2026-11-12
 
