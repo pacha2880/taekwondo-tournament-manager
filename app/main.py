@@ -4,7 +4,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.api import athletes, auth, brackets, categories, clubs, matches, registrations, tournaments
 from app.api_docs import API_DESCRIPTION, TAG_SYSTEM, TAGS_METADATA
-from app.config import check_production_settings, cors_origins, secret_key
+from app.config import check_production_settings, cors_origins, is_deployed, secret_key
 from app.cors import add_cors
 from app.version import __version__
 from app.web import admin, public
@@ -19,7 +19,8 @@ app = FastAPI(
     openapi_tags=TAGS_METADATA,
     generate_unique_id_function=lambda route: route.name,
 )
-app.add_middleware(SessionMiddleware, secret_key=secret_key())
+# En los ambientes desplegados la cookie del admin solo viaja por HTTPS; en local se usa http://localhost.
+app.add_middleware(SessionMiddleware, secret_key=secret_key(), https_only=is_deployed())
 add_cors(app, cors_origins())
 
 app.include_router(auth.router)
