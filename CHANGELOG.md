@@ -11,6 +11,10 @@ funcionando sobre una base ya migrada.
 
 ## [Unreleased]
 
+### Fixed
+- **CORS permite `DELETE`:** desde el navegador, un frontend en otro dominio no podía retirar inscripciones
+  (`DELETE /api/v1/registrations/{id}`, agregado en la 0.6.0): el navegador bloqueaba la llamada.
+
 ## [0.6.0] - 2026-11-12
 
 ### Added

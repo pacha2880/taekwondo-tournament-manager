@@ -69,6 +69,16 @@ def test_preflight_allows_authorization_header_and_patch():
     assert "authorization" in resp.headers["access-control-allow-headers"].lower()
 
 
+@pytest.mark.parametrize("method", ["GET", "POST", "PATCH", "DELETE"])
+def test_preflight_allows_every_method_the_api_uses(method):
+    resp = _client([ALLOWED]).options(
+        "/ping", headers={"Origin": ALLOWED, "Access-Control-Request-Method": method}
+    )
+
+    assert resp.status_code == 200
+    assert method in resp.headers["access-control-allow-methods"]
+
+
 def test_preflight_from_other_origin_is_rejected():
     resp = _client([ALLOWED]).options(
         "/ping", headers={"Origin": OTHER, "Access-Control-Request-Method": "POST"}
