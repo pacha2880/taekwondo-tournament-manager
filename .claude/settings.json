@@ -1,8 +1,6 @@
 {
   "permissions": {
     "ask": [
-      "Bash(git push:*)",
-      "Bash(git tag:*)",
       "Read(./confidencial/**)"
     ],
     "deny": [
