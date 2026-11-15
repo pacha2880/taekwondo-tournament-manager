@@ -2,7 +2,7 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 según [Semantic Versioning](https://semver.org/lang/es/). La versión vive en
-[`app/version.py`](app/version.py) y se muestra en la esquina de cada página y en `/health`.
+[`app/version.py`](app/version.py) y se muestra en `/health`.
 
 Mientras la versión sea `0.y.z` (desarrollo inicial) la API puede cambiar entre versiones
 minor. Dentro de `0.x`, las migraciones de base de datos solo agregan (columnas nuevas
@@ -11,12 +11,15 @@ funcionando sobre una base ya migrada.
 
 ## [Unreleased]
 
+### Removed
+- **Solo queda la API:** se eliminaron el panel admin y las páginas públicas en HTML (y su login por sesión).
+  La interfaz es el frontend externo. `/` redirige a `/docs`. La API no cambia.
+
 ### Changed
 - **Incompatible — importante para quien use la API:** los atletas tienen un **grado** fijo (`grade`: `kup_10` …
   `kup_1` y `dan`) en lugar del cinturón en texto libre. `POST /api/v1/athletes` exige `grade` (sin él, o con un
   valor que no está en la lista, responde `422`); `PATCH` lo acepta para cambiarlo. `belt_rank` deja de existir en
   la API: ya no se devuelve, y si se envía se ignora. A los atletas que ya existían se les asignó un grado al azar.
-- En el admin, crear y editar atleta piden el grado con un selector en lugar del campo de texto «Cinturón».
 
 ### Fixed
 - **CORS permite `DELETE`:** desde el navegador, un frontend en otro dominio no podía retirar inscripciones

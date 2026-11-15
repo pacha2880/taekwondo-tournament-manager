@@ -12,8 +12,7 @@ Lo aceptado y ordenado en versiones. Las versiones ya liberadas están en [`CHAN
 
 Reglas de cada versión: `pytest` en verde (SQLite en local; Postgres lo corre el CI del PR); migraciones solo
 aditivas; los cambios incompatibles de la API se juntan en la versión, y cada cambio de la API se le avisa al frontend externo
-en Notion apenas llega a `dev` (después del push; ver la skill `commit`). **Solo API:** el admin y las páginas públicas en HTML quedan congelados; las funciones nuevas las muestra el
-frontend externo.
+en Notion apenas llega a `dev` (después del push; ver la skill `commit`). **Solo API:** la interfaz es el frontend externo.
 
 ## Ciclo de vida objetivo del torneo
 
@@ -83,8 +82,8 @@ Cambia el comportamiento de la API: va marcado como incompatible en el CHANGELOG
       ocultarla se acuerda antes con Kike. Se sale solo por la fecha límite, hacia Pesaje. Falta decidir si el
       admin puede seguir yendo directo a En curso con `POST .../start`.
 - [ ] **Migración de los torneos en `draft`**: pasan a `registration_open`, para que los que ya existen (también el
-      torneo demo de producción) sigan visibles y aceptando inscripciones. Las reglas de `app/api/lifecycle.py` y los
-      textos de `es_label` pasan de `draft` a `registration_open`.
+      torneo demo de producción) sigan visibles y aceptando inscripciones. Las reglas de `app/api/lifecycle.py` pasan de
+      `draft` a `registration_open`.
 - [ ] **Fecha límite de inscripción** (guardada en UTC, mostrada en hora de Bolivia). Pasada la fecha, el torneo
       queda en Pesaje solo. El estado se calcula al consultarlo con una función pura del torneo y la hora; leer no
       escribe en la base, y no hace falta un cron.

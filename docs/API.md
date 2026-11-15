@@ -102,9 +102,8 @@ paso):
   categorías pendientes.
 
 Las lecturas públicas (`GET /tournaments`, `GET /categories`…) devuelven torneos en cualquier estado,
-incluidos los `draft`. El sitio público del proyecto también los muestra: mientras una categoría no tiene
-llave, su página lista a los inscritos (solo nombre y club). Desde la API se arma lo mismo con `has_bracket`
-y `/registrants` (ver «Recorrer los datos»).
+incluidos los `draft`. Mientras una categoría no tiene llave, lo que se muestra al público es la lista de
+inscritos: con `has_bracket` y `/registrants` (ver «Recorrer los datos»).
 
 ## Errores
 
@@ -124,7 +123,7 @@ códigos que puede devolver.
 
 ## Valores de los enums
 
-Viajan en inglés; para mostrarlos al usuario, esta es la traducción que usa la web del proyecto:
+Viajan en inglés; para mostrarlos al usuario, esta es la traducción sugerida:
 
 | Campo | Valor | Se muestra como |
 |---|---|---|

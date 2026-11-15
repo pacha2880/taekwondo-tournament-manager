@@ -3,13 +3,6 @@
 Registro corto de decisiones no obvias, con el porqué, para no tener que re-derivar el
 razonamiento más adelante.
 
-## 2026-09-11 — Jinja2 en vez de SPA separado
-
-Se eligió server-side rendering con FastAPI + Jinja2 en una sola app, en vez de una API
-separada + frontend en React/Vue. Motivo: el objetivo es un despliegue gratuito simple (un
-solo servicio) y que el foco de aprendizaje sea el backend, que es lo que evalúa el puesto al
-que se está aplicando. htmx queda como mejora incremental opcional, no bloqueante.
-
 ## 2026-09-11 — Render + Neon en vez de Railway/Fly.io/Render-Postgres
 
 Investigado en 2026: Railway ya no tiene tier gratis real (solo $5 de crédito único),
@@ -57,83 +50,19 @@ y "falla en el contenedor" (Linux). Se verificó Python 3.10.12 disponible (no 3
 feature del plan lo requiere) y que Docker todavía no tiene la integración WSL activada en
 esta máquina — pendiente antes de la fase 7, no bloqueante ahora.
 
-## 2026-09-22 — Fase 5: diseño propio y minimalista, no clonar sitios de marketing
-
-Se consideró usar como referencia visual el sitio de una escuela de taekwondo real
-(marketing/institucional, con tienda y noticias), pero se descartó: es un tipo de producto
-distinto (vender clases, no mostrar datos de un torneo en vivo). Se optó por un diseño propio
-y lo más simple posible — la parte visual queda deliberadamente básica, para que decisiones
-de diseño "de verdad" se puedan tomar después (por alguien más, o más adelante) sin tocar
-lógica de negocio, ya que las plantillas Jinja2 están separadas de `app/services`/`app/api`.
-
-Decisiones concretas de la Fase 5:
-- **CSS**: Bootstrap 5 vía CDN (un `<link>`, sin build step) — consistente con "tecnología
-  simple", da componentes listos (navbar, list-group, badges) sin escribir CSS a mano.
-  Paleta: sin personalización por ahora (Bootstrap por defecto); si se quiere un esquema
-  rojo/azul (colores reales de protectores, y ya son los nombres que usa el modelo de datos
-  — `athlete_red_id`/`athlete_blue_id`) queda como mejora visual posterior, no bloqueante.
-- **Navegación**: tres niveles siguiendo la jerarquía de datos — `/` (lista de torneos) →
-  `/torneos/{id}` (categorías de ese torneo) → `/categorias/{id}` (llave + resultados de esa
-  categoría). Sin buscador ni filtros.
-- **Vista de la llave**: lista de texto agrupada por ronda (no un árbol visual con líneas
-  conectoras). Cada combate muestra los dos atletas, su estado (`pending`/`bye`/`finished`),
-  el ganador si ya lo hay, y el puntaje de cada round si el combate ya se jugó.
-- **Sin auto-refresh todavía**: la página se recarga manualmente. El auto-refresh en vivo
-  (polling con htmx) queda anotado como el primer ítem de la Fase 9 (mejoras post-deploy),
-  junto con cualquier otra mejora que se nos ocurra en el camino — deliberadamente no se
-  implementa antes de tener el sistema desplegado y funcionando de punta a punta.
-
-## 2026-09-25 — Fase 5.5: centralizar la traducción de enums, no traducirlos ad-hoc
-
-Las plantillas de la Fase 5 imprimían `.value` de los enums del modelo directo, mostrando
-"draft", "male", "bye" en la página pública — los enums se guardan en inglés a propósito
-(identificadores internos, ver `app/models.py`), pero nadie los estaba traduciendo antes de
-mostrarlos. Se centralizó la traducción en `app/web/labels.py` en vez de traducir en cada
-plantilla, por dos razones: (1) un solo lugar para mantener las traducciones, y (2) permite
-un guardrail automático simple — un test que falla si cualquier plantilla (actual o futura,
-incluida la Fase 6) usa `.value` directo, sin necesidad de saber de antemano qué enum es.
-
-Detalle técnico: los enums de este proyecto heredan de `(str, enum.Enum)`, lo que los hace
-comparables e hasheables como strings — por eso `_LABELS` en `labels.py` es un diccionario
-anidado por clase de enum (`{TournamentStatus: {...}, MatchStatus: {...}}`) en vez de uno
-plano: dos enums distintos pueden compartir el mismo valor string (`TournamentStatus.FINISHED`
-y `MatchStatus.FINISHED` son ambos `"finished"`), y un diccionario plano los trataría como la
-misma clave.
-
-## 2026-09-26 — Fase 6: el admin llama directo a las funciones de la API, no las reimplementa
-
-La pantalla admin necesita las mismas reglas de negocio que ya existen en `app/api/*.py`
-(género debe coincidir, peso en rango, no doble inscripción, etc.). En vez de reescribir esas
-validaciones para los formularios HTML, `app/web/admin.py` importa y llama directo a las
-funciones de los routers de la API (ej. `create_registration` de `app/api/registrations.py`)
-como funciones Python normales, pasándoles una sesión de DB explícita. Esto es seguro porque
-`Depends(get_db)` es solo un valor por defecto de FastAPI que no se usa cuando el llamador
-pasa `db` explícitamente. El admin atrapa `HTTPException`/`ValidationError` y re-renderiza la
-página con el error en vez de dejarlo pasar como JSON crudo.
-
-Login: sesión simple con `SessionMiddleware` (cookie firmada con `SECRET_KEY`) contra un único
-usuario definido en `ADMIN_USERNAME`/`ADMIN_PASSWORD` — no hay tabla de usuarios ni roles,
-suficiente para un solo administrador por torneo. Una dependencia (`require_admin`) protege
-cada ruta; en vez de devolver un 401 plano, lanza una excepción custom (`NotAuthenticated`)
-capturada por un exception handler global que redirige a `/admin/login` — mejor experiencia
-para un flujo pensado para navegador, no para consumo por API.
-
 ## 2026-09-29 — Revertir "MatchRead solo ids": agregar nombres de atletas a la API
 
 En la Fase 5 se decidió que `MatchRead` expusiera solo ids de atletas (no nombres), para no
 acoplar el contrato JSON a una necesidad de presentación. En la práctica, los tres
-consumidores que existen hoy (pantalla pública, pantalla admin, y cualquier llamada directa a
-la API) necesitan los nombres siempre — nadie quiere ids solos. Mantener la API "pura" estaba
+consumidores necesitan los nombres siempre — nadie quiere ids solos. Mantener la API "pura" estaba
 protegiendo un caso de uso hipotético (un consumidor futuro que sí quisiera solo ids) a costa
 de un problema real y actual: la misma lógica de resolución de nombres (batch query para
-evitar N+1) estaba duplicada en `app/web/public.py` y `app/web/admin.py` (hoy
-`app/web/admin/category_workspace.py`).
+evitar N+1) estaba duplicada.
 
 Se agregó `athlete_red_name`/`athlete_blue_name`/`winner_name` a `MatchRead`
 (`app/schemas.py`), y se centralizó la resolución en `resolve_athlete_names(db, matches)`
 (`app/services/brackets.py`) — la única función que hace esa consulta batch. La reusan
-`app/api/brackets.py`, `app/api/matches.py`, `app/web/public.py` y
-`app/web/admin/category_workspace.py`; ninguno vuelve a escribirla por su cuenta.
+`app/api/brackets.py` y `app/api/matches.py`; ninguno vuelve a escribirla por su cuenta.
 
 Detalle de implementación: como `Match` (el modelo ORM) no tiene atributos `*_name`, no se
 puede confiar en la conversión automática `from_attributes=True` para esos tres campos.
@@ -227,8 +156,7 @@ torneo en borrador). SemVer permite eso dentro de `0.y.z`, y su FAQ recomienda a
 
 **Una sola fuente de verdad: `app/version.py`.** No se usa `git describe` porque
 `.dockerignore` excluye `.git` y la imagen que construye Render no tiene historial. La versión
-se muestra en la esquina de cada página (texto chico, fijo abajo a la derecha) y en `/health`,
-que permite saber qué versión corre en producción sin abrir el navegador. Exponerla es
+se muestra en `/health`, que permite saber qué versión corre en producción sin abrir el navegador. Exponerla es
 inofensivo en esta app y útil para verificar un deploy.
 
 **Migraciones solo aditivas dentro de `0.x`** (columnas nuevas opcionales; nunca borrar ni
@@ -239,10 +167,6 @@ y migrar el código, y recién en una versión posterior borrar lo viejo).
 **`CHANGELOG.md`** en formato Keep a Changelog, y un test que falla si su última versión
 publicada no coincide con `app/version.py`, para que no se desincronicen.
 
-**Un único entorno de plantillas** (`app/web/templating.py`): antes, `public.py` y
-`admin/_shared.py` creaban cada uno su `Jinja2Templates` y registraban los mismos filtros por
-duplicado. Para agregar la versión como global sin sumar una tercera copia se unificaron.
-
 **Orden del backlog (tres pasadas de análisis):** 0.2.0 admin más seguro, 0.3.0 datos de
 atletas, 0.4.0 ciclo de vida del torneo, 0.5.0 campeones, 0.6.0 en vivo. La 0.3.0 va antes
 que el ciclo de vida a propósito: tiene la única migración de esquema y es simple, así que
@@ -251,15 +175,14 @@ comportamiento. Detalle en `docs/BACKLOG.md`.
 
 ## 2026-10-15 — API protegida con login y JWT (0.2.0)
 
-**El problema.** Ningún endpoint de `/api/v1` exigía autenticación: el admin web usa sesión por
-cookie, pero la API quedó abierta, así que cualquiera que abriera `/docs` podía crear y modificar
+**El problema.** Ningún endpoint de `/api/v1` exigía autenticación, así que cualquiera que abriera `/docs` podía crear y modificar
 datos en producción. Se hizo visible al aparecer un consumidor externo (el frontend de un amigo,
 en otra tecnología), pero el agujero existía desde antes.
 
 **Token en la cabecera, no cookie.** Con un frontend en otro dominio, la cookie cruzada exige
 `SameSite=None`, `credentials` en CORS, la bloquean cada vez más navegadores y abre la puerta a
 CSRF. Un token que el frontend agrega a mano en `Authorization: Bearer` no sufre CSRF (una página
-ajena no puede hacer que el navegador lo adjunte sola). El admin web sigue con cookie de sesión.
+ajena no puede hacer que el navegador lo adjunte sola).
 
 **JWT (HS256, PyJWT) y no un token propio de `itsdangerous`.** Para el servidor son equivalentes
 (ambos *stateless*), pero JWT es el estándar: el frontend de otra tecnología puede leer el `exp`,
@@ -269,13 +192,13 @@ aceptar `alg: none`; hay un test) y se exigen `exp` y `sub`.
 
 **Login con formulario OAuth2** (`POST /api/v1/auth/login`): es la forma estándar y hace que
 Swagger muestre el botón **Authorize**. Mismo usuario y clave del admin; la comparación es de
-tiempo constante y vive en `app/auth.py`, compartida con el login del admin web. `SECRET_KEY` y las
+tiempo constante y vive en `app/auth.py`. `SECRET_KEY` y las
 credenciales se leen desde `app/config.py` en vez de tres lugares distintos.
 
 **8 horas, sin renovación automática.** El token no se puede revocar antes de vencer (nadie lo
 guarda). Ocho horas cubren una jornada de torneo; un refresh token agregaría almacenamiento,
 rotación y revocación que no se justifican hoy. El "botón de pánico" es cambiar `SECRET_KEY`
-(invalida todos los tokens y también las sesiones del admin web).
+(invalida todos los tokens).
 
 **Qué es público y qué no.** Públicos: torneos, categorías, clubes, llaves y combates (solo
 nombres). Con token: todo `POST`/`PATCH`, y `GET` de atletas e inscripciones, porque devuelven fecha
@@ -284,9 +207,7 @@ inscritos" antes de que exista la llave, se agregará un endpoint público que d
 y club.
 
 **Cómo se aplica.** La constante `ADMIN_ONLY = [Depends(require_api_admin)]` se pasa como
-`dependencies=ADMIN_ONLY` en cada endpoint protegido. El admin web **no** se ve afectado: sus
-handlers llaman a las funciones de `app/api/*.py` directamente (ver la decisión de la Fase 6) y
-las dependencias de FastAPI solo corren cuando la petición entra por HTTP.
+`dependencies=ADMIN_ONLY` en cada endpoint protegido.
 
 **Test de inventario sobre el esquema OpenAPI, no sobre `app.routes`.** La primera versión del
 test recorría `app.routes` buscando `APIRoute`; en FastAPI 0.141 los routers incluidos quedan como
@@ -335,8 +256,7 @@ si el servidor no lo autoriza (lo aplican los navegadores; `curl` y Postman lo i
 no protege la API: eso lo hace la autenticación). `CORS_ORIGINS` es una lista separada por comas; sin
 definirla no se permite ningún origen, y con `APP_ENV=production` la app **se niega a arrancar si la
 lista contiene `*`**. Como el token viaja en la cabecera `Authorization` y no hay cookies,
-`allow_credentials=False`: así tampoco hay riesgo de que un origen permitido reutilice la sesión del
-admin web. Se permiten solo `GET`, `POST`, `PATCH` y `OPTIONS`, y las cabeceras `Authorization` y
+`allow_credentials=False`. Se permiten solo `GET`, `POST`, `PATCH` y `OPTIONS`, y las cabeceras `Authorization` y
 `Content-Type`. El middleware de CORS se agrega al final para quedar como el más externo y responder
 los *preflight* (`OPTIONS`) antes de que cualquier otra capa los toque; el preflight de un `POST`
 protegido pasa sin token a propósito, porque el navegador nunca manda credenciales en un preflight.
@@ -352,11 +272,6 @@ ya generó el suyo. Las descripciones viven en el código, junto a cada endpoint
 `description`, `responses`) y en `Field(description=...)` de `app/schemas.py`, escritas una sola vez
 en las clases `*Base` y heredadas por `Create`/`Read`; el texto general y los grupos están en
 `app/api_docs.py`. Los enums se explican con su docstring, que Pydantic vuelca al esquema.
-
-**Qué se muestra en `/docs`.** Solo la API y `/health`: las páginas HTML del admin y de la parte pública
-se ocultan con `include_in_schema=False` en `include_router` (en FastAPI 0.141 los routers incluidos
-quedan anidados, así que se pasa ahí y no en cada router). Antes aparecían 19 páginas HTML mezcladas con
-la API, lo que además exponía la estructura del panel de administración.
 
 **`operationId` = nombre de la función** (`generate_unique_id_function=lambda route: route.name`):
 pasa de `create_club_api_v1_clubs_post` a `create_club`. Los nombres de las funciones ya son únicos
@@ -378,7 +293,7 @@ manda Swagger se ignoran.
 operación no tiene resumen propio (no el generado a partir del nombre de la función) ni descripción, si
 no pertenece a exactamente un grupo declarado, si requiere token y no documenta el 401, si tiene un
 parámetro de ruta y no documenta el 404, si algún campo o enum queda sin descripción, si hay `operationId`
-repetidos o con restos de la ruta, o si aparecen páginas HTML en el esquema. Se comprobó con pruebas de
+repetidos o con restos de la ruta, o si aparecen rutas que no son de la API en el esquema. Se comprobó con pruebas de
 mutación (quitar la descripción de un campo y de un endpoint hace fallar los tests).
 
 ## 2026-10-17 — `APP_ENV=staging`, para que el servicio `dev` pueda aceptar `CORS_ORIGINS=*`
@@ -444,9 +359,7 @@ que cada inscripción pertenece a un torneo con un estado:
 
 **Confirmación en dos pasos, sin estado en el servidor.** La API no tiene popups: si el cambio retiraría al
 atleta de alguna categoría y no viene `confirm_withdrawal=true`, responde `409` con la lista de categorías y no
-cambia nada; repetida con el parámetro, aplica el cambio y borra esas inscripciones. El admin usa la misma
-función: vuelve a mostrar el formulario con el aviso (la excepción `WithdrawalNotConfirmed` lo distingue de los
-demás `409`) y un botón "Confirmar y retirar" que reenvía el formulario con el parámetro. La validación de
+cambia nada; repetida con el parámetro, aplica el cambio y borra esas inscripciones. La validación de
 género y peso se extrajo de `create_registration` a `app/services/eligibility.py` para que la inscripción y la
 edición usen una sola regla.
 
@@ -481,7 +394,7 @@ las credenciales por defecto: un aviso en los logs es fácil de pasar por alto. 
 la entrada de la 0.2.0. Antes de desplegarlo hay que confirmar que las claves de Render (`dev` y producción)
 miden 32 bytes o más; si no, el deploy queda caído hasta cambiarlas.
 
-## 2026-10-26 — El servidor numera los rounds y el admin confirma antes de guardar (0.5.0)
+## 2026-10-26 — El servidor numera los rounds (0.5.0)
 
 **El número de round lo asigna el servidor, no el cliente.** El backlog planteaba fijar el número solo en el
 formulario del admin, pero el hueco estaba en la API: `round_number` era obligatorio y solo se rechazaba un
@@ -489,30 +402,12 @@ número repetido, así que se podía cargar el round 5 sin el 1 o dejar huecos, 
 heredado el problema. Ahora `RoundScoreCreate` solo lleva `red_points` y `blue_points`, y `record_round`
 asigna `rounds ya cargados + 1`; la respuesta (`RoundScoreRead`) sigue incluyendo `round_number`. Se
 eliminó `DuplicateRound`, que ya no puede ocurrir. Sin capa de compatibilidad (estamos en `0.x`, y Pydantic
-ignora el campo si alguien todavía lo envía). **Costos aceptados:** (1) la restricción única
+ignora el campo si alguien todavía lo envía). **Costo aceptado:** la restricción única
 `uq_round_per_match` sigue siendo la red de seguridad si dos envíos simultáneos calculan el mismo número: el
-segundo falla con un error 500 en lugar de un mensaje claro; la ventana de confirmación deshabilita el botón
-tras el primer clic, así que es poco probable. (2) El admin muestra «Round N» calculado al renderizar la
-página; si se carga un round desde otra pestaña, un envío desde una página vieja se numera con el que
-corresponde en ese momento, no se rechaza.
-
-**Ventana de confirmación genérica.** Todo `<form method="post" data-confirm="Título">` del admin abre una
-ventana de Bootstrap con los datos que el usuario escribió (etiqueta y valor de cada campo; para los
-`<select>`, el texto de la opción elegida) y los botones Cancelar / Confirmar; `data-confirm-note` agrega una
-aclaración. El script vive una sola vez en `admin/base.html`, junto con el JavaScript de Bootstrap 5.3.3 del
-mismo CDN que el CSS. Queda fuera solo el login. «Salir» y el cambio de estado del torneo también piden
-confirmación; el del estado avisará además que es irreversible cuando la 0.6.0 prohíba volver atrás; en «Editar atleta», la pantalla que
-ya avisa «Este cambio retira al atleta de…» no abre una segunda ventana. Como los tests no ejecutan
-JavaScript, `tests/test_admin_confirmations.py` revisa en las plantillas que ningún formulario POST nuevo
-olvide el atributo, y el comportamiento de la ventana se verificó a mano en el navegador.
-
-**Un formulario que falla conserva lo escrito.** Cada manejador de creación pasa lo que recibió con
-`echo_form(...)` (`app/web/admin/_shared.py`, convierte `None` en vacío) y la plantilla lo vuelve a poner en
-los campos (`form.<campo>`); en los `<select>` se marca la opción elegida. Es solo de la vista: la API no
-cambia. Es una regla para todo formulario nuevo del admin; los de editar ya lo hacían.
+segundo falla con un error 500 en lugar de un mensaje claro.
 
 **No se agrega corrección de rounds ya cargados.** Era la decisión pendiente del backlog: se resolvió que
-alcanza con el número fijo y la confirmación con los puntos a la vista. Corregir un round obligaría a
+alcanza con el número fijo. Corregir un round obligaría a
 reabrir el combate y a deshacer el avance del ganador, que es el cambio con más riesgo de dejar datos
 inconsistentes; se reabre solo si el uso real lo pide.
 
@@ -528,15 +423,14 @@ retiro), `in_progress` = lista congelada, llaves y resultados, `finished` = resu
 
 **Costos aceptados.** Una vez que el torneo pasa a «en curso» no se puede inscribir a nadie más, ni siquiera en
 una categoría que todavía no tiene llave, y como no se vuelve atrás tampoco hay forma de reabrir las
-inscripciones. Por eso el cambio de estado pide confirmación en el admin avisando que cierra la preparación.
+inscripciones.
 Si hace falta, más adelante se puede agregar «reabrir inscripciones» solo cuando no exista ninguna llave.
 
 **El estado cambia con acciones, no con `PATCH`.** `POST /tournaments/{id}/start` (solo desde `draft`) y
 `POST /tournaments/{id}/finish` (solo desde `in_progress`). Primero se probó un `PATCH {"status": ...}` que solo
 dejaba avanzar, pero «fijar un estado» escondía condiciones previas en un endpoint genérico y permitía saltar de
 `draft` a `finished`, un torneo que nunca se jugó. Con una acción por paso cada una tiene sus condiciones, sus
-errores y su documentación, y el admin muestra un solo botón según el estado («Cerrar inscripciones e iniciar
-torneo», «Finalizar torneo»). No se vuelve atrás: reabrir un torneo con llaves volvería a permitir categorías e
+errores y su documentación. No se vuelve atrás: reabrir un torneo con llaves volvería a permitir categorías e
 inscripciones. Repetir una acción responde 409. `status` salió del `PATCH` (cambio incompatible, aceptado en
 `0.x`), que además rechaza campos desconocidos (422) para que un cliente viejo que mande `status` se entere en
 vez de que se ignore en silencio. Todos los bloqueos de estado responden 409, el mismo código que usa editar un
@@ -551,8 +445,6 @@ torneo. Una categoría sin llave con 0 o 1 inscritos no bloquea el cierre (no ha
 
 **Dónde vive.** `require_tournament_status` y `require_all_matches_played` están en `app/api/lifecycle.py`,
 junto a la API y no en `app/services/`, porque lanzan `HTTPException` (los servicios no dependen de FastAPI).
-En el admin, cuando el torneo ya empezó, los formularios de crear categoría e inscribir se reemplazan por un
-aviso en vez de dejar que fallen.
 
 ## 2026-10-29 — Ciclo de vida del torneo, parte 2: llaves y resultados solo en curso (0.6.0)
 
@@ -571,35 +463,18 @@ sin mirar si tienen llave; como ahora un torneo en borrador nunca tiene llave, e
 **Tests.** `generate_bracket` (`tests/conftest.py`) inicia el torneo si sigue en borrador y sortea la llave,
 para que cada test no repita esa preparación; los tests que ya iniciaban el torneo a mano quedan como estaban.
 
-## 2026-10-29 — Ciclo de vida del torneo, parte 4: vista pública (0.6.0, revisada el 2026-11-02)
+## 2026-11-02 — Lista pública de inscritos en la API (0.6.0)
 
-**Los borradores se muestran, con su lista de inscritos.** Primero se implementó ocultarlos del sitio público
-(404), para que nada se viera antes del sorteo, pero se cambió antes de liberar la versión: mientras las
-inscripciones están abiertas, lo útil para el público es saber quién está inscrito. La página pública de una
-categoría sin llave (en `draft`, o en curso antes del sorteo) muestra una tabla con nombre y club de los
-inscritos; con llave, la llave. **Privacidad:** solo nombre y club, nunca CI, fecha de nacimiento ni peso (hay
-menores; es la misma regla que mantiene `GET /athletes` detrás de token). El sorteo sigue siendo un evento
-público porque las llaves solo se generan con el torneo en curso.
-
-**El club entre paréntesis en las llaves** («Mateo Quispe (Dojang Norte)»), en el sitio público y en el admin,
-sale de `resolve_athlete_names(..., with_club=True)`: la misma consulta en lote, con el club cargado en la misma
-consulta, así no aparece una segunda resolución de nombres. La API sigue devolviendo solo el nombre en
-`athlete_red_name` y compañía; sumar el club a la API queda para cuando el frontend externo lo pida.
-
-**`draft` se muestra como «Inscripciones abiertas».** Solo cambia el texto traducido (`app/web/labels.py`) y la
-prosa de la documentación de la API; el valor `draft` y el identificador del enum no cambian. El nombre describe
-lo que de verdad se puede hacer en ese estado (crear categorías, inscribir y retirar atletas) en vez de sugerir
-que el torneo es un borrador sin publicar.
-
-**La lista de inscritos también en la API (2026-11-02).** Para que el frontend externo pueda mostrar lo mismo que
-el sitio, se agregó `GET /categories/{id}/registrants` (público) y el campo `has_bracket` en `CategoryRead`. Se
-descartó ampliar `GET /bracket` con una bandera `generated` y la lista de inscritos: habría cambiado su contrato
-(hoy responde 404 sin llave, y eso está documentado), habría vuelto opcionales los campos de la llave y mezclaba
-dos recursos. También se descartó que `GET /registrations` respondiera datos recortados sin token: el mismo
-endpoint con dos formas según la autenticación es fácil de romper. El esquema `RegistrantRead` tiene **solo**
-`athlete_id`, `name` y `club`, así que no hay forma de filtrar datos sensibles por error; la consulta vive en
-`app/services/registrants.py` y la comparten la API y la página pública. El costo es una llamada más en la página
-de categoría del frontend; si algún día pesa, se puede sumar un endpoint agregado del detalle de categoría.
+Mientras una categoría no tiene llave, lo útil para el público es saber quién está inscrito. Se agregó
+`GET /categories/{id}/registrants` (público) y el campo `has_bracket` en `CategoryRead`. **Privacidad:** el esquema
+`RegistrantRead` tiene **solo** `athlete_id`, `name` y `club`, nunca CI, fecha de nacimiento ni peso (hay menores; es
+la misma regla que mantiene `GET /athletes` detrás de token), así que no hay forma de filtrar datos sensibles por
+error; la consulta vive en `app/services/registrants.py`. Se descartó ampliar `GET /bracket` con una bandera
+`generated` y la lista de inscritos: habría cambiado su contrato (hoy responde 404 sin llave, y eso está
+documentado), habría vuelto opcionales los campos de la llave y mezclaba dos recursos. También se descartó que
+`GET /registrations` respondiera datos recortados sin token: el mismo endpoint con dos formas según la autenticación
+es fácil de romper. El costo es una llamada más en la página de categoría del frontend; si algún día pesa, se puede
+sumar un endpoint agregado del detalle de categoría.
 
 ## 2026-11-10 — Listados de categorías e inscripciones siempre filtrados
 
@@ -650,3 +525,11 @@ hay datos de demo).
 
 **Un campo que ya no existe se ignora** (no responde `422`): es como se comportaba la API con cualquier campo
 desconocido, y cambiarlo ahora sería otro cambio incompatible sin un pedido real.
+
+## 2026-11-14 — Solo API: se eliminaron las vistas HTML
+
+Hasta la `0.6.0` el proyecto también tenía un panel admin y páginas públicas en HTML (Jinja2, con login por
+sesión). Se eliminaron porque el frontend externo cubre las dos cosas y mantenerlas costaba en cada cambio de la
+API. Si hiciera falta en una emergencia (por ejemplo, operar un torneo sin el frontend), el código está en el tag
+`v0.6.0`: `app/web/`, `app/templates/`, sus routers y el `SessionMiddleware` en `app/main.py`, y las dependencias
+`Jinja2` e `itsdangerous`. Hay que adaptarlo a la API de ese momento (por ejemplo, `grade` en lugar de `belt_rank`).

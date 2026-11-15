@@ -79,8 +79,7 @@ Mostrar el diff y **pedir permiso** antes de `git commit -m "chore: versión X.Y
    ```
 
 3. Después del push, verificar `/health` en
-   https://taekwondo-tournament-manager.onrender.com/health (debe mostrar `X.Y.Z`) y una
-   página pública.
+   https://taekwondo-tournament-manager.onrender.com/health (debe mostrar `X.Y.Z`).
 
 Un tag publicado nunca se mueve, borra ni reescribe: si la versión salió mal, se corrige con
 una versión de parche nueva.

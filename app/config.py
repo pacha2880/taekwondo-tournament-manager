@@ -17,10 +17,6 @@ def secret_key() -> str:
     return os.environ.get("SECRET_KEY", INSECURE_DEFAULTS["SECRET_KEY"])
 
 
-def is_deployed() -> bool:
-    return os.environ.get("APP_ENV") in DEPLOYED_ENVIRONMENTS
-
-
 def cors_origins() -> list[str]:
     return parse_origins(os.environ.get("CORS_ORIGINS", ""))
 
