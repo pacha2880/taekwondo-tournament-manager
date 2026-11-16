@@ -1,16 +1,13 @@
 # Contexto para asistentes de IA
 
-Sistema de torneos de taekwondo (FastAPI): API `/api/v1`, pantalla admin y páginas públicas. El porqué de
+Sistema de torneos de taekwondo: solo una API JSON en FastAPI (`/api/v1`); la interfaz es un frontend externo. El porqué de
 cada decisión no obvia está en `docs/DECISIONS.md`, el roadmap en `docs/BACKLOG.md`, la guía para quien
 consume la API en `docs/API.md`, y la instalación y el versionado en `README.md`. Las reglas de cada área
 están en `.claude/rules/` y se cargan solas al tocar esos archivos.
 
 ## Verificación de cada cambio
 
-1. `.venv/bin/pytest -q` contra SQLite, siempre y con toda la suite.
-2. Si cambió algo visible en pantallas: levantar el server (`uvicorn app.main:app --reload`) y mirarlo.
-
-Nada más en el día a día. Al terminar un sub-paso, seguir el skill `documentar-cambio`.
+`.venv/bin/pytest -q` contra SQLite, siempre y con toda la suite. Nada más en el día a día. Al terminar un sub-paso, seguir el skill `documentar-cambio`.
 
 - Postgres lo corre el CI en el PR `dev` → `main` (job `pytest-postgres`, requerido para mergear). En local
   solo como respaldo de `/release`.
@@ -23,7 +20,7 @@ Nada más en el día a día. Al terminar un sub-paso, seguir el skill `documenta
 - Producción: https://taekwondo-tournament-manager.onrender.com (Render + Neon, Ohio), despliega desde
   `main`. El servicio `dev` de Render despliega la rama `dev` contra una rama `dev` de Neon.
 - Quedan datos de demo en la base de **producción** (club "Club Demo Cochabamba", torneo
-  "Copa Cochabamba DEMO"); el admin no tiene botón de borrar — limpieza solo por SQL desde el
+  "Copa Cochabamba DEMO"); la API no tiene endpoints de borrar — limpieza solo por SQL desde el
   panel de Neon.
 - Un amigo del usuario construye un frontend separado (otra tecnología) contra esta API: la API es un
   producto, con su propia autenticación, CORS y documentación. Un cambio de contrato va al CHANGELOG y a
@@ -39,9 +36,10 @@ Nada más en el día a día. Al terminar un sub-paso, seguir el skill `documenta
 
 ## Idioma
 
-- Texto visible para el usuario en español: páginas, admin, errores de la API y documentación de `/docs`.
-- Identificadores en inglés: rutas, campos y valores de enums (se guardan en inglés a propósito; en
-  plantillas se traducen con `|es_label`). Comentarios de código y mensajes de commit pueden ir en inglés.
+- Texto visible para el usuario en español: errores de la API (`detail` está pensado para que el frontend lo
+  muestre tal cual) y documentación de `/docs`.
+- Identificadores en inglés: rutas, campos y valores de enums. Comentarios de código y mensajes de commit
+  pueden ir en inglés.
 
 ## Reglas de extensibilidad (no romper)
 

@@ -2,7 +2,7 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y versionado
 según [Semantic Versioning](https://semver.org/lang/es/). La versión vive en
-[`app/version.py`](app/version.py) y se muestra en la esquina de cada página y en `/health`.
+[`app/version.py`](app/version.py) y se muestra en `/health`.
 
 Mientras la versión sea `0.y.z` (desarrollo inicial) la API puede cambiar entre versiones
 minor. Dentro de `0.x`, las migraciones de base de datos solo agregan (columnas nuevas
@@ -10,6 +10,24 @@ opcionales; nunca borrar ni renombrar), para que volver al tag de una versión a
 funcionando sobre una base ya migrada.
 
 ## [Unreleased]
+
+## [0.7.0] - 2026-11-15
+
+### Removed
+- **Solo queda la API:** se eliminaron el panel admin y las páginas públicas en HTML (y su login por sesión).
+  La interfaz es el frontend externo. `/` redirige a `/docs`. La API no cambia.
+
+### Changed
+- **Incompatible — importante para quien use la API:** los atletas tienen un **grado** fijo (`grade`: `kup_10` …
+  `kup_1` y `dan`) en lugar del cinturón en texto libre. `POST /api/v1/athletes` exige `grade` (sin él, o con un
+  valor que no está en la lista, responde `422`); `PATCH` lo acepta para cambiarlo. `belt_rank` deja de existir en
+  la API: ya no se devuelve, y si se envía se ignora. A los atletas que ya existían se les asignó un grado al azar.
+
+### Fixed
+- **CORS permite `DELETE`:** desde el navegador, un frontend en otro dominio no podía retirar inscripciones
+  (`DELETE /api/v1/registrations/{id}`, agregado en la 0.6.0): el navegador bloqueaba la llamada.
+- `GET /api/v1/categories` y `GET /api/v1/registrations` devuelven siempre el mismo orden (el de creación). Antes
+  no tenían orden y en Postgres podía cambiar entre una llamada y otra.
 
 ## [0.6.0] - 2026-11-12
 
@@ -183,7 +201,8 @@ https://taekwondo-tournament-manager.onrender.com.
 - `pool_pre_ping=True` en la conexión a la base de datos: Neon suspende el cómputo por
   inactividad y la primera conexión tras un rato inactivo pudo fallar con un error 500.
 
-[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.3.0...v0.4.0

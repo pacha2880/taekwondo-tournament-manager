@@ -1,12 +1,11 @@
 ---
 name: documentar-cambio
-description: Checklist al terminar un sub-paso de código (feature, fix, cambio de API o de pantallas) — verificar y actualizar CHANGELOG, docs/API.md, DECISIONS, BACKLOG y, solo si corresponde, CLAUDE.md. Usar antes de dar un cambio por terminado.
+description: Checklist al terminar un sub-paso de código (feature, fix, cambio de API) — verificar y actualizar CHANGELOG, docs/API.md, DECISIONS, BACKLOG y, solo si corresponde, CLAUDE.md. Usar antes de dar un cambio por terminado.
 ---
 
 # Cerrar un sub-paso
 
-1. **Verificar**: `.venv/bin/pytest -q` (SQLite, toda la suite). Si cambió algo visible en pantallas,
-   levantar el server (`uvicorn app.main:app --reload`) y mirarlo. Postgres no: lo corre el CI del PR.
+1. **Verificar**: `.venv/bin/pytest -q` (SQLite, toda la suite). Postgres no: lo corre el CI del PR.
 2. **Documentar** solo lo que aplique:
    - `CHANGELOG.md`, `[Unreleased]`: una línea por cambio visible para usuarios de la app o de la API.
      El CI, las docs internas y la configuración de Claude no cuentan.

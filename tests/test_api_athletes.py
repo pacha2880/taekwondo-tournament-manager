@@ -9,7 +9,7 @@ def test_create_athlete_requires_existing_club(client):
             "ci": "5555555",
             "birth_date": "2010-01-01",
             "gender": "female",
-            "belt_rank": "amarillo",
+            "grade": "kup_8",
             "weight_kg": 35,
             "club_id": 999,
         },
@@ -32,7 +32,7 @@ def _athlete_payload(club, **overrides):
         "ci": "7654321",
         "birth_date": "2011-02-03",
         "gender": "female",
-        "belt_rank": "azul",
+        "grade": "kup_4",
         "weight_kg": 36,
         "club_id": club["id"],
     }
@@ -232,11 +232,11 @@ def test_other_fields_can_still_be_edited_while_the_tournament_is_in_progress(
 
     resp = client.patch(
         f"/api/v1/athletes/{athlete['id']}",
-        json={"name": "Juan P.", "belt_rank": "azul", "weight_kg": athlete["weight_kg"], "gender": "male"},
+        json={"name": "Juan P.", "grade": "kup_4", "weight_kg": athlete["weight_kg"], "gender": "male"},
     )
 
     assert resp.status_code == 200
-    assert resp.json()["belt_rank"] == "azul"
+    assert resp.json()["grade"] == "kup_4"
 
 
 def test_update_is_allowed_after_the_tournament_finished_and_keeps_the_registration(
@@ -329,3 +329,48 @@ def test_search_without_matches_returns_an_empty_list(client, searchable_athlete
 def test_athletes_without_ci_are_found_by_name_but_never_by_none(client, searchable_athletes):
     assert _search(client, "quispe") == ["María Quispe"]
     assert _search(client, "none") == []
+
+
+def test_grade_is_required_to_create_an_athlete(client, club):
+    payload = _athlete_payload(club)
+    del payload["grade"]
+
+    resp = client.post("/api/v1/athletes", json=payload)
+
+    assert resp.status_code == 422
+    assert resp.json()["detail"][0]["loc"] == ["body", "grade"]
+
+
+def test_grade_only_accepts_the_fixed_values(client, club):
+    resp = client.post("/api/v1/athletes", json=_athlete_payload(club, grade="verde"))
+
+    assert resp.status_code == 422
+
+
+def test_belt_rank_is_no_longer_part_of_the_api(client, club):
+    created = client.post("/api/v1/athletes", json=_athlete_payload(club, belt_rank="verde"))
+    updated = client.patch(f"/api/v1/athletes/{created.json()['id']}", json={"belt_rank": "azul"})
+
+    assert created.status_code == 201
+    assert updated.status_code == 200
+    assert "belt_rank" not in created.json()
+    assert "belt_rank" not in updated.json()
+
+
+def test_grade_can_be_edited(client, athlete):
+    resp = client.patch(f"/api/v1/athletes/{athlete['id']}", json={"grade": "dan"})
+
+    assert resp.status_code == 200
+    assert resp.json()["grade"] == "dan"
+
+
+def test_the_legacy_belt_rank_column_follows_the_grade(client, athlete):
+    # La columna belt_rank sigue en la base hasta la 1.0.0 para poder volver a la 0.6.0 (que la lee).
+    from app.database import get_db
+    from app.main import app
+    from app.models import Athlete
+
+    client.patch(f"/api/v1/athletes/{athlete['id']}", json={"grade": "kup_1"})
+
+    db = next(app.dependency_overrides[get_db]())
+    assert db.get(Athlete, athlete["id"]).belt_rank == "kup_1"

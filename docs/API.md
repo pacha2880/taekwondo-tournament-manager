@@ -102,9 +102,8 @@ paso):
   categorías pendientes.
 
 Las lecturas públicas (`GET /tournaments`, `GET /categories`…) devuelven torneos en cualquier estado,
-incluidos los `draft`. El sitio público del proyecto también los muestra: mientras una categoría no tiene
-llave, su página lista a los inscritos (solo nombre y club). Desde la API se arma lo mismo con `has_bracket`
-y `/registrants` (ver «Recorrer los datos»).
+incluidos los `draft`. Mientras una categoría no tiene llave, lo que se muestra al público es la lista de
+inscritos: con `has_bracket` y `/registrants` (ver «Recorrer los datos»).
 
 ## Errores
 
@@ -124,7 +123,7 @@ códigos que puede devolver.
 
 ## Valores de los enums
 
-Viajan en inglés; para mostrarlos al usuario, esta es la traducción que usa la web del proyecto:
+Viajan en inglés; para mostrarlos al usuario, esta es la traducción sugerida:
 
 | Campo | Valor | Se muestra como |
 |---|---|---|
@@ -132,6 +131,7 @@ Viajan en inglés; para mostrarlos al usuario, esta es la traducción que usa la
 | `status` de un combate | `pending` / `bye` / `finished` | Pendiente / Pase directo / Finalizado |
 | `gender` | `male` / `female` | Masculino / Femenino |
 | `belt_group` | `color` / `black` | Cinturón de color / Cinturón negro |
+| `grade` de un atleta | `kup_10` … `kup_1` / `dan` | 10mo Kup … 1er Kup / Dan |
 | `discipline` | `sparring` | Combate |
 
 ## Ejemplo de flujo con `curl`
@@ -158,7 +158,7 @@ curl -s -X POST $BASE/api/v1/categories -H "$AUTH" -H "$JSON" \
 # 3) Atletas e inscripciones (repetir por cada atleta; la llave necesita al menos 2)
 curl -s -X POST $BASE/api/v1/athletes -H "$AUTH" -H "$JSON" \
   -d '{"name": "Mateo Quispe", "ci": "1234567", "birth_date": "2012-03-14", "gender": "male",
-       "belt_rank": "verde", "weight_kg": 38.5, "club_id": 1}'
+       "grade": "kup_6", "weight_kg": 38.5, "club_id": 1}'
 curl -s -X POST $BASE/api/v1/registrations -H "$AUTH" -H "$JSON" -d '{"athlete_id": 1, "category_id": 1}'
 
 # 4) Generar la llave y consultarla (la consulta es pública)

@@ -22,7 +22,7 @@ def _operations(schema):
 def test_only_the_api_and_health_are_documented(schema):
     unexpected = [path for path in schema["paths"] if not path.startswith("/api/v1") and path != "/health"]
 
-    assert unexpected == [], "las páginas HTML no deben aparecer en /docs"
+    assert unexpected == [], "en /docs solo aparecen la API y /health"
 
 
 def test_every_operation_has_a_summary_and_a_description(schema):

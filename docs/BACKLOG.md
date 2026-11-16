@@ -11,9 +11,8 @@ Lo aceptado y ordenado en versiones. Las versiones ya liberadas están en [`CHAN
 - **[`DECISIONS.md`](DECISIONS.md):** el porqué de cada decisión técnica.
 
 Reglas de cada versión: `pytest` en verde (SQLite en local; Postgres lo corre el CI del PR); migraciones solo
-aditivas; los cambios incompatibles de la API se juntan en la versión y se le avisan al frontend externo antes del
-merge. **Solo API:** el admin y las páginas públicas en HTML quedan congelados; las funciones nuevas las muestra el
-frontend externo.
+aditivas; los cambios incompatibles de la API se juntan en la versión, y cada cambio de la API se le avisa al frontend externo
+en Notion apenas llega a `dev` (después del push; ver la skill `commit`). **Solo API:** la interfaz es el frontend externo.
 
 ## Ciclo de vida objetivo del torneo
 
@@ -39,8 +38,8 @@ Terminada en `dev`; falta liberarla. Detalle en el `CHANGELOG.md`.
 
 Va primero porque la inscripción pública (0.10.0) necesita saber en qué categorías encaja cada atleta.
 
-- [ ] **Grado del atleta** como valor fijo: 10mo Kup … 1er Kup y Dan. Reemplaza el `belt_rank` de texto libre
-      (la columna vieja se conserva). [Notion](https://app.notion.com/p/415fae3be03b8102b61fea28aee098df)
+- [x] **Grado del atleta** como valor fijo: 10mo Kup … 1er Kup y Dan. Reemplaza el `belt_rank` de texto libre
+      (la columna vieja se conserva hasta la 1.0.0). [Notion](https://app.notion.com/p/415fae3be03b8102b61fea28aee098df)
 - [ ] **Grupos de grado por torneo**, con rangos editables (hoy Principiantes 10mo–6to Kup, Novatos 5to–2do,
       Avanzados 1er Kup y Dan). Reemplazan a `BeltGroup` (color/negro) en la categoría.
 - [ ] **Plantillas de categorías editables**: edades, grupos de grado y divisiones de peso por edad y género. Al
@@ -83,8 +82,8 @@ Cambia el comportamiento de la API: va marcado como incompatible en el CHANGELOG
       ocultarla se acuerda antes con Kike. Se sale solo por la fecha límite, hacia Pesaje. Falta decidir si el
       admin puede seguir yendo directo a En curso con `POST .../start`.
 - [ ] **Migración de los torneos en `draft`**: pasan a `registration_open`, para que los que ya existen (también el
-      torneo demo de producción) sigan visibles y aceptando inscripciones. Las reglas de `app/api/lifecycle.py` y los
-      textos de `es_label` pasan de `draft` a `registration_open`.
+      torneo demo de producción) sigan visibles y aceptando inscripciones. Las reglas de `app/api/lifecycle.py` pasan de
+      `draft` a `registration_open`.
 - [ ] **Fecha límite de inscripción** (guardada en UTC, mostrada en hora de Bolivia). Pasada la fecha, el torneo
       queda en Pesaje solo. El estado se calcula al consultarlo con una función pura del torneo y la hora; leer no
       escribe en la base, y no hace falta un cron.
@@ -123,6 +122,10 @@ Al final, cuando todo el ciclo funcione con kyorugi.
       [Notion](https://app.notion.com/p/415fae3be03b81a9b769d4ac7a91532d)
 - [ ] **Inscribirse en kyorugi y en poomsae** del mismo torneo: la regla «un atleta, una categoría por torneo» pasa
       a ser por modalidad.
+
+## 1.0.0
+
+- [ ] Borrar la columna `athletes.belt_rank` (reemplazada por `grade` en la 0.7.0; ver `DECISIONS.md`, 2026-11-13).
 
 ## Más adelante / sin versión
 

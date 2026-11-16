@@ -31,11 +31,6 @@ def _ensure_ci_is_free(db: Session, ci: str | None, athlete_id: int | None = Non
         raise HTTPException(status_code=409, detail="Ya existe un atleta con ese CI")
 
 
-class WithdrawalNotConfirmed(HTTPException):
-    def __init__(self, detail: str):
-        super().__init__(status_code=409, detail=detail)
-
-
 def _withdraw_registrations_that_no_longer_fit(db: Session, athlete: Athlete, changes: dict, confirmed: bool):
     gender = changes.get("gender", athlete.gender)
     weight_kg = changes.get("weight_kg", athlete.weight_kg)
@@ -65,7 +60,10 @@ def _withdraw_registrations_that_no_longer_fit(db: Session, athlete: Athlete, ch
         names = ", ".join(
             f"{r.category.age_label} {r.category.weight_label} ({r.category.tournament.name})" for r in no_longer_fit
         )
-        raise WithdrawalNotConfirmed(f"Este cambio retira al atleta de: {names}. Hay que confirmar el retiro para continuar")
+        raise HTTPException(
+            status_code=409,
+            detail=f"Este cambio retira al atleta de: {names}. Hay que confirmar el retiro para continuar",
+        )
     for registration in no_longer_fit:
         db.delete(registration)
 

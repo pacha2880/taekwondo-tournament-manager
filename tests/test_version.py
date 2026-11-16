@@ -26,6 +26,8 @@ def test_health_reports_version(client):
     assert resp.json() == {"status": "ok", "version": __version__}
 
 
-def test_version_is_shown_on_public_and_admin_pages(client):
-    for path in ("/", "/admin/login"):
-        assert f"v{__version__}" in client.get(path).text
+def test_root_redirects_to_the_api_docs(client):
+    resp = client.get("/", follow_redirects=False)
+
+    assert resp.status_code == 307
+    assert resp.headers["location"] == "/docs"

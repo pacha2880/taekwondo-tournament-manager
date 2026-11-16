@@ -3,8 +3,8 @@
 Sistema de gestión de torneos de taekwondo: inscripción de atletas, generación aleatoria de
 llaves (con byes cuando el número de inscritos no es potencia de 2), categorías por edad,
 género, cinturón (colores desde amarillo, y negro con su propia categoría absoluta) y peso,
-carga de resultados de combate por round/puntaje, y dos pantallas: una pública de solo
-lectura y una de administración.
+carga de resultados de combate por round/puntaje. Es solo una API JSON: la interfaz es un
+frontend externo.
 
 Pensado para poder extenderse más adelante a otras disciplinas (formas/poomsae,
 rompimiento) sin rehacer lo ya construido — ver [`docs/DECISIONS.md`](docs/DECISIONS.md).
@@ -12,7 +12,6 @@ rompimiento) sin rehacer lo ya construido — ver [`docs/DECISIONS.md`](docs/DEC
 ## Stack
 
 - Python 3.10+, FastAPI, SQLAlchemy 2.0 + Alembic, Pydantic v2
-- Jinja2 (server-side rendering, sin frontend separado)
 - SQLite en desarrollo, PostgreSQL en producción (mismo código, cambia `DATABASE_URL`)
 - pytest + httpx para tests
 - Docker + docker-compose (a partir de la fase 7) para Postgres local y paridad con producción
@@ -40,10 +39,10 @@ local, ver la sección Docker más abajo.
 docker compose up --build
 ```
 
-Levanta dos servicios: `db` (Postgres 16) y `app` (la API/web, corriendo las migraciones de
+Levanta dos servicios: `db` (Postgres 16) y `app` (la API, corriendo las migraciones de
 Alembic automáticamente al arrancar — ver `docker-entrypoint.sh`). Queda en
 `http://localhost:8000`, igual que en local. Credenciales de ejemplo en `docker-compose.yml`
-(`taekwondo`/`taekwondo` para la DB, `admin`/`admin` para el panel admin) — son solo para
+(`taekwondo`/`taekwondo` para la DB, `admin`/`admin` para el login de la API) — son solo para
 desarrollo local, no usar en producción.
 
 Para correr los tests contra esta Postgres en vez de SQLite (con los contenedores arriba). La suite
@@ -72,7 +71,7 @@ repo; las migraciones corren solas al arrancar). Variables de entorno en Render:
 |---|---|
 | `DATABASE_URL` | connection string **directo** de Neon (host sin `-pooler`); se acepta con el prefijo `postgresql://` que entrega Neon, la app lo convierte a `postgresql+psycopg://` |
 | `SECRET_KEY` | string largo y aleatorio |
-| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | credenciales del panel admin |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | credenciales del administrador (login de la API) |
 | `APP_ENV` | `production` — la app se niega a arrancar si `SECRET_KEY` o `ADMIN_PASSWORD` quedaron con el valor por defecto, o si `CORS_ORIGINS` contiene `*`. `staging` exige las mismas credenciales pero sí permite `CORS_ORIGINS=*` (para el servicio `dev`, que prueba contra frontends externos) |
 | `CORS_ORIGINS` | (opcional) orígenes de los frontends autorizados a llamar a la API desde el navegador, separados por comas; sin definir no se permite ninguno |
 
@@ -84,7 +83,7 @@ y la primera visita siguiente tarda ~30-50 s.
 ## Versionado
 
 Sigue [Semantic Versioning](https://semver.org/lang/es/). La versión vive en
-[`app/version.py`](app/version.py), se muestra en la esquina de cada página y en `/health`
+[`app/version.py`](app/version.py), se muestra en `/health`
 (sirve para saber qué versión corre en producción), y cada cambio se documenta en
 [`CHANGELOG.md`](CHANGELOG.md). Mientras sea `0.y.z` la API puede cambiar entre versiones minor.
 
@@ -113,18 +112,10 @@ el merge.
    despliega solo al llegar a `main`.
 5. Crear el tag anotado **sobre `main`, ya mergeado** (no sobre `dev`):
    `git checkout main && git pull && git tag -a v0.2.0 -m "0.2.0" && git push origin v0.2.0`.
-6. Verificar `/health` (debe mostrar la versión nueva) y una página pública.
+6. Verificar `/health` (debe mostrar la versión nueva).
 
 Para volver a una versión anterior: `git checkout v0.1.0` (o redeploy de ese commit desde
 Render). Es seguro porque, dentro de `0.x`, las migraciones solo agregan columnas opcionales.
-
-## Pantallas
-
-- **Pública** (sin login): `http://localhost:8000/` — lista de torneos, categorías y llaves.
-- **Admin**: `http://localhost:8000/admin` — pide login. Usuario/contraseña salen de las
-  variables de entorno `ADMIN_USERNAME`/`ADMIN_PASSWORD` (ver [`.env.example`](.env.example));
-  si no se configuran, el valor por defecto es `admin`/`admin`. Cambiá `SECRET_KEY` también
-  antes de desplegar — firma la cookie de sesión.
 
 ## Tests
 
@@ -137,7 +128,8 @@ pytest -v
 Las lecturas de torneos, categorías, clubes, llaves y combates son **públicas**. Todo lo que
 escribe (`POST`/`PATCH`) y las lecturas de **atletas e inscripciones** (llevan fecha de
 nacimiento y peso, y hay menores) exigen un token. Se obtiene con el mismo usuario y clave del
-admin y dura 8 horas, sin renovación automática:
+admin (variables `ADMIN_USERNAME`/`ADMIN_PASSWORD`, ver [`.env.example`](.env.example); por
+defecto `admin`/`admin`) y dura 8 horas, sin renovación automática. `SECRET_KEY` firma los tokens:
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/auth/login -d "username=admin&password=admin"
@@ -147,7 +139,7 @@ Responde `{"access_token": "...", "token_type": "bearer", "expires_in": 28800}`.
 manda en cada petición protegida como `Authorization: Bearer <access_token>`. Sin token (o con
 uno inválido o vencido) la API responde `401`. En Swagger (`/docs`) el botón **Authorize**
 hace el login por vos. Si el token se filtra, el "botón de pánico" es cambiar `SECRET_KEY`:
-invalida todos los tokens (y también cierra la sesión del admin web).
+invalida todos los tokens.
 
 ## Documentación de la API
 
@@ -173,9 +165,6 @@ endpoints a mano, además de los tests automáticos:
 - [x] Fase 2 — CRUD base vía API
 - [x] Fase 3 — Generación de llaves
 - [x] Fase 4 — Carga de resultados y propagación de ganador
-- [x] Fase 5 — Pantalla pública
-- [x] Fase 5.5 — Traducción de enums al español + guardrail para futuras plantillas
-- [x] Fase 6 — Pantalla admin
 - [x] Fase 7 — Docker + docker-compose (Postgres local)
 - [x] Fase 8 — Despliegue (Neon + Render) — en producción: https://taekwondo-tournament-manager.onrender.com
 - [ ] Fase 9 — Mejoras post-deploy (backlog abierto en [`docs/BACKLOG.md`](docs/BACKLOG.md))
