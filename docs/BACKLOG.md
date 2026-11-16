@@ -4,7 +4,7 @@ Lo aceptado y ordenado en versiones. Las versiones ya liberadas están en [`CHAN
 
 ## Cómo se usa
 
-- **Notion, [Cambios posibles](https://app.notion.com/p/542c165c4b604d2aa3901cd55d86d24c):** pedidos del cliente e
+- **Notion, [Pedidos e ideas](https://app.notion.com/p/542c165c4b604d2aa3901cd55d86d24c):** pedidos del cliente e
   ideas por decidir, con el texto original de cada reunión. Lo leen el cliente y el equipo del frontend.
 - **Este archivo:** solo lo aceptado, en versiones y con el detalle técnico. Cada ítem enlaza a su fila de Notion;
   la fila pasa a «Aceptado» y anota la versión. El texto no se copia de un lado al otro.
@@ -20,26 +20,12 @@ en Notion apenas llega a `dev` (después del push; ver la skill `commit`). **Sol
 se cierran solas en la fecha límite) → **Pesaje** (la lista de inscritos se hace pública) → **En curso** (todas las
 llaves juntas) → **Finalizado**.
 
-La 0.6.0 deja tres de esos estados (inscripciones abiertas, en curso, finalizado); la 0.9.0 agrega los otros dos.
+La 0.6.0 deja tres de esos estados (inscripciones abiertas, en curso, finalizado); la 0.10.0 agrega los otros dos.
 
-## 0.6.0 — Ciclo de vida del torneo
+## 0.8.0 — Grupos de grado y categorías
 
-Terminada en `dev`; falta liberarla. Detalle en el `CHANGELOG.md`.
+Va primero porque la inscripción pública (0.11.0) necesita saber en qué categorías encaja cada atleta.
 
-- [x] El estado cambia con `POST /tournaments/{id}/start` y `/finish`, y no vuelve atrás.
-- [x] Categorías e inscripciones solo con inscripciones abiertas; llaves y resultados solo en curso.
-- [x] Retirar a un atleta de una categoría mientras las inscripciones están abiertas.
-- [x] Lista pública de inscritos (nombre y club), club en las llaves y la etiqueta «Inscripciones abiertas».
-- [x] **Rounds sin duplicados:** `POST /matches/{id}/rounds` exige `round_number`, que tiene que ser el siguiente;
-      si no, `409` sin guardar nada. Un reenvío del celular (la respuesta se perdió por mala señal) ya no queda
-      guardado como el round siguiente cerrando el combate con un ganador equivocado. Sin migración.
-
-## 0.7.0 — Grados y categorías
-
-Va primero porque la inscripción pública (0.10.0) necesita saber en qué categorías encaja cada atleta.
-
-- [x] **Grado del atleta** como valor fijo: 10mo Kup … 1er Kup y Dan. Reemplaza el `belt_rank` de texto libre
-      (la columna vieja se conserva hasta la 1.0.0). [Notion](https://app.notion.com/p/415fae3be03b8102b61fea28aee098df)
 - [ ] **Grupos de grado por torneo**, con rangos editables (hoy Principiantes 10mo–6to Kup, Novatos 5to–2do,
       Avanzados 1er Kup y Dan). Reemplazan a `BeltGroup` (color/negro) en la categoría.
 - [ ] **Plantillas de categorías editables**: edades, grupos de grado y divisiones de peso por edad y género. Al
@@ -54,9 +40,9 @@ Va primero porque la inscripción pública (0.10.0) necesita saber en qué categ
       [#78](https://github.com/ArtesanoWeb/taekwondo-tournament-web/issues/78) del frontend).
       [Notion](https://app.notion.com/p/415fae3be03b81f5addfe9ad07cec61a)
 - [ ] **Categorías en las que encaja un atleta**, la consulta inversa y con la misma regla: la usa la inscripción
-      pública de la 0.10.0.
+      pública de la 0.11.0.
 
-## 0.8.0 — Campeones y ranking
+## 0.9.0 — Campeones y ranking
 
 - [ ] Categoría con un solo inscrito: ese atleta es campeón sin pelea, sin llave ni combate artificial.
 - [ ] Al iniciar el torneo, tabla aparte con las categorías de un solo inscrito.
@@ -67,7 +53,7 @@ Va primero porque la inscripción pública (0.10.0) necesita saber en qué categ
 - [ ] Ranking de clubes: oro 7, plata 3, bronce 1 y categoría sin pelea 1, configurable por torneo.
       [Notion](https://app.notion.com/p/415fae3be03b817fb311feac5e158ed2)
 
-## 0.9.0 — Ciclo nuevo y pesaje
+## 0.10.0 — Ciclo nuevo y pesaje
 
 Cambia el comportamiento de la API: va marcado como incompatible en el CHANGELOG.
 
@@ -99,7 +85,7 @@ Cambia el comportamiento de la API: va marcado como incompatible en el CHANGELOG
 - [ ] **Festival (hasta 9 años)**: categoría sin llave ni división de peso; se muestra como lista con nombre y
       club. [Notion](https://app.notion.com/p/415fae3be03b81909a7ee26f2cd969c4)
 
-## 0.10.0 — Cuentas e inscripción pública
+## 0.11.0 — Cuentas e inscripción pública
 
 Por etapas: el login actual del admin sigue funcionando hasta que Firebase esté probado.
 
@@ -107,13 +93,13 @@ Por etapas: el login actual del admin sigue funcionando hasta que Firebase esté
       guardan en nuestra base. [Notion](https://app.notion.com/p/415fae3be03b818d925eff564e07b1e8)
 - [ ] **Una cuenta maneja uno o varios atletas**: normalmente el propio; a veces un tutor maneja los de sus hijos.
 - [ ] **Inscripción pública**: con inscripciones abiertas, la cuenta elige entre las categorías en las que el
-      atleta encaja (0.7.0). Queda inscrito al enviarla; el admin puede retirarlo mientras sigan abiertas.
+      atleta encaja (0.8.0). Queda inscrito al enviarla; el admin puede retirarlo mientras sigan abiertas.
 - [ ] **Club de una lista**: el competidor elige entre los clubes existentes; si el suyo falta, lo crea el admin.
 - [ ] **Foto de perfil** en Cloudflare R2: la base guarda solo la clave del archivo, el frontend la sube con una
       URL firmada, y la ven solo la cuenta y el admin. [Notion](https://app.notion.com/p/415fae3be03b81f9aca6fe1b1d8f62f8)
 - [ ] **El admin pasa a Firebase** y se retira el login propio.
 
-## 0.11.0 — Poomsae y las dos modalidades
+## 0.12.0 — Poomsae y las dos modalidades
 
 Al final, cuando todo el ciclo funcione con kyorugi.
 
@@ -145,7 +131,7 @@ Al final, cuando todo el ciclo funcione con kyorugi.
 - [ ] Fotos del torneo (sin definir). [Notion](https://app.notion.com/p/415fae3be03b81a085b8d1443e8cbcfd)
 - [ ] Link al sitio del club organizador (ej. `keumgangdelfines.com`, configurable) en la vista pública.
 - [ ] Adjuntar un PDF a la inscripción (el formulario del WordPress lo pide para Festival y poomsae). Se reevalúa
-      con la 0.10.0, que ya trae almacenamiento de archivos.
+      con la 0.11.0, que ya trae almacenamiento de archivos.
 - [ ] Evitar atletas duplicados sin CI (niños) creados dos veces: el CI único de la 0.4.0 solo cubre a quien lo
       informa.
 - [ ] Endpoint que junte la página de detalle de categoría (categoría, inscritos y llave en un request), si el
