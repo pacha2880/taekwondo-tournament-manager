@@ -49,6 +49,13 @@ Va primero porque la inscripción pública (0.11.0) necesita saber en qué categ
 - [ ] **Categorías en las que encaja un atleta**, la consulta inversa y con la misma regla: la usa la inscripción
       pública de la 0.11.0.
 
+## 0.8.1 — Valores fuera de rango: 422, no 500
+
+- [ ] **Largo y rango de cada campo de entrada**, como ya tiene la estructura: los `str` sin `max_length` (nombres
+      de club, atleta y torneo, `location`, `age_label`, `weight_label`) y los `int` sin rango (edades,
+      `rounds_to_win`, los `*_id`) pasan en SQLite pero Postgres los rechaza al guardar o al buscar, y la API
+      responde `500` en vez de `422`. El límite sale de la columna de `app/models.py`.
+
 ## 0.9.0 — Ciclo nuevo y pesaje
 
 Cambia el comportamiento de la API: va marcado como incompatible en el CHANGELOG.
