@@ -151,6 +151,9 @@ En los `422` de formato (campo faltante, tipo incorrecto), `detail` no es un tex
 el formato estándar de FastAPI (`loc`, `msg`, `type` por cada error). Cada endpoint de `/docs` lista los
 códigos que puede devolver.
 
+Cada texto tiene un largo máximo, que `/docs` muestra como `maxLength` (por ejemplo 120 para el nombre de un club o
+atleta y 150 para el nombre de un torneo): conviene usarlo como `maxlength` del input. Pasarse responde `422`.
+
 ## Valores de los enums
 
 Viajan en inglés; para mostrarlos al usuario, esta es la traducción sugerida:

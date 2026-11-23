@@ -51,10 +51,12 @@ Va primero porque la inscripción pública (0.11.0) necesita saber en qué categ
 
 ## 0.8.1 — Valores fuera de rango: 422, no 500
 
-- [ ] **Largo y rango de cada campo de entrada**, como ya tiene la estructura: los `str` sin `max_length` (nombres
+- [x] **Largo y rango de cada campo de entrada**, como ya tiene la estructura: los `str` sin `max_length` (nombres
       de club, atleta y torneo, `location`, `age_label`, `weight_label`) y los `int` sin rango (edades,
-      `rounds_to_win`, los `*_id`) pasan en SQLite pero Postgres los rechaza al guardar o al buscar, y la API
-      responde `500` en vez de `422`. El límite sale de la columna de `app/models.py`.
+      `rounds_to_win`, los `*_id` del body) pasan en SQLite pero Postgres los rechaza al guardar o al buscar, y la
+      API responde `500` en vez de `422`. El límite sale de la columna de `app/models.py`.
+- [ ] **Ids de la ruta y de los filtros** (`/clubs/{club_id}`, `?tournament_id=`…): un id mayor que `int4` también
+      da `500` en Postgres en vez de `404`. Falta ponerles tope.
 
 ## 0.9.0 — Ciclo nuevo y pesaje
 

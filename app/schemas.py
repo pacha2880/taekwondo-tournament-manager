@@ -11,6 +11,12 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validat
 from app.models import BeltGroup, Discipline, Gender, Grade, MatchStatus, TournamentStatus
 
 
+# Postgres `Integer` (int4). SQLite doesn't enforce it, so a bigger number passed the tests and was a 500 in Postgres.
+INT4_MAX = 2_147_483_647
+Int4 = Annotated[int, Field(ge=-INT4_MAX - 1, le=INT4_MAX)]
+Int4Id = Annotated[int, Field(ge=1, le=INT4_MAX)]
+
+
 class ErrorResponse(BaseModel):
     detail: str = Field(description="Mensaje del error, en español.", examples=["Club no encontrado"])
 
@@ -22,7 +28,7 @@ class TokenResponse(BaseModel):
 
 
 class ClubBase(BaseModel):
-    name: str = Field(description="Nombre del club. No puede repetirse.", examples=["Dojang Central"])
+    name: str = Field(max_length=120, description="Nombre del club. No puede repetirse.", examples=["Dojang Central"])
 
 
 class ClubCreate(ClubBase):
@@ -30,7 +36,9 @@ class ClubCreate(ClubBase):
 
 
 class ClubUpdate(BaseModel):
-    name: str | None = Field(default=None, description="Nuevo nombre. No puede repetirse. Si no se envía, no cambia.")
+    name: str | None = Field(
+        default=None, max_length=120, description="Nuevo nombre. No puede repetirse. Si no se envía, no cambia."
+    )
 
 
 class ClubRead(ClubBase):
@@ -69,7 +77,7 @@ WeightKg = Annotated[float, AfterValidator(check_one_decimal)]
 
 
 class AthleteBase(BaseModel):
-    name: str = Field(description="Nombre completo del atleta.", examples=["Mateo Quispe Mamani"])
+    name: str = Field(max_length=120, description="Nombre completo del atleta.", examples=["Mateo Quispe Mamani"])
     ci: NormalizedCi = Field(
         default=None,
         description=(
@@ -84,7 +92,7 @@ class AthleteBase(BaseModel):
     gender: Gender = Field(description="Género del atleta. Debe coincidir con el de la categoría en que se inscribe.")
     grade: Grade = Field(description="Grado del atleta.", examples=["kup_6"])
     weight_kg: float = Field(description="Peso en kilogramos, con un decimal como máximo.", examples=[38.5])
-    club_id: int = Field(description="Id del club al que pertenece. El club debe existir.")
+    club_id: Int4Id = Field(description="Id del club al que pertenece. El club debe existir.")
 
 
 class AthleteCreate(AthleteBase):
@@ -95,7 +103,7 @@ class AthleteCreate(AthleteBase):
 
 
 class AthleteUpdate(BaseModel):
-    name: str | None = Field(default=None, description="Nuevo nombre. Si no se envía, no cambia.")
+    name: str | None = Field(default=None, max_length=120, description="Nuevo nombre. Si no se envía, no cambia.")
     ci: NormalizedCi = Field(
         default=None,
         description=(
@@ -116,7 +124,7 @@ class AthleteUpdate(BaseModel):
         default=None,
         description="Nuevo peso en kilogramos, con un decimal como máximo. Si no se envía, no cambia. Ver las reglas con inscripciones en la operación.",
     )
-    club_id: int | None = Field(
+    club_id: Int4Id | None = Field(
         default=None, description="Id del nuevo club, que debe existir. Si no se envía, no cambia."
     )
 
@@ -129,9 +137,9 @@ class AthleteRead(AthleteBase):
 
 
 class TournamentBase(BaseModel):
-    name: str = Field(description="Nombre del torneo.", examples=["Copa Cochabamba"])
+    name: str = Field(max_length=150, description="Nombre del torneo.", examples=["Copa Cochabamba"])
     date: datetime.date = Field(description="Fecha del torneo (`YYYY-MM-DD`).", examples=["2026-11-15"])
-    location: str = Field(description="Lugar donde se realiza.", examples=["Cochabamba, Bolivia"])
+    location: str = Field(max_length=150, description="Lugar donde se realiza.", examples=["Cochabamba, Bolivia"])
 
 
 class TournamentCreate(TournamentBase):
@@ -141,9 +149,9 @@ class TournamentCreate(TournamentBase):
 class TournamentUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    name: str | None = Field(default=None, description="Nuevo nombre. Si no se envía, no cambia.")
+    name: str | None = Field(default=None, max_length=150, description="Nuevo nombre. Si no se envía, no cambia.")
     date: datetime.date | None = Field(default=None, description="Nueva fecha (`YYYY-MM-DD`). Si no se envía, no cambia.")
-    location: str | None = Field(default=None, description="Nuevo lugar. Si no se envía, no cambia.")
+    location: str | None = Field(default=None, max_length=150, description="Nuevo lugar. Si no se envía, no cambia.")
 
 
 class TournamentRead(TournamentBase):
@@ -154,19 +162,20 @@ class TournamentRead(TournamentBase):
 
 
 class CategoryBase(BaseModel):
-    tournament_id: int = Field(description="Id del torneo al que pertenece la categoría. El torneo debe existir.")
+    tournament_id: Int4Id = Field(description="Id del torneo al que pertenece la categoría. El torneo debe existir.")
     discipline: Discipline = Field(
         default=Discipline.SPARRING,
         description="Modalidad. Hoy solo existe `sparring` (combate), que es el valor por defecto.",
     )
     gender: Gender = Field(description="Género de la categoría. Solo se inscriben atletas del mismo género.")
-    age_label: str = Field(description="Nombre del rango de edad.", examples=["Cadete"])
-    min_age: int = Field(description="Edad mínima, en años.", examples=[12])
-    max_age: int | None = Field(
+    age_label: str = Field(max_length=60, description="Nombre del rango de edad.", examples=["Cadete"])
+    min_age: Int4 = Field(description="Edad mínima, en años.", examples=[12])
+    max_age: Int4 | None = Field(
         default=None, description="Edad máxima, en años. Si es nulo, no hay tope.", examples=[14]
     )
     belt_group: BeltGroup = Field(description="Grupo de cinturón de la categoría.")
     weight_label: str = Field(
+        max_length=60,
         description="Nombre del rango de peso, en texto libre. Es lo que se muestra al público.",
         examples=["Hasta 45kg"],
     )
@@ -179,7 +188,7 @@ class CategoryBase(BaseModel):
         description="Peso máximo en kg, con un decimal como máximo. Si se define, no se inscriben atletas más pesados.",
         examples=[45],
     )
-    rounds_to_win: int = Field(
+    rounds_to_win: Int4 = Field(
         default=2,
         description="Rounds que hay que ganar para ganar un combate (2 equivale a un combate al mejor de 3).",
     )
@@ -343,13 +352,12 @@ class RegistrantRead(BaseModel):
 
 
 class RoundScoreCreate(BaseModel):
-    round_number: int = Field(
-        ge=1,
+    round_number: Int4Id = Field(
         description="Número del round que se está cargando: el siguiente al último guardado (1 si no hay ninguno).",
         examples=[1],
     )
-    red_points: int = Field(description="Puntos del lado rojo en este round.", examples=[12])
-    blue_points: int = Field(description="Puntos del lado azul en este round.", examples=[5])
+    red_points: Int4 = Field(description="Puntos del lado rojo en este round.", examples=[12])
+    blue_points: Int4 = Field(description="Puntos del lado azul en este round.", examples=[5])
 
 
 class RoundScoreRead(RoundScoreCreate):
@@ -407,8 +415,8 @@ class BracketRead(BaseModel):
 
 
 class RegistrationBase(BaseModel):
-    athlete_id: int = Field(description="Id del atleta que se inscribe. El atleta debe existir.")
-    category_id: int = Field(description="Id de la categoría en la que se inscribe. La categoría debe existir.")
+    athlete_id: Int4Id = Field(description="Id del atleta que se inscribe. El atleta debe existir.")
+    category_id: Int4Id = Field(description="Id de la categoría en la que se inscribe. La categoría debe existir.")
 
 
 class RegistrationCreate(RegistrationBase):
