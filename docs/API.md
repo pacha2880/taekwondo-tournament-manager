@@ -55,6 +55,9 @@ Desde la 0.8.0, las categorías de un torneo salen de su **estructura**, que se 
 - **Divisiones de peso** (`weight_limits` de cada edad, por género): límites superiores en kg. Con
   `[48, 55, 63, 73]` las divisiones son «Hasta 48 kg», «48.1–55 kg», «55.1–63 kg», «63.1–73 kg» y «Más de 73 kg».
   Si `has_weight_divisions` es `false` (Festival), hay una sola división, «Todos los pesos».
+- **Pesos con un decimal como máximo**, en toda la API: los límites de la estructura, `weight_kg` del atleta y
+  `min_weight`/`max_weight` de una categoría. Con más decimales responde `422`: un atleta de 48.05 kg no cabría en
+  «Hasta 48 kg» ni en «48.1–55 kg».
 
 Cada combinación de grupo × género × edad × peso es una categoría, salvo **Festival**: la primera división de
 edad, siempre presente y fija (hasta 9 años, contados por año de nacimiento: en un torneo de 2026 entra quien nació

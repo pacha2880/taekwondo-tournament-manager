@@ -215,6 +215,17 @@ def test_an_invalid_structure_is_rejected_without_changes(client, tournament, ch
     assert _structure(client, tournament).json() == before
 
 
+def test_weight_limits_with_more_than_one_decimal_are_rejected(client, tournament):
+    before = _structure(client, tournament).json()
+    body = _editable(before)
+    body["age_divisions"][0]["weight_limits"]["female"][0] = 26.05
+
+    resp = _put(client, tournament, body)
+
+    assert resp.status_code == 422
+    assert _structure(client, tournament).json() == before
+
+
 def test_the_structure_only_changes_while_the_tournament_is_a_draft(client, tournament, set_tournament_status):
     body = _editable(_structure(client, tournament).json())
     set_tournament_status(client, tournament["id"], "in_progress")

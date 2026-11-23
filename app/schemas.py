@@ -5,7 +5,7 @@ import datetime
 import re
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.models import BeltGroup, Discipline, Gender, Grade, MatchStatus, TournamentStatus
 
@@ -55,6 +55,17 @@ def normalize_ci(value: str | None) -> str | None:
 NormalizedCi = Annotated[str | None, AfterValidator(normalize_ci)]
 
 
+def check_one_decimal(value: float | None) -> float | None:
+    # Weight divisions go in tenths (48 → 48.1): a weight like 48.05 would fall between two divisions.
+    if value is not None and round(value, 1) != value:
+        raise ValueError("el peso puede tener como máximo un decimal")
+    return value
+
+
+# Only on input schemas: the *Read ones also validate what's already stored, which may predate this rule.
+WeightKg = Annotated[float, AfterValidator(check_one_decimal)]
+
+
 class AthleteBase(BaseModel):
     name: str = Field(description="Nombre completo del atleta.", examples=["Mateo Quispe Mamani"])
     ci: NormalizedCi = Field(
@@ -70,12 +81,15 @@ class AthleteBase(BaseModel):
     birth_date: datetime.date = Field(description="Fecha de nacimiento (`YYYY-MM-DD`).", examples=["2012-03-14"])
     gender: Gender = Field(description="Género del atleta. Debe coincidir con el de la categoría en que se inscribe.")
     grade: Grade = Field(description="Grado del atleta.", examples=["kup_6"])
-    weight_kg: float = Field(description="Peso en kilogramos.", examples=[38.5])
+    weight_kg: float = Field(description="Peso en kilogramos, con un decimal como máximo.", examples=[38.5])
     club_id: int = Field(description="Id del club al que pertenece. El club debe existir.")
 
 
 class AthleteCreate(AthleteBase):
-    pass
+    @field_validator("weight_kg")
+    @classmethod
+    def check_weight(cls, value: float) -> float:
+        return check_one_decimal(value)
 
 
 class AthleteUpdate(BaseModel):
@@ -96,9 +110,9 @@ class AthleteUpdate(BaseModel):
         description="Nuevo género. Si no se envía, no cambia. Ver las reglas con inscripciones en la operación.",
     )
     grade: Grade | None = Field(default=None, description="Nuevo grado. Si no se envía, no cambia.")
-    weight_kg: float | None = Field(
+    weight_kg: WeightKg | None = Field(
         default=None,
-        description="Nuevo peso en kilogramos. Si no se envía, no cambia. Ver las reglas con inscripciones en la operación.",
+        description="Nuevo peso en kilogramos, con un decimal como máximo. Si no se envía, no cambia. Ver las reglas con inscripciones en la operación.",
     )
     club_id: int | None = Field(
         default=None, description="Id del nuevo club, que debe existir. Si no se envía, no cambia."
@@ -156,11 +170,11 @@ class CategoryBase(BaseModel):
     )
     min_weight: float | None = Field(
         default=None,
-        description="Peso mínimo en kg. Si se define, no se inscriben atletas más livianos.",
+        description="Peso mínimo en kg, con un decimal como máximo. Si se define, no se inscriben atletas más livianos.",
     )
     max_weight: float | None = Field(
         default=None,
-        description="Peso máximo en kg. Si se define, no se inscriben atletas más pesados.",
+        description="Peso máximo en kg, con un decimal como máximo. Si se define, no se inscriben atletas más pesados.",
         examples=[45],
     )
     rounds_to_win: int = Field(
@@ -186,7 +200,10 @@ class CategoryBase(BaseModel):
 
 
 class CategoryCreate(CategoryBase):
-    pass
+    @field_validator("min_weight", "max_weight")
+    @classmethod
+    def check_weights(cls, value: float | None) -> float | None:
+        return check_one_decimal(value)
 
 
 class CategoryRead(CategoryBase):
@@ -261,12 +278,12 @@ class GradeGroupInput(BaseModel):
 
 
 class WeightLimitsInput(BaseModel):
-    male: list[float] = Field(
-        description="Límites superiores masculinos en kg, de menor a mayor y sin repetir. Vacía: una sola división "
+    male: list[WeightKg] = Field(
+        description="Límites superiores masculinos en kg (con un decimal como máximo), de menor a mayor y sin repetir. Vacía: una sola división "
         "con todos los pesos.",
         examples=[[48, 55, 63, 73]],
     )
-    female: list[float] = Field(description="Igual que `male`, para las divisiones femeninas.", examples=[[44, 49, 55, 63]])
+    female: list[WeightKg] = Field(description="Igual que `male`, para las divisiones femeninas.", examples=[[44, 49, 55, 63]])
 
 
 class AgeDivisionInput(BaseModel):

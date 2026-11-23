@@ -572,3 +572,17 @@ se carga la plantilla; cada «Guardar» es un `PUT` que queda en el servidor, as
 (o cambia de dispositivo) encuentra lo último guardado. No hace falta una plantilla aparte adjunta al torneo. Lo que
 todavía no se guardó lo puede conservar el frontend en el navegador, como comodidad, nunca como lo oficial. Cuando
 exista «En preparación» (0.9.0), el `PUT` se limita a ese estado y la estructura queda fija al abrir inscripciones.
+
+## 2026-11-22 — Pesos con un decimal como máximo
+
+Las divisiones de peso van en décimas (`Hasta 48`, `48.1–55`), con los dos extremos incluidos: un peso con más
+decimales (48.05) quedaría entre dos divisiones y no cabría en ninguna. Por eso todo peso que entra por la API
+(atleta, categoría, límites de la estructura) admite como máximo un decimal, y con más responde `422` en vez de
+redondear en silencio.
+
+**Sigue siendo `float`, no `Decimal`:** Pydantic serializa `Decimal` como string en el JSON (`"48.1"`), lo que
+cambiaría el contrato de `weight_kg`, `min_weight` y `max_weight`; y con un solo decimal el error de `float` no se
+nota (el mínimo de cada división ya se redondea a décimas).
+
+**Solo en los schemas de entrada:** los `*Read` también validan lo que devuelven, y un peso con más decimales
+guardado antes de esta regla haría fallar la lectura con un 500. Los datos existentes no se tocan.

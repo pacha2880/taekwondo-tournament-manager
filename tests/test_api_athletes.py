@@ -69,6 +69,15 @@ def test_invalid_ci_is_rejected(client, club, ci):
     assert resp.status_code == 422
 
 
+def test_weight_with_more_than_one_decimal_is_rejected(client, club, athlete):
+    created = client.post("/api/v1/athletes", json=_athlete_payload(club, weight_kg=48.05))
+    updated = client.patch(f"/api/v1/athletes/{athlete['id']}", json={"weight_kg": 48.05})
+
+    assert created.status_code == updated.status_code == 422
+    assert "como máximo un decimal" in created.json()["detail"][0]["msg"]
+    assert client.post("/api/v1/athletes", json=_athlete_payload(club, weight_kg=48.1)).status_code == 201
+
+
 @pytest.mark.parametrize("empty", ["", "   "])
 def test_empty_ci_is_stored_as_no_ci(client, club, empty):
     first = client.post("/api/v1/athletes", json=_athlete_payload(club, ci=empty))

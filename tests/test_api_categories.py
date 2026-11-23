@@ -58,6 +58,24 @@ def test_create_category_rejects_min_weight_greater_than_max_weight(client, tour
     assert resp.status_code == 422
 
 
+@pytest.mark.parametrize("weights", [{"min_weight": 45.15}, {"max_weight": 55.25}])
+def test_create_category_rejects_weights_with_more_than_one_decimal(client, tournament, weights):
+    resp = client.post(
+        "/api/v1/categories",
+        json={
+            "tournament_id": tournament["id"],
+            "gender": "male",
+            "age_label": "Junior",
+            "min_age": 15,
+            "max_age": 17,
+            "belt_group": "color",
+            "weight_label": "Hasta 55kg",
+            **weights,
+        },
+    )
+    assert resp.status_code == 422
+
+
 def test_create_category_rejects_min_age_greater_than_max_age(client, tournament):
     resp = client.post(
         "/api/v1/categories",

@@ -23,6 +23,10 @@ funcionando sobre una base ya migrada.
   válida responde `422` sin cambiar nada; con `validate_only=true` devuelve cómo quedaría sin guardar.
   Los torneos anteriores no tienen estructura (responde `404`) y sus categorías no cambian.
 
+### Changed
+- **Incompatible — pesos con un decimal como máximo:** `POST`/`PATCH /api/v1/athletes` (`weight_kg`) y
+  `POST /api/v1/categories` (`min_weight`, `max_weight`) responden `422` si el peso tiene más de un decimal
+  (`48.05`). Antes se aceptaba, y ese atleta no cabía en ninguna división de peso. Los datos ya guardados no cambian.
 
 ## [0.7.0] - 2026-11-15
 
