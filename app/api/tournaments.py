@@ -8,6 +8,7 @@ from app.auth import ADMIN_ONLY
 from app.database import get_db
 from app.models import Tournament, TournamentStatus
 from app.schemas import TournamentCreate, TournamentRead, TournamentUpdate
+from app.services.category_structure import add_default_structure, sync_categories
 
 router = APIRouter(prefix="/api/v1/tournaments", tags=[TAG_TOURNAMENTS])
 
@@ -25,12 +26,16 @@ def get_tournament_or_404(db: Session, tournament_id: int) -> Tournament:
     status_code=201,
     dependencies=ADMIN_ONLY,
     summary="Crear un torneo",
-    description="Crea un torneo en estado `draft` (inscripciones abiertas). Requiere token.",
+    description="Crea un torneo en estado `draft` (inscripciones abiertas). Nace con la estructura de categorías "
+    "de la Copa Diamante y todas sus categorías ya creadas (ver `GET /tournaments/{id}/category-structure`). "
+    "Requiere token.",
     responses=errors(auth=True),
 )
 def create_tournament(payload: TournamentCreate, db: Session = Depends(get_db)):
     tournament = Tournament(**payload.model_dump())
     db.add(tournament)
+    add_default_structure(tournament)
+    sync_categories(db, tournament)
     db.commit()
     db.refresh(tournament)
     return tournament

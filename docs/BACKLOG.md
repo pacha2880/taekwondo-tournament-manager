@@ -20,19 +20,26 @@ en Notion apenas llega a `dev` (después del push; ver la skill `commit`). **Sol
 se cierran solas en la fecha límite) → **Pesaje** (la lista de inscritos se hace pública) → **En curso** (todas las
 llaves juntas) → **Finalizado**.
 
-La 0.6.0 deja tres de esos estados (inscripciones abiertas, en curso, finalizado); la 0.10.0 agrega los otros dos.
+La 0.6.0 deja tres de esos estados (inscripciones abiertas, en curso, finalizado); la 0.9.0 agrega los otros dos.
 
 ## 0.8.0 — Grupos de grado y categorías
 
 Va primero porque la inscripción pública (0.11.0) necesita saber en qué categorías encaja cada atleta.
 
-- [ ] **Grupos de grado por torneo**, con rangos editables (hoy Principiantes 10mo–6to Kup, Novatos 5to–2do,
+- [x] **Grupos de grado por torneo**, con rangos editables (hoy Principiantes 10mo–6to Kup, Novatos 5to–2do,
       Avanzados 1er Kup y Dan). Reemplazan a `BeltGroup` (color/negro) en la categoría.
-- [ ] **Plantillas de categorías editables**: edades, grupos de grado y divisiones de peso por edad y género. Al
-      crear un torneo se copian y se ajustan para ese torneo. La primera plantilla es la Copa Diamante 2026.
+- [x] **Plantilla de categorías**: una sola y fija, la de la Copa Diamante 2026, con edades, grupos de grado y
+      divisiones de peso por edad y género. Todo torneo nuevo nace con ella y se ajusta con el `PUT` de la estructura.
       [Notion](https://app.notion.com/p/415fae3be03b81aa9986d21e5029fd1c)
-- [ ] **Editar categorías** mientras el torneo no empezó.
-- [ ] **Edad por año de nacimiento** (Art. 4 del reglamento WT), no por fecha exacta.
+- [x] **Editar categorías** mientras el torneo no empezó: se edita la estructura entera
+      (`PUT /tournaments/{id}/category-structure`) y las categorías se recalculan.
+- [ ] **Quitar `POST /categories`**: las categorías salen solo de la estructura. Es incompatible: va marcado en el
+      CHANGELOG y se avisa al frontend. Los torneos anteriores a la 0.8.0 se quedan con las categorías que tienen.
+- [ ] **Edad por año de nacimiento** (Art. 4 del reglamento WT), no por fecha exacta. Ya se documenta así, pero
+      todavía no se aplica en ninguna regla.
+- [ ] **`category_mismatch` revisa también edad y grupo de grado**, además de género y peso. Cambia
+      `POST /registrations`: rechaza inscripciones que hoy acepta (va al CHANGELOG). En las categorías sin estructura
+      (anteriores a la 0.8.0) solo se revisan género y peso, como hoy.
 - [ ] **Estatura del atleta**, opcional. Ninguna categoría filtra por estatura.
       [Notion](https://app.notion.com/p/415fae3be03b8109bdd6decce78ad733)
 - [ ] **Atletas que encajan en una categoría**, reusando `category_mismatch`: el admin que inscribe ve solo a
@@ -42,18 +49,7 @@ Va primero porque la inscripción pública (0.11.0) necesita saber en qué categ
 - [ ] **Categorías en las que encaja un atleta**, la consulta inversa y con la misma regla: la usa la inscripción
       pública de la 0.11.0.
 
-## 0.9.0 — Campeones y ranking
-
-- [ ] Categoría con un solo inscrito: ese atleta es campeón sin pelea, sin llave ni combate artificial.
-- [ ] Al iniciar el torneo, tabla aparte con las categorías de un solo inscrito.
-      [Notion](https://app.notion.com/p/415fae3be03b81728aefc395fb241292)
-- [ ] Podio: oro el ganador de la final, plata el que perdió la final y **un solo bronce**, el semifinalista que
-      perdió con el campeón. No hay combate por el bronce.
-      [Notion](https://app.notion.com/p/415fae3be03b81b088fae8cc4f877e8a)
-- [ ] Ranking de clubes: oro 7, plata 3, bronce 1 y categoría sin pelea 1, configurable por torneo.
-      [Notion](https://app.notion.com/p/415fae3be03b817fb311feac5e158ed2)
-
-## 0.10.0 — Ciclo nuevo y pesaje
+## 0.9.0 — Ciclo nuevo y pesaje
 
 Cambia el comportamiento de la API: va marcado como incompatible en el CHANGELOG.
 
@@ -84,6 +80,17 @@ Cambia el comportamiento de la API: va marcado como incompatible en el CHANGELOG
       ronda, salvo que no se pueda evitar. Desde la segunda ronda no importa.
 - [ ] **Festival (hasta 9 años)**: categoría sin llave ni división de peso; se muestra como lista con nombre y
       club. [Notion](https://app.notion.com/p/415fae3be03b81909a7ee26f2cd969c4)
+
+## 0.10.0 — Campeones y ranking
+
+- [ ] Categoría con un solo inscrito: ese atleta es campeón sin pelea, sin llave ni combate artificial.
+- [ ] Al iniciar el torneo, tabla aparte con las categorías de un solo inscrito.
+      [Notion](https://app.notion.com/p/415fae3be03b81728aefc395fb241292)
+- [ ] Podio: oro el ganador de la final, plata el que perdió la final y **un solo bronce**, el semifinalista que
+      perdió con el campeón. No hay combate por el bronce.
+      [Notion](https://app.notion.com/p/415fae3be03b81b088fae8cc4f877e8a)
+- [ ] Ranking de clubes: oro 7, plata 3, bronce 1 y categoría sin pelea 1, configurable por torneo.
+      [Notion](https://app.notion.com/p/415fae3be03b817fb311feac5e158ed2)
 
 ## 0.11.0 — Cuentas e inscripción pública
 
@@ -147,6 +154,8 @@ Al final, cuando todo el ciclo funcione con kyorugi.
   [Notion](https://app.notion.com/p/415fae3be03b813eac58feed16593865)
 - **Estatura mínima y máxima en la categoría** (era la 0.8.0): las categorías nunca se dividen por estatura.
 - **Grados editables** (era la 0.8.0): los grados son fijos; lo editable son los grupos.
+- **Plantillas de categorías editables con nombre** (era la 0.8.0): alcanza con la Copa Diamante fija, que cada
+  torneo ajusta con el `PUT` de la estructura.
 - **Fusionar categorías de peso contiguas** (Art. 6.1.1 de WT): la categoría de un solo inscrito queda campeón sin
   pelea.
 - **Integración con el WordPress del club**: los dos sistemas quedan separados.

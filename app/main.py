@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
-from app.api import athletes, auth, brackets, categories, clubs, matches, registrations, tournaments
+from app.api import athletes, auth, brackets, categories, category_structure, clubs, matches, registrations, tournaments
 from app.api_docs import API_DESCRIPTION, TAG_SYSTEM, TAGS_METADATA
 from app.config import check_production_settings, cors_origins
 from app.cors import add_cors
@@ -23,6 +23,7 @@ app.include_router(clubs.router)
 app.include_router(athletes.router)
 app.include_router(tournaments.router)
 app.include_router(categories.router)
+app.include_router(category_structure.router)
 app.include_router(registrations.router)
 app.include_router(brackets.router)
 app.include_router(matches.router)

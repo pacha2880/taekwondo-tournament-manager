@@ -199,6 +199,111 @@ class CategoryRead(CategoryBase):
     )
 
 
+class GradeGroupRead(BaseModel):
+    id: int = Field(description="Identificador del grupo de grado. Se conserva al editar la estructura.")
+    name: str = Field(description="Nombre del grupo.", examples=["Novatos"])
+    from_grade: Grade = Field(description="Primer grado del grupo.")
+    to_grade: Grade = Field(
+        description="Último grado del grupo: el anterior al primero del grupo siguiente (el último grupo llega hasta "
+        "`dan`)."
+    )
+
+
+class WeightLimitsRead(BaseModel):
+    male: list[float] = Field(
+        description="Límites superiores de las divisiones de peso masculinas, en kg y de menor a mayor. Cada división "
+        "va desde el límite anterior + 0,1 hasta el suyo, y la última es «más de» el último límite.",
+        examples=[[48, 55, 63, 73]],
+    )
+    female: list[float] = Field(description="Igual que `male`, para las divisiones femeninas.", examples=[[44, 49, 55, 63]])
+
+
+class AgeDivisionRead(BaseModel):
+    id: int = Field(description="Identificador de la división de edad. Se conserva al editar la estructura.")
+    name: str = Field(description="Nombre de la división.", examples=["Junior"])
+    from_age: int = Field(
+        description="Edad mínima. La edad se cuenta por año de nacimiento: año del torneo menos año de nacimiento.",
+        examples=[15],
+    )
+    to_age: int | None = Field(
+        description="Edad máxima: la anterior a la mínima de la división siguiente. Es nula en la última (sin tope).",
+        examples=[17],
+    )
+    has_weight_divisions: bool = Field(
+        description="Si se divide por peso. Si es `false` (por ejemplo Festival), hay una sola categoría por grupo y "
+        "género, sin importar el peso."
+    )
+    weight_limits: WeightLimitsRead = Field(description="Divisiones de peso por género (vacías si no se divide por peso).")
+
+
+class CategoryStructureRead(BaseModel):
+    """Estructura de categorías de un torneo: sus categorías son todas las combinaciones de grupo de grado, género,
+    división de edad y división de peso."""
+
+    grade_groups: list[GradeGroupRead] = Field(
+        description="Grupos de grado, de menor a mayor. Entre todos cubren cada grado exactamente una vez."
+    )
+    age_divisions: list[AgeDivisionRead] = Field(
+        description="Divisiones de edad, de menor a mayor. Entre todas cubren cada edad exactamente una vez."
+    )
+
+
+class GradeGroupInput(BaseModel):
+    id: int | None = Field(
+        default=None,
+        description="Id de un grupo que ya existe, para conservarlo (y sus categorías). Sin id, se crea uno nuevo; los "
+        "grupos que no se envían se borran, salvo el último, que no se puede quitar.",
+    )
+    name: str = Field(description="Nombre del grupo. No puede repetirse.", examples=["Novatos"])
+    from_grade: Grade = Field(
+        description="Primer grado del grupo. El primer grupo empieza en `kup_10` y cada uno empieza después del anterior."
+    )
+
+
+class WeightLimitsInput(BaseModel):
+    male: list[float] = Field(
+        description="Límites superiores masculinos en kg, de menor a mayor y sin repetir. Vacía: una sola división "
+        "con todos los pesos.",
+        examples=[[48, 55, 63, 73]],
+    )
+    female: list[float] = Field(description="Igual que `male`, para las divisiones femeninas.", examples=[[44, 49, 55, 63]])
+
+
+class AgeDivisionInput(BaseModel):
+    id: int | None = Field(
+        default=None,
+        description="Id de una división que ya existe, para conservarla (y sus categorías). Sin id, se crea una nueva; las "
+        "que no se envían se borran.",
+    )
+    name: str = Field(description="Nombre de la división. No puede repetirse ni llamarse Festival.", examples=["Junior"])
+    from_age: int = Field(
+        description="Edad mínima (por año de nacimiento). La primera división empieza en 10, justo después de Festival, "
+        "y cada una empieza después de la anterior.",
+        examples=[15],
+    )
+    weight_limits: WeightLimitsInput = Field(description="Divisiones de peso por género.")
+
+
+class CategoryStructureUpdate(BaseModel):
+    """Estructura completa de categorías de un torneo, sin Festival (que es fijo y no se envía)."""
+
+    grade_groups: list[GradeGroupInput] = Field(description="Grupos de grado, de menor a mayor.")
+    age_divisions: list[AgeDivisionInput] = Field(description="Divisiones de edad después de Festival, de menor a mayor.")
+
+
+class CategoryPreview(BaseModel):
+    grade_group_name: str | None = Field(description="Grupo de grado. Es nulo en Festival, que no se divide por grado.")
+    gender: Gender = Field(description="Género de la categoría.")
+    age_label: str = Field(description="División de edad.", examples=["Junior"])
+    weight_label: str = Field(description="División de peso.", examples=["48.1–55 kg"])
+
+
+class CategoryStructureResult(CategoryStructureRead):
+    categories: list[CategoryPreview] = Field(
+        description="Las categorías que corresponden a la estructura (con `validate_only=true`, las que quedarían)."
+    )
+
+
 class RegistrantRead(BaseModel):
     """Inscrito de una categoría, solo con datos públicos: sin CI, fecha de nacimiento ni peso."""
 

@@ -22,15 +22,22 @@ def test_create_category_defaults_discipline_to_sparring(client, category):
 
 
 def test_list_categories_filtered_by_tournament(client, category, tournament):
+    client.post("/api/v1/tournaments", json={"name": "Otro", "date": "2026-12-01", "location": "La Paz"}).json()
+
     resp = client.get("/api/v1/categories", params={"tournament_id": tournament["id"]})
+
     assert resp.status_code == 200
-    assert len(resp.json()) == 1
+    assert category["id"] in [c["id"] for c in resp.json()]
+    assert {c["tournament_id"] for c in resp.json()} == {tournament["id"]}
 
 
 def test_list_categories_without_filter_returns_all(client, category):
+    other = client.post("/api/v1/tournaments", json={"name": "Otro", "date": "2026-12-01", "location": "La Paz"}).json()
+
     resp = client.get("/api/v1/categories")
+
     assert resp.status_code == 200
-    assert [c["id"] for c in resp.json()] == [category["id"]]
+    assert {c["tournament_id"] for c in resp.json()} == {category["tournament_id"], other["id"]}
 
 
 def test_create_category_rejects_min_weight_greater_than_max_weight(client, tournament):
@@ -114,4 +121,4 @@ def test_has_bracket_tells_whether_the_bracket_was_generated(client, club, categ
     listed = client.get("/api/v1/categories", params={"tournament_id": category["tournament_id"]}).json()
 
     assert (before, after) == (False, True)
-    assert [c["has_bracket"] for c in listed] == [True]
+    assert [c["has_bracket"] for c in listed if c["id"] == category["id"]] == [True]

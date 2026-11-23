@@ -11,6 +11,19 @@ funcionando sobre una base ya migrada.
 
 ## [Unreleased]
 
+### Added
+- **Estructura de categorías del torneo:** `GET /api/v1/tournaments/{id}/category-structure` (público) devuelve los
+  grupos de grado, las divisiones de edad y las divisiones de peso del torneo. Todo torneo nuevo nace con la
+  estructura de la Copa Diamante y con todas sus categorías ya creadas (grupo × género × edad × peso; 212 en total).
+  Festival (hasta 9 años por año de nacimiento) está siempre y es una lista general por género, sin grupos de grado
+  ni pesos.
+- **Editar la estructura de categorías:** `PUT /api/v1/tournaments/{id}/category-structure` reemplaza de una vez
+  los grupos de grado y las divisiones de edad y peso (Festival es fijo y no se envía), solo con el torneo en
+  `draft`. Las categorías se recalculan: las que siguen correspondiendo conservan su id. Si la estructura no es
+  válida responde `422` sin cambiar nada; con `validate_only=true` devuelve cómo quedaría sin guardar.
+  Los torneos anteriores no tienen estructura (responde `404`) y sus categorías no cambian.
+
+
 ## [0.7.0] - 2026-11-15
 
 ### Removed

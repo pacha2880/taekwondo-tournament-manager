@@ -533,3 +533,42 @@ sesión). Se eliminaron porque el frontend externo cubre las dos cosas y mantene
 API. Si hiciera falta en una emergencia (por ejemplo, operar un torneo sin el frontend), el código está en el tag
 `v0.6.0`: `app/web/`, `app/templates/`, sus routers y el `SessionMiddleware` en `app/main.py`, y las dependencias
 `Jinja2` e `itsdangerous`. Hay que adaptarlo a la API de ese momento (por ejemplo, `grade` en lugar de `belt_rank`).
+
+## 2026-11-16 — Estructura de categorías del torneo (0.8.0)
+
+**Las categorías salen de una estructura del torneo, no se cargan a mano.** Abel quiere grupos de grado editables
+(Principiantes, Novatos, Avanzados) y cada grado cubierto por un solo grupo. Los pesos y las edades dependen solo de
+edad y género, nunca del grupo (así lo hacen el reglamento WT y la Copa Diamante). Entonces una categoría es una
+combinación de grupo × género × división de edad × división de peso, y el torneo guarda solo esas tres listas.
+
+**Grupos y edades se guardan como cortes.** Cada uno dice desde dónde empieza y termina donde empieza el siguiente,
+así que no puede haber huecos ni solapes por cómo están guardados: la regla «cada grado en exactamente un grupo» se
+cumple sola. Los pesos son límites superiores por edad y género; N límites dan N + 1 divisiones (la última es «más
+de»). El último grupo siempre llega hasta Dan.
+
+**Se edita la estructura entera de una vez** (`PUT`, en la parte 2), no grupo por grupo: mover un corte toca dos
+grupos, y de a uno habría un momento con un grado sin grupo. Al guardar, las categorías se recalculan: las que
+siguen correspondiendo conservan su `id` (y con él sus inscripciones y su llave), y las demás se crean o se borran.
+Una categoría se identifica por grupo × género × edad × posición de su división de peso, así que cambiar un límite
+de peso no le cambia el `id`. Se descartaron: crear categorías por lotes como filas de una tabla (los pesos se
+repetirían en cada grupo y podrían diferir por error), validar la cobertura recién al iniciar el torneo (quedarían
+estados a medias) y que cada categoría copiara su rango (los grupos dejarían de mandar).
+
+**Las categorías históricas quedan como están.** Las de torneos anteriores se cargaron con texto libre y
+color/negro; convertirlas obligaría a inventar a qué grupo iba «color». No tienen estructura ni se recalculan.
+
+**Todo torneo nuevo nace con la estructura de la Copa Diamante** (la convocatoria real del club). Es la única
+plantilla y es fija: no hacen falta plantillas editables con nombre (decidido 2026-11-18), porque cada torneo ajusta
+la suya con el `PUT`. Las columnas viejas de la categoría (`age_label`,
+`min_weight`…) se llenan desde la estructura, para que quien las lea no note el cambio, y `belt_group` (que ya no va a
+salir en la API) se llena con negro solo en el último grupo, para poder volver a la 0.7.0.
+
+**Festival es fijo** (pedido del club, 2026-11-16): es la primera división de edad, siempre presente, hasta 9 años
+por año de nacimiento, y es una lista general por género, sin grupos de grado ni pesos. Las demás divisiones empiezan
+en 10 años.
+
+**La estructura se edita mientras el torneo está en `draft`, y el borrador es el propio torneo.** Al crear el torneo
+se carga la plantilla; cada «Guardar» es un `PUT` que queda en el servidor, así que si el organizador sale y vuelve
+(o cambia de dispositivo) encuentra lo último guardado. No hace falta una plantilla aparte adjunta al torneo. Lo que
+todavía no se guardó lo puede conservar el frontend en el navegador, como comodidad, nunca como lo oficial. Cuando
+exista «En preparación» (0.9.0), el `PUT` se limita a ese estado y la estructura queda fija al abrir inscripciones.

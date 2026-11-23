@@ -13,6 +13,7 @@ PUBLIC_ENDPOINTS = {
     ("GET", "/api/v1/clubs/{club_id}"),
     ("GET", "/api/v1/tournaments"),
     ("GET", "/api/v1/tournaments/{tournament_id}"),
+    ("GET", "/api/v1/tournaments/{tournament_id}/category-structure"),
     ("GET", "/api/v1/categories"),
     ("GET", "/api/v1/categories/{category_id}"),
     ("GET", "/api/v1/categories/{category_id}/bracket"),
