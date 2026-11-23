@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 
@@ -74,8 +76,16 @@ def test_weight_with_more_than_one_decimal_is_rejected(client, club, athlete):
     updated = client.patch(f"/api/v1/athletes/{athlete['id']}", json={"weight_kg": 48.05})
 
     assert created.status_code == updated.status_code == 422
-    assert "como máximo un decimal" in created.json()["detail"][0]["msg"]
+    assert "un decimal como máximo" in created.json()["detail"][0]["msg"]
     assert client.post("/api/v1/athletes", json=_athlete_payload(club, weight_kg=48.1)).status_code == 201
+
+
+def test_infinite_weight_is_rejected(client, club):
+    # json.dumps writes the non-standard `Infinity` token, which the API's JSON parser accepts.
+    body = json.dumps(_athlete_payload(club, weight_kg=float("inf")))
+    resp = client.post("/api/v1/athletes", content=body, headers={"Content-Type": "application/json"})
+
+    assert resp.status_code == 422
 
 
 @pytest.mark.parametrize("empty", ["", "   "])

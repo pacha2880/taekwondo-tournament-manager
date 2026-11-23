@@ -67,7 +67,8 @@ torneo nuevo nace con la estructura de la Copa Diamante (212 categorías). Los t
 Para cambiarla (con token y solo con el torneo en `draft`), `PUT /api/v1/tournaments/{id}/category-structure`
 recibe la estructura completa sin Festival: los grupos con `id`, `name` y `from_grade`, y las divisiones con `id`,
 `name`, `from_age` y `weight_limits`. Lo que trae `id` se conserva (y sus categorías también), lo que no trae `id`
-se crea y lo que falta se borra; el último grupo no se puede quitar. Si algo no es válido responde `422` con el
+se crea y lo que falta se borra; el último grupo no se puede quitar. Los nombres tienen hasta 60 caracteres,
+`from_age` llega hasta 120 y cada lista de límites de peso tiene hasta 30. Si algo no es válido responde `422` con el
 motivo y no cambia nada. Con `?validate_only=true` devuelve cómo quedaría (estructura y categorías) sin guardar:
 sirve para una vista previa. Lo que el usuario todavía no guardó puede quedar en el navegador (por ejemplo en
 `localStorage`), pero lo oficial es lo que devuelve el `GET`.

@@ -28,6 +28,10 @@ funcionando sobre una base ya migrada.
   `POST /api/v1/categories` (`min_weight`, `max_weight`) responden `422` si el peso tiene más de un decimal
   (`48.05`). Antes se aceptaba, y ese atleta no cabía en ninguna división de peso. Los datos ya guardados no cambian.
 
+### Fixed
+- **`Infinity` o `NaN` en un número del body** responden `422` en toda la API. Antes un peso `Infinity` se guardaba y
+  hacía fallar con `500` cada lectura de ese atleta o categoría.
+
 ## [0.7.0] - 2026-11-15
 
 ### Removed

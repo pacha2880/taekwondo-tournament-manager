@@ -2,6 +2,7 @@
 # `date` con tipo `date` y valor por defecto se pisa a sí mismo: la asignación ocurre antes de
 # que se evalúe la anotación.
 import datetime
+import math
 import re
 from typing import Annotated
 
@@ -57,8 +58,9 @@ NormalizedCi = Annotated[str | None, AfterValidator(normalize_ci)]
 
 def check_one_decimal(value: float | None) -> float | None:
     # Weight divisions go in tenths (48 → 48.1): a weight like 48.05 would fall between two divisions.
-    if value is not None and round(value, 1) != value:
-        raise ValueError("el peso puede tener como máximo un decimal")
+    # Infinity passes round() unchanged and then can't be serialized back to JSON (500).
+    if value is not None and not (math.isfinite(value) and round(value, 1) == value):
+        raise ValueError("el peso tiene que ser un número finito con un decimal como máximo")
     return value
 
 
@@ -271,7 +273,7 @@ class GradeGroupInput(BaseModel):
         description="Id de un grupo que ya existe, para conservarlo (y sus categorías). Sin id, se crea uno nuevo; los "
         "grupos que no se envían se borran, salvo el último, que no se puede quitar.",
     )
-    name: str = Field(description="Nombre del grupo. No puede repetirse.", examples=["Novatos"])
+    name: str = Field(max_length=60, description="Nombre del grupo, hasta 60 caracteres. No puede repetirse.", examples=["Novatos"])
     from_grade: Grade = Field(
         description="Primer grado del grupo. El primer grupo empieza en `kup_10` y cada uno empieza después del anterior."
     )
@@ -279,11 +281,15 @@ class GradeGroupInput(BaseModel):
 
 class WeightLimitsInput(BaseModel):
     male: list[WeightKg] = Field(
-        description="Límites superiores masculinos en kg (con un decimal como máximo), de menor a mayor y sin repetir. Vacía: una sola división "
+        max_length=30,
+        description="Límites superiores masculinos en kg (con un decimal como máximo), de menor a mayor, sin repetir y "
+        "hasta 30. Vacía: una sola división "
         "con todos los pesos.",
         examples=[[48, 55, 63, 73]],
     )
-    female: list[WeightKg] = Field(description="Igual que `male`, para las divisiones femeninas.", examples=[[44, 49, 55, 63]])
+    female: list[WeightKg] = Field(
+        max_length=30, description="Igual que `male`, para las divisiones femeninas.", examples=[[44, 49, 55, 63]]
+    )
 
 
 class AgeDivisionInput(BaseModel):
@@ -292,10 +298,15 @@ class AgeDivisionInput(BaseModel):
         description="Id de una división que ya existe, para conservarla (y sus categorías). Sin id, se crea una nueva; las "
         "que no se envían se borran.",
     )
-    name: str = Field(description="Nombre de la división. No puede repetirse ni llamarse Festival.", examples=["Junior"])
+    name: str = Field(
+        max_length=60,
+        description="Nombre de la división, hasta 60 caracteres. No puede repetirse ni llamarse Festival.",
+        examples=["Junior"],
+    )
     from_age: int = Field(
-        description="Edad mínima (por año de nacimiento). La primera división empieza en 10, justo después de Festival, "
-        "y cada una empieza después de la anterior.",
+        le=120,
+        description="Edad mínima (por año de nacimiento), hasta 120. La primera división empieza en 10, justo después "
+        "de Festival, y cada una empieza después de la anterior.",
         examples=[15],
     )
     weight_limits: WeightLimitsInput = Field(description="Divisiones de peso por género.")

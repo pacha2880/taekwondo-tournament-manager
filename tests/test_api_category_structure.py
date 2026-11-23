@@ -1,4 +1,5 @@
 import copy
+import json
 
 import pytest
 
@@ -131,7 +132,13 @@ def _editable(structure):
 
 
 def _put(client, tournament, body, **params):
-    return client.put(f"/api/v1/tournaments/{tournament['id']}/category-structure", json=body, params=params)
+    # json.dumps (not httpx's json=) so a test can send the non-standard `Infinity` token.
+    return client.put(
+        f"/api/v1/tournaments/{tournament['id']}/category-structure",
+        content=json.dumps(body),
+        headers={"Content-Type": "application/json"},
+        params=params,
+    )
 
 
 def test_moving_a_grade_cut_keeps_every_category_id(client, tournament):
@@ -215,10 +222,22 @@ def test_an_invalid_structure_is_rejected_without_changes(client, tournament, ch
     assert _structure(client, tournament).json() == before
 
 
-def test_weight_limits_with_more_than_one_decimal_are_rejected(client, tournament):
+@pytest.mark.parametrize(
+    "change",
+    [
+        lambda b: b["age_divisions"][0]["weight_limits"].update(female=[26.05]),
+        lambda b: b["age_divisions"][-1]["weight_limits"].update(male=[58, float("inf")]),
+        lambda b: b["age_divisions"][0]["weight_limits"].update(male=list(range(20, 51))),  # 31 límites
+        lambda b: b["grade_groups"][0].update(name="x" * 61),
+        lambda b: b["age_divisions"][-1].update(name="x" * 61),
+        lambda b: b["age_divisions"][-1].update(from_age=121),
+    ],
+)
+def test_out_of_range_values_are_rejected_before_reaching_the_database(client, tournament, change):
+    # SQLite doesn't enforce String(60) or int4, Postgres does: without these limits it would be a 500, not a 422.
     before = _structure(client, tournament).json()
     body = _editable(before)
-    body["age_divisions"][0]["weight_limits"]["female"][0] = 26.05
+    change(body)
 
     resp = _put(client, tournament, body)
 

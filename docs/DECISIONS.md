@@ -560,8 +560,8 @@ color/negro; convertirlas obligaría a inventar a qué grupo iba «color». No t
 **Todo torneo nuevo nace con la estructura de la Copa Diamante** (la convocatoria real del club). Es la única
 plantilla y es fija: no hacen falta plantillas editables con nombre (decidido 2026-11-18), porque cada torneo ajusta
 la suya con el `PUT`. Las columnas viejas de la categoría (`age_label`,
-`min_weight`…) se llenan desde la estructura, para que quien las lea no note el cambio, y `belt_group` (que ya no va a
-salir en la API) se llena con negro solo en el último grupo, para poder volver a la 0.7.0.
+`min_weight`…) se llenan desde la estructura, para que quien las lea no note el cambio, y `belt_group` (que sigue
+en la API hasta que se retire, ver BACKLOG) se llena con negro solo en el último grupo, para poder volver a la 0.7.0.
 
 **Festival es fijo** (pedido del club, 2026-11-16): es la primera división de edad, siempre presente, hasta 9 años
 por año de nacimiento, y es una lista general por género, sin grupos de grado ni pesos. Las demás divisiones empiezan
