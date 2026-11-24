@@ -24,16 +24,21 @@ funcionando sobre una base ya migrada.
   Los torneos anteriores no tienen estructura (responde `404`) y sus categorías no cambian.
 
 ### Changed
-- **Incompatible — pesos con un decimal como máximo:** `POST`/`PATCH /api/v1/athletes` (`weight_kg`) y
-  `POST /api/v1/categories` (`min_weight`, `max_weight`) responden `422` si el peso tiene más de un decimal
-  (`48.05`). Antes se aceptaba, y ese atleta no cabía en ninguna división de peso. Los datos ya guardados no cambian.
+- **Incompatible — pesos con un decimal como máximo:** `POST`/`PATCH /api/v1/athletes` (`weight_kg`) responden
+  `422` si el peso tiene más de un decimal (`48.05`). Antes se aceptaba, y ese atleta no cabía en ninguna división de
+  peso. Los datos ya guardados no cambian.
+
+### Removed
+- **Incompatible — `POST /api/v1/categories`:** ya no existe (responde `405`). Las categorías salen solo de la
+  estructura del torneo (`PUT /api/v1/tournaments/{id}/category-structure`). Las categorías de torneos anteriores
+  se siguen leyendo igual.
 
 ### Fixed
 - **`Infinity` o `NaN` en un número del body** responden `422` en toda la API. Antes un peso `Infinity` se guardaba y
   hacía fallar con `500` cada lectura de ese atleta o categoría.
 - **Textos y números que no caben en la base** responden `422` en vez de `500`: nombres de club y atleta (hasta 120
-  caracteres), nombre y lugar del torneo (150), `age_label` y `weight_label` (60), y los enteros de categorías,
-  rounds e ids del body (hasta 2.147.483.647). El límite de cada texto sale como `maxLength` en `/docs`.
+  caracteres), nombre y lugar del torneo (150), y los enteros de rounds e ids del body
+  (hasta 2.147.483.647). El límite de cada texto sale como `maxLength` en `/docs`.
 
 ## [0.7.0] - 2026-11-15
 

@@ -8,14 +8,6 @@ from app.schemas import INT4_MAX, RoundScoreCreate
 
 TOO_BIG = INT4_MAX + 1
 
-CATEGORY = {
-    "gender": "male",
-    "age_label": "Cadete",
-    "min_age": 12,
-    "max_age": 14,
-    "belt_group": "color",
-    "weight_label": "Hasta 45kg",
-}
 ATHLETE = {"name": "Ana Rojas", "birth_date": "2011-02-03", "gender": "female", "grade": "kup_4", "weight_kg": 36}
 TOURNAMENT = {"name": "Copa", "date": "2026-11-15", "location": "Cochabamba"}
 
@@ -31,12 +23,6 @@ TOURNAMENT = {"name": "Copa", "date": "2026-11-15", "location": "Cochabamba"}
         ("post", "/api/v1/tournaments", lambda ids: {**TOURNAMENT, "location": "x" * 151}),
         ("patch", "/api/v1/tournaments/{tournament}", lambda ids: {"name": "x" * 151}),
         ("patch", "/api/v1/tournaments/{tournament}", lambda ids: {"location": "x" * 151}),
-        ("post", "/api/v1/categories", lambda ids: {**CATEGORY, "tournament_id": ids["tournament"], "age_label": "x" * 61}),
-        ("post", "/api/v1/categories", lambda ids: {**CATEGORY, "tournament_id": ids["tournament"], "weight_label": "x" * 61}),
-        ("post", "/api/v1/categories", lambda ids: {**CATEGORY, "tournament_id": ids["tournament"], "min_age": -TOO_BIG - 1}),
-        ("post", "/api/v1/categories", lambda ids: {**CATEGORY, "tournament_id": ids["tournament"], "max_age": TOO_BIG}),
-        ("post", "/api/v1/categories", lambda ids: {**CATEGORY, "tournament_id": ids["tournament"], "rounds_to_win": TOO_BIG}),
-        ("post", "/api/v1/categories", lambda ids: {**CATEGORY, "tournament_id": TOO_BIG}),
         ("post", "/api/v1/athletes", lambda ids: {**ATHLETE, "club_id": TOO_BIG}),
         ("patch", "/api/v1/athletes/{athlete}", lambda ids: {"club_id": TOO_BIG}),
         ("post", "/api/v1/registrations", lambda ids: {"athlete_id": TOO_BIG, "category_id": ids["category"]}),

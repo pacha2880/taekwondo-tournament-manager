@@ -183,7 +183,7 @@ def test_update_requires_existing_athlete_and_club(client, athlete):
 def test_update_keeps_the_registration_when_the_athlete_still_fits(client, athlete, category):
     client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
 
-    resp = client.patch(f"/api/v1/athletes/{athlete['id']}", json={"weight_kg": 44})
+    resp = client.patch(f"/api/v1/athletes/{athlete['id']}", json={"weight_kg": 41})
 
     assert resp.status_code == 200
     assert len(_registrations(client, category)) == 1
@@ -196,7 +196,7 @@ def test_update_that_no_longer_fits_needs_confirmation_and_changes_nothing(clien
     resp = client.patch(f"/api/v1/athletes/{athlete['id']}", json=change)
 
     assert resp.status_code == 409
-    assert "Este cambio retira al atleta de: Cadete Hasta 45kg (Copa Nacional)" in resp.json()["detail"]
+    assert "Este cambio retira al atleta de: Cadete 37.1–41 kg (Copa Nacional)" in resp.json()["detail"]
     assert client.get(f"/api/v1/athletes/{athlete['id']}").json() == athlete
     assert len(_registrations(client, category)) == 1
 
@@ -236,10 +236,10 @@ def test_update_that_still_fits_is_allowed_while_the_tournament_is_in_progress(
     client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
     set_tournament_status(client, tournament["id"], "in_progress")
 
-    resp = client.patch(f"/api/v1/athletes/{athlete['id']}", json={"weight_kg": 44})
+    resp = client.patch(f"/api/v1/athletes/{athlete['id']}", json={"weight_kg": 41})
 
     assert resp.status_code == 200
-    assert resp.json() == {**athlete, "weight_kg": 44}
+    assert resp.json() == {**athlete, "weight_kg": 41}
     assert len(_registrations(client, category)) == 1
 
 
@@ -251,11 +251,11 @@ def test_other_fields_can_still_be_edited_while_the_tournament_is_in_progress(
 
     resp = client.patch(
         f"/api/v1/athletes/{athlete['id']}",
-        json={"name": "Juan P.", "grade": "kup_4", "weight_kg": athlete["weight_kg"], "gender": "male"},
+        json={"name": "Juan P.", "grade": "kup_7", "weight_kg": athlete["weight_kg"], "gender": "male"},
     )
 
     assert resp.status_code == 200
-    assert resp.json()["grade"] == "kup_4"
+    assert resp.json()["grade"] == "kup_7"
 
 
 def test_update_is_allowed_after_the_tournament_finished_and_keeps_the_registration(
@@ -271,26 +271,14 @@ def test_update_is_allowed_after_the_tournament_finished_and_keeps_the_registrat
 
 
 def test_only_draft_tournaments_withdraw_the_athlete(
-    client, athlete, category, tournament, set_tournament_status
+    client, athlete, category, tournament, set_tournament_status, find_category
 ):
     client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
     set_tournament_status(client, tournament["id"], "finished")
     next_tournament = client.post(
         "/api/v1/tournaments", json={"name": "Copa Siguiente", "date": "2027-03-01", "location": "La Paz"}
     ).json()
-    next_category = client.post(
-        "/api/v1/categories",
-        json={
-            "tournament_id": next_tournament["id"],
-            "gender": "male",
-            "age_label": "Cadete",
-            "min_age": 12,
-            "max_age": 14,
-            "belt_group": "color",
-            "weight_label": "Hasta 45kg",
-            "max_weight": 45,
-        },
-    ).json()
+    next_category = find_category(next_tournament["id"], "male", "Junior", "Hasta 48 kg")
     client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": next_category["id"]})
 
     resp = client.patch(f"/api/v1/athletes/{athlete['id']}", params={"confirm_withdrawal": True}, json={"weight_kg": 50})

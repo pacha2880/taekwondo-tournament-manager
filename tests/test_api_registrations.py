@@ -64,23 +64,12 @@ def test_weight_out_of_range_rejected(client, club, category):
     assert resp.status_code == 422
 
 
-def test_athlete_in_second_category_of_same_tournament_rejected(client, athlete, category, tournament):
+def test_athlete_in_second_category_of_same_tournament_rejected(client, athlete, category, tournament, historical_category):
     client.post(
         "/api/v1/registrations",
         json={"athlete_id": athlete["id"], "category_id": category["id"]},
     )
-    other_category = client.post(
-        "/api/v1/categories",
-        json={
-            "tournament_id": tournament["id"],
-            "gender": "male",
-            "age_label": "Cadete",
-            "min_age": 12,
-            "max_age": 14,
-            "belt_group": "color",
-            "weight_label": "Todos los pesos",
-        },
-    ).json()
+    other_category = historical_category(tournament["id"], weight_label="Todos los pesos", max_weight=None)
     resp = client.post(
         "/api/v1/registrations",
         json={"athlete_id": athlete["id"], "category_id": other_category["id"]},

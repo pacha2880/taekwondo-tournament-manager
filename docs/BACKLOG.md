@@ -33,7 +33,7 @@ Va primero porque la inscripción pública (0.11.0) necesita saber en qué categ
       [Notion](https://app.notion.com/p/415fae3be03b81aa9986d21e5029fd1c)
 - [x] **Editar categorías** mientras el torneo no empezó: se edita la estructura entera
       (`PUT /tournaments/{id}/category-structure`) y las categorías se recalculan.
-- [ ] **Quitar `POST /categories`**: las categorías salen solo de la estructura. Es incompatible: va marcado en el
+- [x] **Quitar `POST /categories`**: las categorías salen solo de la estructura. Es incompatible: va marcado en el
       CHANGELOG y se avisa al frontend. Los torneos anteriores a la 0.8.0 se quedan con las categorías que tienen.
 - [ ] **Edad por año de nacimiento** (Art. 4 del reglamento WT), no por fecha exacta. Ya se documenta así, pero
       todavía no se aplica en ninguna regla.

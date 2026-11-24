@@ -96,7 +96,6 @@ def test_issued_token_can_be_used_on_a_protected_endpoint(anon_client):
         ("patch", "/api/v1/clubs/1"),
         ("post", "/api/v1/tournaments"),
         ("patch", "/api/v1/tournaments/1"),
-        ("post", "/api/v1/categories"),
         ("post", "/api/v1/registrations"),
         ("delete", "/api/v1/registrations/1"),
         ("post", "/api/v1/categories/1/bracket"),

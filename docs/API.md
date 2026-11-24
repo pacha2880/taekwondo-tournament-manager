@@ -45,7 +45,7 @@ se avisará antes en el CHANGELOG.
 
 ## Estructura de categorías
 
-Desde la 0.8.0, las categorías de un torneo salen de su **estructura**, que se lee con
+Desde la 0.8.0, `POST /categories` ya no existe (responde `405`): las categorías de un torneo salen de su **estructura**, que se lee con
 `GET /api/v1/tournaments/{id}/category-structure` (sin token):
 
 - **Grupos de grado** (`grade_groups`): cada uno va de `from_grade` a `to_grade`. Entre todos cubren cada grado
@@ -123,8 +123,8 @@ El estado no se cambia con `PATCH` sino con dos acciones, y solo avanza (`409` s
 paso):
 
 - `POST /api/v1/tournaments/{id}/start`: de `draft` a `in_progress`. Mientras el torneo está en `draft` se
-  crean las categorías y se inscribe (o se retira, con `DELETE /registrations/{id}`) a los atletas; al
-  iniciarlo esas cosas se cierran (`POST /categories`, `POST /registrations` y `DELETE /registrations/{id}`
+  edita la estructura de categorías y se inscribe (o se retira, con `DELETE /registrations/{id}`) a los atletas; al
+  iniciarlo esas cosas se cierran (`POST /registrations`, `PUT /category-structure` y `DELETE /registrations/{id}`
   responden `409`). Con el torneo en curso se generan las
   llaves y se cargan los resultados; en `draft` o `finished` ambas cosas responden `409`.
 - `POST /api/v1/tournaments/{id}/finish`: de `in_progress` a `finished`, los resultados quedan como

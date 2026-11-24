@@ -86,8 +86,8 @@ def update_tournament(tournament_id: int, payload: TournamentUpdate, db: Session
     response_model=TournamentRead,
     dependencies=ADMIN_ONLY,
     summary="Iniciar un torneo",
-    description="Pasa el torneo de `draft` a `in_progress`: se cierran las inscripciones y la creación de "
-    "categorías, y se pueden generar las llaves. Es irreversible. Requiere token.",
+    description="Pasa el torneo de `draft` a `in_progress`: se cierran las inscripciones y la edición de la "
+    "estructura de categorías, y se pueden generar las llaves. Es irreversible. Requiere token.",
     responses=errors({404: "El torneo no existe.", 409: "El torneo ya empezó."}, auth=True),
 )
 def start_tournament(tournament_id: int, db: Session = Depends(get_db)):

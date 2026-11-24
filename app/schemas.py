@@ -6,7 +6,7 @@ import math
 import re
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator
 
 from app.models import BeltGroup, Discipline, Gender, Grade, MatchStatus, TournamentStatus
 
@@ -192,29 +192,6 @@ class CategoryBase(BaseModel):
         default=2,
         description="Rounds que hay que ganar para ganar un combate (2 equivale a un combate al mejor de 3).",
     )
-
-    @model_validator(mode="after")
-    def check_weight_range(self) -> "CategoryBase":
-        if (
-            self.min_weight is not None
-            and self.max_weight is not None
-            and self.min_weight > self.max_weight
-        ):
-            raise ValueError("min_weight no puede ser mayor que max_weight")
-        return self
-
-    @model_validator(mode="after")
-    def check_age_range(self) -> "CategoryBase":
-        if self.max_age is not None and self.min_age > self.max_age:
-            raise ValueError("min_age no puede ser mayor que max_age")
-        return self
-
-
-class CategoryCreate(CategoryBase):
-    @field_validator("min_weight", "max_weight")
-    @classmethod
-    def check_weights(cls, value: float | None) -> float | None:
-        return check_one_decimal(value)
 
 
 class CategoryRead(CategoryBase):
