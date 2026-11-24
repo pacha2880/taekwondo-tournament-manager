@@ -1,15 +1,17 @@
 from types import SimpleNamespace
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.api.clubs import get_club_or_404
+from app.api.tournaments import get_tournament_or_404
 from app.api_docs import TAG_ATHLETES, errors
 from app.auth import ADMIN_ONLY
 from app.database import get_db
-from app.models import Athlete, TournamentStatus
-from app.schemas import AthleteCreate, AthleteRead, AthleteUpdate, Int4
+from app.models import Athlete, Category, TournamentStatus
+from app.schemas import AthleteCreate, AthleteRead, AthleteUpdate, CategoryRead, Int4
 from app.services.athlete_search import search_athletes
 from app.services.eligibility import category_mismatch
 
@@ -125,6 +127,35 @@ def list_athletes(
 )
 def get_athlete(athlete_id: Int4, db: Session = Depends(get_db)):
     return get_athlete_or_404(db, athlete_id)
+
+
+@router.get(
+    "/{athlete_id}/eligible-categories",
+    response_model=list[CategoryRead],
+    dependencies=ADMIN_ONLY,
+    summary="Listar las categorías en las que encaja un atleta",
+    description="Devuelve, ordenadas por id, las categorías del torneo `tournament_id` que cumplen la regla de "
+    "`POST /registrations` para este atleta (género, peso, y en las categorías con estructura, edad y grupo de "
+    "grado). Es la consulta inversa de `GET /categories/{id}/eligible-athletes`; la usará la inscripción pública. "
+    "Con la estructura de la Copa Diamante un atleta normalmente encaja en exactamente una categoría; las "
+    "categorías históricas (sin estructura) pueden dar más de una. No mira si el atleta ya está inscrito ni el "
+    "estado del torneo. Requiere token.",
+    responses=errors({404: "El atleta o el torneo no existe."}, auth=True),
+)
+def list_eligible_categories(
+    athlete_id: Int4,
+    tournament_id: Annotated[Int4, Query(description="Torneo en el que se buscan las categorías.")],
+    db: Session = Depends(get_db),
+):
+    athlete = get_athlete_or_404(db, athlete_id)
+    get_tournament_or_404(db, tournament_id)
+    categories = db.scalars(
+        select(Category)
+        .options(selectinload(Category.bracket))
+        .where(Category.tournament_id == tournament_id)
+        .order_by(Category.id)
+    )
+    return [c for c in categories if category_mismatch(athlete, c) is None]
 
 
 @router.patch(

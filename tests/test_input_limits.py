@@ -62,7 +62,7 @@ def _id_inputs():
 
 def _call_with_id(client, method, path, name, where, value):
     path_values = {n: 1 for n in re.findall(r"{(\w+)}", path)}
-    query = {}
+    query = {"tournament_id": 1}  # obligatorio en eligible-categories; en el resto es un filtro más
     if where == "path":
         path_values[name] = value
     else:
@@ -86,3 +86,4 @@ def test_ids_outside_int4_are_rejected(client, method, path, name, where, value)
 @pytest.mark.parametrize("value", [INT4_MAX, 0, -1])
 def test_ids_inside_int4_that_do_not_exist_are_404(client, value):
     assert client.get(f"/api/v1/clubs/{value}").status_code == 404
+    assert client.get(f"/api/v1/athletes/{value}/eligible-categories", params={"tournament_id": value}).status_code == 404

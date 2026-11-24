@@ -1,6 +1,9 @@
 import json
 
 import pytest
+from sqlalchemy import delete
+
+from app.models import Category, Gender
 
 
 def test_create_athlete_requires_existing_club(client):
@@ -444,3 +447,64 @@ def test_invalid_height_is_rejected(client, club, athlete, height):
 
     assert created.status_code == 422
     assert updated.status_code == 422
+
+
+def _eligible_categories(client, athlete, tournament):
+    return client.get(f"/api/v1/athletes/{athlete['id']}/eligible-categories", params={"tournament_id": tournament["id"]})
+
+
+def test_eligible_categories_with_default_structure_is_exactly_one(client, athlete, tournament, category):
+    resp = _eligible_categories(client, athlete, tournament)
+
+    assert resp.status_code == 200
+    assert [c["id"] for c in resp.json()] == [category["id"]]
+
+
+def test_eligible_categories_empty_when_athlete_fits_none(client, club, tournament, db_session):
+    ana = client.post("/api/v1/athletes", json=_athlete_payload(club)).json()
+    db_session.execute(delete(Category).where(Category.gender == Gender.FEMALE))
+    db_session.commit()
+
+    assert _eligible_categories(client, ana, tournament).json() == []
+
+
+def test_eligible_categories_only_from_the_requested_tournament(client, athlete, tournament, category):
+    other = client.post("/api/v1/tournaments", json={"name": "Otra Copa", "date": "2026-12-01", "location": "Sucre"}).json()
+
+    resp = _eligible_categories(client, athlete, other)
+
+    assert resp.status_code == 200
+    assert category["id"] not in [c["id"] for c in resp.json()]
+    assert all(c["tournament_id"] == other["id"] for c in resp.json())
+
+
+def test_eligible_categories_includes_a_fitting_historical_one_sorted_by_id(
+    client, athlete, tournament, category, historical_category
+):
+    historical = historical_category(tournament["id"])
+
+    resp = _eligible_categories(client, athlete, tournament)
+
+    assert [c["id"] for c in resp.json()] == [category["id"], historical["id"]]
+
+
+def test_eligible_categories_athlete_not_found(client, tournament):
+    resp = client.get("/api/v1/athletes/9999/eligible-categories", params={"tournament_id": tournament["id"]})
+
+    assert resp.status_code == 404
+    assert resp.json()["detail"] == "Atleta no encontrado"
+
+
+def test_eligible_categories_tournament_not_found(client, athlete):
+    resp = client.get(f"/api/v1/athletes/{athlete['id']}/eligible-categories", params={"tournament_id": 9999})
+
+    assert resp.status_code == 404
+    assert resp.json()["detail"] == "Torneo no encontrado"
+
+
+def test_eligible_categories_requires_tournament_id(client, athlete):
+    assert client.get(f"/api/v1/athletes/{athlete['id']}/eligible-categories").status_code == 422
+
+
+def test_eligible_categories_requires_token(anon_client, athlete, tournament):
+    assert _eligible_categories(anon_client, athlete, tournament).status_code == 401

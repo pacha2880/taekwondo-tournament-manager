@@ -12,6 +12,9 @@ funcionando sobre una base ya migrada.
 ## [Unreleased]
 
 ### Added
+- **Categorías en las que encaja un atleta:** `GET /api/v1/athletes/{id}/eligible-categories?tournament_id=` (requiere
+  token) devuelve, ordenadas por id, las categorías de ese torneo que cumplen la misma regla que `POST /registrations`,
+  sin mirar si ya está inscrito. Con la estructura de la Copa Diamante normalmente es una sola.
 - **Atletas que encajan en una categoría:** `GET /api/v1/categories/{id}/eligible-athletes` (requiere token) devuelve,
   ordenados por nombre, los atletas que cumplen la misma regla que `POST /registrations`, incluidos los ya inscritos.
 - **Estatura del atleta:** campo opcional `height_cm` (entero, 50 a 250 cm) al crear y editar atletas; en

@@ -46,7 +46,7 @@ Va primero porque la inscripción pública (0.11.0) necesita saber en qué categ
       quienes la API aceptaría (issue
       [#78](https://github.com/ArtesanoWeb/taekwondo-tournament-web/issues/78) del frontend).
       [Notion](https://app.notion.com/p/415fae3be03b81f5addfe9ad07cec61a)
-- [ ] **Categorías en las que encaja un atleta**, la consulta inversa y con la misma regla: la usa la inscripción
+- [x] **Categorías en las que encaja un atleta**, la consulta inversa y con la misma regla: la usa la inscripción
       pública de la 0.11.0.
 
 ## 0.8.1 — Valores fuera de rango: 422, no 500

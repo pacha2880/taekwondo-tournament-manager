@@ -86,6 +86,11 @@ Para inscribir, listá los que encajan con `GET /api/v1/categories/{id}/eligible
 los atletas que cumplen esa regla, ordenados por nombre, e incluye a los ya inscritos; quiénes son lo da
 `GET /registrations?category_id=`.
 
+La consulta inversa es `GET /api/v1/athletes/{id}/eligible-categories?tournament_id=` (requiere token; `tournament_id`
+es obligatorio): devuelve las categorías de ese torneo en las que encaja el atleta, ordenadas por id, sin mirar si ya
+está inscrito ni el estado del torneo. Con la estructura de la Copa Diamante normalmente es una sola; las categorías
+históricas pueden dar más. `404` si el atleta o el torneo no existen.
+
 ## Cómo leer una llave
 
 La llave trae **todos los combates de todas las rondas** en una lista plana (`matches`). Para dibujar el
