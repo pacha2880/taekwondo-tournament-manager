@@ -11,6 +11,8 @@ funcionando sobre una base ya migrada.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-24
+
 ### Added
 - **Categorías en las que encaja un atleta:** `GET /api/v1/athletes/{id}/eligible-categories?tournament_id=` (requiere
   token) devuelve, ordenadas por id, las categorías de ese torneo que cumplen la misma regla que `POST /registrations`,
@@ -248,7 +250,8 @@ https://taekwondo-tournament-manager.onrender.com.
 - `pool_pre_ping=True` en la conexión a la base de datos: Neon suspende el cómputo por
   inactividad y la primera conexión tras un rato inactivo pudo fallar con un error 500.
 
-[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.4.0...v0.5.0
