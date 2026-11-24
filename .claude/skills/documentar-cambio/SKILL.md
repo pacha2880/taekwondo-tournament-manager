@@ -10,8 +10,10 @@ description: Checklist al terminar un sub-paso de código (feature, fix, cambio 
    - `CHANGELOG.md`, `[Unreleased]`: una línea por cambio visible para usuarios de la app o de la API.
      El CI, las docs internas y la configuración de Claude no cuentan.
    - `docs/API.md`: si cambió el contrato o el comportamiento de la API (lo lee el frontend externo).
-     Si cambia un endpoint que usa `scripts/seed_demo_api.py`, actualizar también el script.
-   - `docs/DECISIONS.md`: si se tomó una decisión no obvia, con su porqué.
+     Si cambia un endpoint que usa `scripts/seed_demo_api.py`, actualizar también el script; si hay una tabla
+     nueva con datos de un torneo, sumarla a `scripts/delete_demo_data.py`.
+   - `docs/DECISIONS.md`: si se tomó una decisión no obvia, con su porqué, y su fila en el índice (si reemplaza a
+     otra, cambiar el estado de esa).
    - `docs/BACKLOG.md`: marcar lo terminado.
    - Comportamiento de una función que no se ve en su código: en su docstring.
    - Regla de una carpeta: en `.claude/rules/`.

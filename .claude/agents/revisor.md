@@ -35,6 +35,11 @@ Antes de opinar, leé las reglas del proyecto; **no las repitas de memoria**, ap
    `ADMIN_ONLY` sin una razón escrita.
 4. **Seguridad propia del proyecto**: secretos en el código o en archivos versionados, CORS, validación de entrada
    que falte, errores tragados en silencio. Para una auditoría general existe `/security-review`; no la repitas.
+5. **Usos que quedaron atrás**: por cada ruta, campo, método HTTP, función, tabla o regla que el cambio quitó,
+   agregó o modificó, buscá en **todo el repo**, también en archivos sin cambios (`scripts/`, `app/cors.py`,
+   docstrings que salen en `/docs`), quién depende de lo viejo o no contempla lo nuevo.
+6. **Documentos que contradicen el cambio**: `CLAUDE.md`, `.claude/`, `README.md`, `docs/BACKLOG.md` (ítems `[x]` que
+   todavía dicen que falta) y el estado en el índice de `docs/DECISIONS.md`.
 
 No reportes estilo ni gustos, ni cosas que los tests ya atrapan (por ejemplo `tests/test_api_docs.py`).
 

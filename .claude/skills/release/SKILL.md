@@ -28,6 +28,16 @@ Partir de la última versión de `git tag` y de `app/version.py`. Dentro de `0.x
 
 Proponer el número con una línea de justificación y **esperar confirmación** del usuario.
 
+Si es **minor**, antes de seguir auditar la documentación (unos 20 minutos, solo lectura) y mostrar los hallazgos;
+el usuario decide cuáles se corrigen, en commits aparte antes del de versión:
+
+- Duplicados y contradicciones entre `CLAUDE.md`, `.claude/`, `README.md`, `docs/DECISIONS.md` y `docs/BACKLOG.md`,
+  y contra el código. Reglas de `CLAUDE.md` que ya no sirven.
+- Con el permiso del usuario, un subagente nuevo responde «¿cómo libero una versión?» desde `CLAUDE.md`: qué leyó,
+  qué adivinó y qué se contradice.
+
+Si dos releases minor seguidos no encuentran nada, proponer quitar este paso.
+
 ## 3. Editar
 
 - `app/version.py`: `__version__ = "X.Y.Z"`.
