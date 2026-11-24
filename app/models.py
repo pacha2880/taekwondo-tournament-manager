@@ -87,6 +87,7 @@ class Athlete(Base):
     # Nullable solo en la base, para que la 0.6.0 pueda seguir creando atletas si se vuelve atrás; la API lo exige.
     grade: Mapped[Grade | None] = mapped_column(Enum(Grade), nullable=True)
     weight_kg: Mapped[float] = mapped_column(Float, nullable=False)
+    height_cm: Mapped[int | None] = mapped_column(Integer, nullable=True)
     club_id: Mapped[int] = mapped_column(ForeignKey("clubs.id"), nullable=False)
 
     club: Mapped["Club"] = relationship(back_populates="athletes")

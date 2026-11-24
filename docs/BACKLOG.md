@@ -40,7 +40,7 @@ Va primero porque la inscripción pública (0.11.0) necesita saber en qué categ
 - [x] **`category_mismatch` revisa también edad y grupo de grado**, además de género y peso. Cambia
       `POST /registrations`: rechaza inscripciones que hoy acepta (va al CHANGELOG). En las categorías sin estructura
       (anteriores a la 0.8.0) solo se revisan género y peso, como hoy.
-- [ ] **Estatura del atleta**, opcional. Ninguna categoría filtra por estatura.
+- [x] **Estatura del atleta**, opcional. Ninguna categoría filtra por estatura.
       [Notion](https://app.notion.com/p/415fae3be03b8109bdd6decce78ad733)
 - [ ] **Atletas que encajan en una categoría**, reusando `category_mismatch`: el admin que inscribe ve solo a
       quienes la API aceptaría (issue

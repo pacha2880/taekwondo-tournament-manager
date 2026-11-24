@@ -12,6 +12,8 @@ funcionando sobre una base ya migrada.
 ## [Unreleased]
 
 ### Added
+- **Estatura del atleta:** campo opcional `height_cm` (entero, 50 a 250 cm) al crear y editar atletas; en
+  `PATCH`, `null` la borra. No se usa en ninguna regla de categorías y no sale en los endpoints públicos.
 - **Estructura de categorías del torneo:** `GET /api/v1/tournaments/{id}/category-structure` (público) devuelve los
   grupos de grado, las divisiones de edad y las divisiones de peso del torneo. Todo torneo nuevo nace con la
   estructura de la Copa Diamante y con todas sus categorías ya creadas (grupo × género × edad × peso; 212 en total).

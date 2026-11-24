@@ -4,7 +4,7 @@ import re
 
 from tests.test_api_auth import PUBLIC_ENDPOINTS
 
-SENSITIVE_FIELDS = {"birth_date", "weight_kg", "ci"}
+SENSITIVE_FIELDS = {"birth_date", "weight_kg", "ci", "height_cm"}
 
 
 def _keys(value):

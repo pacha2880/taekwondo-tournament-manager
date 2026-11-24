@@ -92,6 +92,13 @@ class AthleteBase(BaseModel):
     gender: Gender = Field(description="Género del atleta. Debe coincidir con el de la categoría en que se inscribe.")
     grade: Grade = Field(description="Grado del atleta.", examples=["kup_6"])
     weight_kg: float = Field(description="Peso en kilogramos, con un decimal como máximo.", examples=[38.5])
+    height_cm: int | None = Field(
+        default=None,
+        ge=50,
+        le=250,
+        description="Estatura en centímetros, opcional (de 50 a 250). No se usa para asignar categorías.",
+        examples=[152],
+    )
     club_id: Int4Id = Field(description="Id del club al que pertenece. El club debe existir.")
 
 
@@ -127,6 +134,12 @@ class AthleteUpdate(BaseModel):
     weight_kg: WeightKg | None = Field(
         default=None,
         description="Nuevo peso en kilogramos, con un decimal como máximo. Si no se envía, no cambia. Ver las reglas con inscripciones en la operación.",
+    )
+    height_cm: int | None = Field(
+        default=None,
+        ge=50,
+        le=250,
+        description="Nueva estatura en centímetros (de 50 a 250). Si no se envía, no cambia; `null` la borra.",
     )
     club_id: Int4Id | None = Field(
         default=None, description="Id del nuevo club, que debe existir. Si no se envía, no cambia."

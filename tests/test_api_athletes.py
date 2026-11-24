@@ -417,3 +417,30 @@ def test_the_legacy_belt_rank_column_follows_the_grade(client, athlete):
 
     db = next(app.dependency_overrides[get_db]())
     assert db.get(Athlete, athlete["id"]).belt_rank == "kup_1"
+
+
+def test_height_is_optional_and_stored(client, club):
+    without = client.post("/api/v1/athletes", json=_athlete_payload(club, ci=None))
+    with_height = client.post("/api/v1/athletes", json=_athlete_payload(club, height_cm=152))
+
+    assert without.status_code == 201
+    assert without.json()["height_cm"] is None
+    assert with_height.status_code == 201
+    assert with_height.json()["height_cm"] == 152
+
+
+def test_update_changes_and_clears_the_height(client, athlete):
+    url = f"/api/v1/athletes/{athlete['id']}"
+
+    assert client.patch(url, json={"height_cm": 160}).json()["height_cm"] == 160
+    assert client.patch(url, json={"name": "Otro Nombre"}).json()["height_cm"] == 160
+    assert client.patch(url, json={"height_cm": None}).json()["height_cm"] is None
+
+
+@pytest.mark.parametrize("height", [49, 251, 150.5])
+def test_invalid_height_is_rejected(client, club, athlete, height):
+    created = client.post("/api/v1/athletes", json=_athlete_payload(club, height_cm=height))
+    updated = client.patch(f"/api/v1/athletes/{athlete['id']}", json={"height_cm": height})
+
+    assert created.status_code == 422
+    assert updated.status_code == 422

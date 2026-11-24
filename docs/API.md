@@ -109,11 +109,14 @@ Para mostrar nombres no hace falta pedir cada atleta: cada combate trae `athlete
 
 ## Atletas
 
+**Estatura:** `height_cm` es opcional, un entero de 50 a 250 (cm); fuera de rango o con decimales responde `422`.
+Solo informa: ninguna regla de categorías la usa. Como el peso, no sale en los endpoints públicos.
+
 **Buscar:** `GET /api/v1/athletes?q=texto` devuelve los atletas cuyo nombre o CI contienen el texto, sin
 distinguir mayúsculas ni tildes (`perez` encuentra a `Pérez`). Sin `q`, o con `q` vacío, devuelve todos.
 
 **Editar:** `PATCH /api/v1/athletes/{id}` cambia solo los campos que se envían. Para quitar el CI se envía
-`"ci": null` (o `""`). Si el cambio de **género, peso, grado o fecha de nacimiento** deja al atleta fuera de una categoría en la que
+`"ci": null` (o `""`); para quitar la estatura, `"height_cm": null`. Si el cambio de **género, peso, grado o fecha de nacimiento** deja al atleta fuera de una categoría en la que
 está inscrito:
 
 - En un torneo **en borrador** responde `409` y no cambia nada; `detail` nombra las categorías afectadas.

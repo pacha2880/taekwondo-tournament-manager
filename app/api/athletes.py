@@ -133,8 +133,8 @@ def get_athlete(athlete_id: int, db: Session = Depends(get_db)):
     dependencies=ADMIN_ONLY,
     summary="Actualizar un atleta",
     description=(
-        "Modifica solo los campos que se envían (un `null` en un campo que no sea `ci` se ignora). `ci` con "
-        "`null` o texto vacío lo borra. Si el cambio de **género, peso, grado o fecha de nacimiento** afecta inscripciones: en un torneo "
+        "Modifica solo los campos que se envían (un `null` en un campo que no sea `ci` ni `height_cm` se ignora). `ci` con "
+        "`null` o texto vacío lo borra; `height_cm` con `null` también. Si el cambio de **género, peso, grado o fecha de nacimiento** afecta inscripciones: en un torneo "
         "en curso se rechaza (409) si el atleta deja de cumplir las reglas de su categoría; en un torneo en "
         "`draft` (inscripciones abiertas), si el atleta deja de cumplir las reglas de la "
         "categoría hay que confirmar con `confirm_withdrawal=true`, y entonces se lo retira de ella (sin la "
@@ -163,7 +163,7 @@ def update_athlete(
     changes = {
         field: value
         for field, value in payload.model_dump(exclude_unset=True).items()
-        if value is not None or field == "ci"
+        if value is not None or field in ("ci", "height_cm")
     }
     if "club_id" in changes:
         get_club_or_404(db, changes["club_id"])
