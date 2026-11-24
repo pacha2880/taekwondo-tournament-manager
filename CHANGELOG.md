@@ -48,6 +48,8 @@ funcionando sobre una base ya migrada.
   se siguen leyendo igual.
 
 ### Fixed
+- **CORS permite `PUT`:** desde un navegador, `PUT /api/v1/tournaments/{id}/category-structure` fallaba en el
+  *preflight* (`400`) aunque el origen estuviera autorizado.
 - **`Infinity` o `NaN` en un número del body** responden `422` en toda la API. Antes un peso `Infinity` se guardaba y
   hacía fallar con `500` cada lectura de ese atleta o categoría.
 - **Ids de la ruta y de los filtros fuera del rango de `int4`** (`/clubs/{id}`, `?tournament_id=`, `?category_id=`…)
