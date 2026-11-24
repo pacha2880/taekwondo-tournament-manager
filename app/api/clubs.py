@@ -6,7 +6,7 @@ from app.api_docs import TAG_CLUBS, errors
 from app.auth import ADMIN_ONLY
 from app.database import get_db
 from app.models import Club
-from app.schemas import ClubCreate, ClubRead, ClubUpdate
+from app.schemas import ClubCreate, ClubRead, ClubUpdate, Int4
 
 router = APIRouter(prefix="/api/v1/clubs", tags=[TAG_CLUBS])
 
@@ -62,7 +62,7 @@ def list_clubs(db: Session = Depends(get_db)):
     description="Devuelve un club por su id. Es público.",
     responses=errors({404: "El club no existe."}),
 )
-def get_club(club_id: int, db: Session = Depends(get_db)):
+def get_club(club_id: Int4, db: Session = Depends(get_db)):
     return get_club_or_404(db, club_id)
 
 
@@ -74,7 +74,7 @@ def get_club(club_id: int, db: Session = Depends(get_db)):
     description="Modifica el nombre del club, que debe seguir siendo único. Requiere token.",
     responses=errors({404: "El club no existe.", 409: "Ya existe otro club con ese nombre."}, auth=True),
 )
-def update_club(club_id: int, payload: ClubUpdate, db: Session = Depends(get_db)):
+def update_club(club_id: Int4, payload: ClubUpdate, db: Session = Depends(get_db)):
     club = get_club_or_404(db, club_id)
     if payload.name is not None:
         _ensure_name_is_free(db, payload.name, club_id)

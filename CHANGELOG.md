@@ -45,6 +45,8 @@ funcionando sobre una base ya migrada.
 ### Fixed
 - **`Infinity` o `NaN` en un número del body** responden `422` en toda la API. Antes un peso `Infinity` se guardaba y
   hacía fallar con `500` cada lectura de ese atleta o categoría.
+- **Ids de la ruta y de los filtros fuera del rango de `int4`** (`/clubs/{id}`, `?tournament_id=`, `?category_id=`…)
+  responden `422` en vez de `500` en Postgres. Los ids dentro del rango que no existen siguen dando `404`.
 - **Textos y números que no caben en la base** responden `422` en vez de `500`: nombres de club y atleta (hasta 120
   caracteres), nombre y lugar del torneo (150), y los enteros de rounds e ids del body
   (hasta 2.147.483.647). El límite de cada texto sale como `maxLength` en `/docs`.

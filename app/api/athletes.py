@@ -9,7 +9,7 @@ from app.api_docs import TAG_ATHLETES, errors
 from app.auth import ADMIN_ONLY
 from app.database import get_db
 from app.models import Athlete, TournamentStatus
-from app.schemas import AthleteCreate, AthleteRead, AthleteUpdate
+from app.schemas import AthleteCreate, AthleteRead, AthleteUpdate, Int4
 from app.services.athlete_search import search_athletes
 from app.services.eligibility import category_mismatch
 
@@ -123,7 +123,7 @@ def list_athletes(
     description="Devuelve un atleta por su id. Incluye fecha de nacimiento y peso, por eso requiere token.",
     responses=errors({404: "El atleta no existe."}, auth=True),
 )
-def get_athlete(athlete_id: int, db: Session = Depends(get_db)):
+def get_athlete(athlete_id: Int4, db: Session = Depends(get_db)):
     return get_athlete_or_404(db, athlete_id)
 
 
@@ -151,7 +151,7 @@ def get_athlete(athlete_id: int, db: Session = Depends(get_db)):
     ),
 )
 def update_athlete(
-    athlete_id: int,
+    athlete_id: Int4,
     payload: AthleteUpdate,
     confirm_withdrawal: bool = Query(
         default=False,

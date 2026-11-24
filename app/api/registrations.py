@@ -8,7 +8,7 @@ from app.api_docs import TAG_REGISTRATIONS, errors
 from app.auth import ADMIN_ONLY
 from app.database import get_db
 from app.models import Category, Registration, TournamentStatus
-from app.schemas import RegistrationCreate, RegistrationRead
+from app.schemas import Int4, RegistrationCreate, RegistrationRead
 from app.services.eligibility import category_mismatch
 
 router = APIRouter(prefix="/api/v1/registrations", tags=[TAG_REGISTRATIONS])
@@ -71,7 +71,7 @@ def create_registration(payload: RegistrationCreate, db: Session = Depends(get_d
     responses=errors(auth=True),
 )
 def list_registrations(
-    category_id: int | None = None, tournament_id: int | None = None, db: Session = Depends(get_db)
+    category_id: Int4 | None = None, tournament_id: Int4 | None = None, db: Session = Depends(get_db)
 ):
     query = (
         select(Registration)
@@ -93,7 +93,7 @@ def list_registrations(
     description="Borra la inscripción. Solo mientras el torneo está en `draft`: con el torneo ya iniciado responde 409. Requiere token.",
     responses=errors({404: "La inscripción no existe.", 409: "Las inscripciones están cerradas (el torneo ya empezó)."}, auth=True),
 )
-def delete_registration(registration_id: int, db: Session = Depends(get_db)):
+def delete_registration(registration_id: Int4, db: Session = Depends(get_db)):
     registration = db.get(Registration, registration_id)
     if not registration:
         raise HTTPException(status_code=404, detail="Inscripción no encontrada")

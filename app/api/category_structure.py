@@ -7,7 +7,7 @@ from app.api_docs import TAG_CATEGORIES, errors
 from app.auth import ADMIN_ONLY
 from app.database import get_db
 from app.models import Tournament, TournamentStatus
-from app.schemas import CategoryStructureRead, CategoryStructureResult, CategoryStructureUpdate
+from app.schemas import CategoryStructureRead, CategoryStructureResult, CategoryStructureUpdate, Int4
 from app.services.category_structure import apply_structure, describe_structure, preview_categories
 
 router = APIRouter(prefix="/api/v1/tournaments", tags=[TAG_CATEGORIES])
@@ -32,7 +32,7 @@ def _get_tournament_with_structure(db: Session, tournament_id: int) -> Tournamen
     ),
     responses=errors({404: "El torneo no existe, o no tiene estructura de categorías."}),
 )
-def get_category_structure(tournament_id: int, db: Session = Depends(get_db)):
+def get_category_structure(tournament_id: Int4, db: Session = Depends(get_db)):
     return describe_structure(_get_tournament_with_structure(db, tournament_id))
 
 
@@ -55,7 +55,7 @@ def get_category_structure(tournament_id: int, db: Session = Depends(get_db)):
     ),
 )
 def update_category_structure(
-    tournament_id: int,
+    tournament_id: Int4,
     payload: CategoryStructureUpdate,
     validate_only: bool = Query(default=False, description="Si es `true`, valida y devuelve el resultado sin guardarlo."),
     db: Session = Depends(get_db),

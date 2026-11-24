@@ -1,6 +1,8 @@
 """Valores que no caben en la columna de Postgres: SQLite los guarda igual, así que sin estos límites la suite pasaba
 y en producción la API respondía 500 en vez de 422."""
 
+import re
+
 import pytest
 from pydantic import ValidationError
 
@@ -45,3 +47,42 @@ def test_a_name_exactly_as_long_as_the_column_is_accepted(client):
 def test_round_points_must_fit_the_column(points):
     with pytest.raises(ValidationError):
         RoundScoreCreate(**{"round_number": 1, "red_points": 0, "blue_points": 0, **points})
+
+
+def _id_inputs():
+    """Cada parámetro de ruta o de query que termina en _id, sacado del openapi: una ruta nueva queda cubierta sola."""
+    from app.main import app
+
+    for path, operations in app.openapi()["paths"].items():
+        for method, operation in operations.items():
+            for param in operation.get("parameters", []):
+                if param["name"].endswith("_id"):
+                    yield method, path, param["name"], param["in"]
+
+
+def _call_with_id(client, method, path, name, where, value):
+    path_values = {n: 1 for n in re.findall(r"{(\w+)}", path)}
+    query = {}
+    if where == "path":
+        path_values[name] = value
+    else:
+        query[name] = value
+    return client.request(method, path.format(**path_values), params=query)
+
+
+ID_INPUTS = list(_id_inputs())
+
+
+def test_every_id_input_was_found():
+    assert len(ID_INPUTS) >= 15
+
+
+@pytest.mark.parametrize("value", [INT4_MAX + 1, -INT4_MAX - 2])
+@pytest.mark.parametrize("method, path, name, where", ID_INPUTS)
+def test_ids_outside_int4_are_rejected(client, method, path, name, where, value):
+    assert _call_with_id(client, method, path, name, where, value).status_code == 422
+
+
+@pytest.mark.parametrize("value", [INT4_MAX, 0, -1])
+def test_ids_inside_int4_that_do_not_exist_are_404(client, value):
+    assert client.get(f"/api/v1/clubs/{value}").status_code == 404

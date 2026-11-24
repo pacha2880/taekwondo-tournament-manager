@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.api_docs import TAG_CATEGORIES, errors
 from app.database import get_db
 from app.models import Category
-from app.schemas import CategoryRead, RegistrantRead
+from app.schemas import CategoryRead, Int4, RegistrantRead
 from app.services.registrants import list_registrants
 
 router = APIRouter(prefix="/api/v1/categories", tags=[TAG_CATEGORIES])
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/api/v1/categories", tags=[TAG_CATEGORIES])
     ),
     responses=errors(),
 )
-def list_categories(tournament_id: int | None = None, db: Session = Depends(get_db)):
+def list_categories(tournament_id: Int4 | None = None, db: Session = Depends(get_db)):
     query = select(Category).options(selectinload(Category.bracket)).order_by(Category.id)
     if tournament_id is not None:
         query = query.where(Category.tournament_id == tournament_id)
@@ -35,7 +35,7 @@ def list_categories(tournament_id: int | None = None, db: Session = Depends(get_
     description="Devuelve una categoría por su id. Es público.",
     responses=errors({404: "La categoría no existe."}),
 )
-def get_category(category_id: int, db: Session = Depends(get_db)):
+def get_category(category_id: Int4, db: Session = Depends(get_db)):
     category = db.get(Category, category_id)
     if not category:
         raise HTTPException(status_code=404, detail="Categoría no encontrada")
@@ -51,7 +51,7 @@ def get_category(category_id: int, db: Session = Depends(get_db)):
     "categoría no tiene llave (`has_bracket: false`) es lo que se muestra al público. Es público.",
     responses=errors({404: "La categoría no existe."}),
 )
-def list_category_registrants(category_id: int, db: Session = Depends(get_db)):
+def list_category_registrants(category_id: Int4, db: Session = Depends(get_db)):
     if not db.get(Category, category_id):
         raise HTTPException(status_code=404, detail="Categoría no encontrada")
     return list_registrants(db, category_id)

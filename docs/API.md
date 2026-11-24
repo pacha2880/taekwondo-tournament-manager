@@ -166,6 +166,9 @@ códigos que puede devolver.
 Cada texto tiene un largo máximo, que `/docs` muestra como `maxLength` (por ejemplo 120 para el nombre de un club o
 atleta y 150 para el nombre de un torneo): conviene usarlo como `maxlength` del input. Pasarse responde `422`.
 
+Los ids (en la ruta o en filtros como `?tournament_id=`) van de -2147483648 a 2147483647; fuera de ese rango responde
+`422`. Un id dentro del rango que no existe sigue dando `404`.
+
 ## Valores de los enums
 
 Viajan en inglés; para mostrarlos al usuario, esta es la traducción sugerida:
