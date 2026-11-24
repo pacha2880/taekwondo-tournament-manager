@@ -51,3 +51,54 @@ def test_has_bracket_tells_whether_the_bracket_was_generated(client, club, categ
 
     assert (before, after) == (False, True)
     assert [c["has_bracket"] for c in listed if c["id"] == category["id"]] == [True]
+
+
+def _athlete_payload(club, name, **changes):
+    return {
+        "name": name,
+        "birth_date": "2012-05-01",
+        "gender": "male",
+        "grade": "kup_6",
+        "weight_kg": 40.5,
+        "club_id": club["id"],
+        **changes,
+    }
+
+
+def test_eligible_athletes_only_those_that_fit_sorted_by_name(client, club, athlete, category):
+    client.post("/api/v1/athletes", json=_athlete_payload(club, "Ana Zeta"))
+    client.post("/api/v1/athletes", json=_athlete_payload(club, "Abel Alto"))
+    for name, change in [
+        ("Otro genero", {"gender": "female"}),
+        ("Otra edad", {"birth_date": "2000-05-01"}),
+        ("Otro grado", {"grade": "kup_1"}),
+        ("Otro peso", {"weight_kg": 60}),
+    ]:
+        assert client.post("/api/v1/athletes", json=_athlete_payload(club, name, **change)).status_code == 201
+
+    resp = client.get(f"/api/v1/categories/{category['id']}/eligible-athletes")
+
+    assert resp.status_code == 200
+    assert [a["name"] for a in resp.json()] == ["Abel Alto", "Ana Zeta", "Juan Perez"]
+    assert resp.json()[0]["club"]["id"] == club["id"]
+
+
+def test_eligible_athletes_includes_already_registered(client, athlete, category):
+    client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
+
+    resp = client.get(f"/api/v1/categories/{category['id']}/eligible-athletes")
+
+    assert [a["id"] for a in resp.json()] == [athlete["id"]]
+
+
+def test_eligible_athletes_category_not_found(client):
+    resp = client.get("/api/v1/categories/9999/eligible-athletes")
+
+    assert resp.status_code == 404
+    assert resp.json()["detail"] == "Categoría no encontrada"
+
+
+def test_eligible_athletes_requires_token(anon_client, category):
+    resp = anon_client.get(f"/api/v1/categories/{category['id']}/eligible-athletes")
+
+    assert resp.status_code == 401

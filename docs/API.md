@@ -82,6 +82,10 @@ distinto; peso fuera de `min_weight`/`max_weight` (si los tiene); y, en las cate
 Las categorías de torneos anteriores a la 0.8.0 solo revisan género y peso. Además: `409` si el torneo ya empezó o si
 el atleta ya está inscrito en esa categoría o en otra del mismo torneo.
 
+Para inscribir, listá los que encajan con `GET /api/v1/categories/{id}/eligible-athletes` (requiere token): devuelve
+los atletas que cumplen esa regla, ordenados por nombre, e incluye a los ya inscritos; quiénes son lo da
+`GET /registrations?category_id=`.
+
 ## Cómo leer una llave
 
 La llave trae **todos los combates de todas las rondas** en una lista plana (`matches`). Para dibujar el

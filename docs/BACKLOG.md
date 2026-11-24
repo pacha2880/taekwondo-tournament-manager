@@ -42,7 +42,7 @@ Va primero porque la inscripción pública (0.11.0) necesita saber en qué categ
       (anteriores a la 0.8.0) solo se revisan género y peso, como hoy.
 - [x] **Estatura del atleta**, opcional. Ninguna categoría filtra por estatura.
       [Notion](https://app.notion.com/p/415fae3be03b8109bdd6decce78ad733)
-- [ ] **Atletas que encajan en una categoría**, reusando `category_mismatch`: el admin que inscribe ve solo a
+- [x] **Atletas que encajan en una categoría**, reusando `category_mismatch`: el admin que inscribe ve solo a
       quienes la API aceptaría (issue
       [#78](https://github.com/ArtesanoWeb/taekwondo-tournament-web/issues/78) del frontend).
       [Notion](https://app.notion.com/p/415fae3be03b81f5addfe9ad07cec61a)

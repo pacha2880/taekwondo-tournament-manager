@@ -12,6 +12,8 @@ funcionando sobre una base ya migrada.
 ## [Unreleased]
 
 ### Added
+- **Atletas que encajan en una categoría:** `GET /api/v1/categories/{id}/eligible-athletes` (requiere token) devuelve,
+  ordenados por nombre, los atletas que cumplen la misma regla que `POST /registrations`, incluidos los ya inscritos.
 - **Estatura del atleta:** campo opcional `height_cm` (entero, 50 a 250 cm) al crear y editar atletas; en
   `PATCH`, `null` la borra. No se usa en ninguna regla de categorías y no sale en los endpoints públicos.
 - **Estructura de categorías del torneo:** `GET /api/v1/tournaments/{id}/category-structure` (público) devuelve los
