@@ -1,10 +1,9 @@
 # Torneos de Taekwondo
 
 Sistema de gestión de torneos de taekwondo: inscripción de atletas, generación aleatoria de
-llaves (con byes cuando el número de inscritos no es potencia de 2), categorías por edad,
-género, cinturón (colores desde amarillo, y negro con su propia categoría absoluta) y peso,
-carga de resultados de combate por round/puntaje. Es solo una API JSON: la interfaz es un
-frontend externo.
+llaves (con byes cuando el número de inscritos no es potencia de 2), categorías por grupo de
+grado, género, edad y peso que salen de la estructura de cada torneo, y carga de resultados de
+combate por round/puntaje. Es solo una API JSON: la interfaz es un frontend externo.
 
 Pensado para poder extenderse más adelante a otras disciplinas (formas/poomsae,
 rompimiento) sin rehacer lo ya construido — ver [`docs/DECISIONS.md`](docs/DECISIONS.md).

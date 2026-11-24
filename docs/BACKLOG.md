@@ -22,41 +22,6 @@ llaves juntas) → **Finalizado**.
 
 La 0.6.0 deja tres de esos estados (inscripciones abiertas, en curso, finalizado); la 0.9.0 agrega los otros dos.
 
-## 0.8.0 — Grupos de grado y categorías
-
-Va primero porque la inscripción pública (0.11.0) necesita saber en qué categorías encaja cada atleta.
-
-- [x] **Grupos de grado por torneo**, con rangos editables (hoy Principiantes 10mo–6to Kup, Novatos 5to–2do,
-      Avanzados 1er Kup y Dan). Reemplazan a `BeltGroup` (color/negro) en la categoría.
-- [x] **Plantilla de categorías**: una sola y fija, la de la Copa Diamante 2026, con edades, grupos de grado y
-      divisiones de peso por edad y género. Todo torneo nuevo nace con ella y se ajusta con el `PUT` de la estructura.
-      [Notion](https://app.notion.com/p/415fae3be03b81aa9986d21e5029fd1c)
-- [x] **Editar categorías** mientras el torneo no empezó: se edita la estructura entera
-      (`PUT /tournaments/{id}/category-structure`) y las categorías se recalculan.
-- [x] **Quitar `POST /categories`**: las categorías salen solo de la estructura. Es incompatible: va marcado en el
-      CHANGELOG y se avisa al frontend. Los torneos anteriores a la 0.8.0 se quedan con las categorías que tienen.
-- [x] **Edad por año de nacimiento** (Art. 4 del reglamento WT), no por fecha exacta.
-- [x] **`category_mismatch` revisa también edad y grupo de grado**, además de género y peso. Cambia
-      `POST /registrations`: rechaza inscripciones que hoy acepta (va al CHANGELOG). En las categorías sin estructura
-      (anteriores a la 0.8.0) solo se revisan género y peso, como hoy.
-- [x] **Estatura del atleta**, opcional. Ninguna categoría filtra por estatura.
-      [Notion](https://app.notion.com/p/415fae3be03b8109bdd6decce78ad733)
-- [x] **Atletas que encajan en una categoría**, reusando `category_mismatch`: el admin que inscribe ve solo a
-      quienes la API aceptaría (issue
-      [#78](https://github.com/ArtesanoWeb/taekwondo-tournament-web/issues/78) del frontend).
-      [Notion](https://app.notion.com/p/415fae3be03b81f5addfe9ad07cec61a)
-- [x] **Categorías en las que encaja un atleta**, la consulta inversa y con la misma regla: la usa la inscripción
-      pública de la 0.11.0.
-
-## 0.8.1 — Valores fuera de rango: 422, no 500
-
-- [x] **Largo y rango de cada campo de entrada**, como ya tiene la estructura: los `str` sin `max_length` (nombres
-      de club, atleta y torneo, `location`, `age_label`, `weight_label`) y los `int` sin rango (edades,
-      `rounds_to_win`, los `*_id` del body) pasan en SQLite pero Postgres los rechaza al guardar o al buscar, y la
-      API responde `500` en vez de `422`. El límite sale de la columna de `app/models.py`.
-- [x] **Ids de la ruta y de los filtros** (`/clubs/{club_id}`, `?tournament_id=`…): un id mayor que `int4` también
-      daba `500` en Postgres; ahora responde `422`.
-
 ## 0.9.0 — Ciclo nuevo y pesaje
 
 Cambia el comportamiento de la API: va marcado como incompatible en el CHANGELOG.
