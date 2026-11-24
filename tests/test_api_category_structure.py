@@ -3,8 +3,6 @@ import json
 
 import pytest
 
-from app.database import get_db
-from app.main import app
 from app.models import Tournament
 from app.services.category_structure import sync_categories
 
@@ -15,10 +13,6 @@ def _structure(client, tournament):
 
 def _categories(client, tournament):
     return client.get("/api/v1/categories", params={"tournament_id": tournament["id"]}).json()
-
-
-def _db():
-    return next(app.dependency_overrides[get_db]())
 
 
 def test_a_new_tournament_starts_with_the_copa_diamante_grade_groups(client, tournament):
@@ -87,12 +81,11 @@ def test_festival_is_one_general_list_per_gender(client, tournament):
     }
 
 
-def test_syncing_again_keeps_every_category_and_its_id(client, tournament):
+def test_syncing_again_keeps_every_category_and_its_id(client, tournament, db_session):
     before = sorted(c["id"] for c in _categories(client, tournament))
 
-    db = _db()
-    sync_categories(db, db.get(Tournament, tournament["id"]))
-    db.commit()
+    sync_categories(db_session, db_session.get(Tournament, tournament["id"]))
+    db_session.commit()
 
     assert sorted(c["id"] for c in _categories(client, tournament)) == before
 
@@ -105,14 +98,13 @@ def test_structure_of_a_missing_tournament_is_404(client):
     assert client.get("/api/v1/tournaments/999/category-structure").status_code == 404
 
 
-def test_tournaments_from_before_the_structure_have_none(client, tournament):
-    db = _db()
-    old = db.get(Tournament, tournament["id"])
+def test_tournaments_from_before_the_structure_have_none(client, tournament, db_session):
+    old = db_session.get(Tournament, tournament["id"])
     old.categories = []
-    db.flush()
+    db_session.flush()
     old.grade_groups = []
     old.age_divisions = []
-    db.commit()
+    db_session.commit()
 
     resp = _structure(client, tournament)
 

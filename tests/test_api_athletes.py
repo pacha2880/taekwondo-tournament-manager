@@ -410,16 +410,13 @@ def test_grade_can_be_edited(client, athlete):
     assert resp.json()["grade"] == "dan"
 
 
-def test_the_legacy_belt_rank_column_follows_the_grade(client, athlete):
+def test_the_legacy_belt_rank_column_follows_the_grade(client, athlete, db_session):
     # La columna belt_rank sigue en la base hasta la 1.0.0 para poder volver a la 0.6.0 (que la lee).
-    from app.database import get_db
-    from app.main import app
     from app.models import Athlete
 
     client.patch(f"/api/v1/athletes/{athlete['id']}", json={"grade": "kup_1"})
 
-    db = next(app.dependency_overrides[get_db]())
-    assert db.get(Athlete, athlete["id"]).belt_rank == "kup_1"
+    assert db_session.get(Athlete, athlete["id"]).belt_rank == "kup_1"
 
 
 def test_height_is_optional_and_stored(client, club):
