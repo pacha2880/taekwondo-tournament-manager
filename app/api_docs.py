@@ -24,7 +24,7 @@ inscripciones, llaves de eliminación simple con pases directos (*byes*) y resul
 ## Autenticación
 
 Las lecturas de **torneos, categorías, clubes, llaves y combates son públicas**. Todo lo que escribe
-(`POST`/`PATCH`) y las lecturas de **atletas e inscripciones** (llevan fecha de nacimiento y peso, y
+(`POST`, `PUT`, `PATCH` y `DELETE`) y las lecturas de **atletas e inscripciones** (llevan fecha de nacimiento y peso, y
 hay menores) requieren un token:
 
 1. `POST /api/v1/auth/login` con `username` y `password` como formulario devuelve un token JWT que
@@ -65,7 +65,7 @@ TAGS_METADATA = [
     },
     {
         "name": TAG_REGISTRATIONS,
-        "description": "Inscripción de un atleta en una categoría de un torneo. Valida género, peso y duplicados.",
+        "description": "Inscripción de un atleta en una categoría de un torneo. Valida género, peso, edad, grado y duplicados.",
     },
     {
         "name": TAG_BRACKETS,

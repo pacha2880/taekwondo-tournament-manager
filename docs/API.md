@@ -16,7 +16,7 @@ de ejemplo.
 ## Acceso
 
 Lecturas **públicas**: torneos, categorías, clubes, llaves, combates y la lista de inscritos de cada
-categoría (solo nombre y club). Todo `POST`/`PATCH` y las
+categoría (solo nombre y club). Todo `POST`, `PUT`, `PATCH` y `DELETE` y las
 lecturas de **atletas e inscripciones** piden `Authorization: Bearer <token>` (esas respuestas
 incluyen fecha de nacimiento y peso, y hay menores). El token se obtiene en
 `POST /api/v1/auth/login` (formulario con `username` y `password`), dura 8 horas y no se renueva solo:
@@ -55,8 +55,8 @@ Desde la 0.8.0, `POST /categories` ya no existe (responde `405`): las categoría
 - **Divisiones de peso** (`weight_limits` de cada edad, por género): límites superiores en kg. Con
   `[48, 55, 63, 73]` las divisiones son «Hasta 48 kg», «48.1–55 kg», «55.1–63 kg», «63.1–73 kg» y «Más de 73 kg».
   Si `has_weight_divisions` es `false` (Festival), hay una sola división, «Todos los pesos».
-- **Pesos con un decimal como máximo**, en toda la API: los límites de la estructura, `weight_kg` del atleta y
-  `min_weight`/`max_weight` de una categoría. Con más decimales responde `422`: un atleta de 48.05 kg no cabría en
+- **Pesos con un decimal como máximo**, en toda la API: los límites de la estructura y `weight_kg` del
+  atleta. Con más decimales responde `422`: un atleta de 48.05 kg no cabría en
   «Hasta 48 kg» ni en «48.1–55 kg».
 
 Cada combinación de grupo × género × edad × peso es una categoría, salvo **Festival**: la primera división de
@@ -204,23 +204,23 @@ TOKEN=$(curl -s -X POST $BASE/api/v1/auth/login -d "username=admin&password=TU_C
 AUTH="Authorization: Bearer $TOKEN"
 JSON="Content-Type: application/json"
 
-# 2) Club, torneo y categoría
+# 2) Club y torneo (nace con sus categorías ya creadas)
 curl -s -X POST $BASE/api/v1/clubs -H "$AUTH" -H "$JSON" -d '{"name": "Dojang Central"}'
 curl -s -X POST $BASE/api/v1/tournaments -H "$AUTH" -H "$JSON" \
   -d '{"name": "Copa Cochabamba", "date": "2026-11-15", "location": "Cochabamba, Bolivia"}'
-curl -s -X POST $BASE/api/v1/categories -H "$AUTH" -H "$JSON" \
-  -d '{"tournament_id": 1, "gender": "male", "age_label": "Cadete", "min_age": 12, "max_age": 14,
-       "belt_group": "color", "weight_label": "Hasta 45kg", "max_weight": 45}'
 
-# 3) Atletas e inscripciones (repetir por cada atleta; la llave necesita al menos 2)
+# 3) Atletas, la categoría en la que encajan e inscripciones (repetir por cada atleta; la llave necesita al menos 2)
 curl -s -X POST $BASE/api/v1/athletes -H "$AUTH" -H "$JSON" \
   -d '{"name": "Mateo Quispe", "ci": "1234567", "birth_date": "2012-03-14", "gender": "male",
        "grade": "kup_6", "weight_kg": 38.5, "club_id": 1}'
-curl -s -X POST $BASE/api/v1/registrations -H "$AUTH" -H "$JSON" -d '{"athlete_id": 1, "category_id": 1}'
+CATEGORY=$(curl -s "$BASE/api/v1/athletes/1/eligible-categories?tournament_id=1" -H "$AUTH" \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['id'])")
+curl -s -X POST $BASE/api/v1/registrations -H "$AUTH" -H "$JSON" -d "{\"athlete_id\": 1, \"category_id\": $CATEGORY}"
 
-# 4) Generar la llave y consultarla (la consulta es pública)
-curl -s -X POST $BASE/api/v1/categories/1/bracket -H "$AUTH"
-curl -s $BASE/api/v1/categories/1/bracket
+# 4) Iniciar el torneo, generar la llave y consultarla (la consulta es pública)
+curl -s -X POST $BASE/api/v1/tournaments/1/start -H "$AUTH"
+curl -s -X POST $BASE/api/v1/categories/$CATEGORY/bracket -H "$AUTH"
+curl -s $BASE/api/v1/categories/$CATEGORY/bracket
 
 # 5) Cargar un round: su número (el siguiente) y los puntos; no admite empates
 curl -s -X POST $BASE/api/v1/matches/1/rounds -H "$AUTH" -H "$JSON" \

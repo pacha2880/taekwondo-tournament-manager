@@ -193,8 +193,8 @@ class CategoryBase(BaseModel):
     belt_group: BeltGroup = Field(description="Grupo de cinturón de la categoría.")
     weight_label: str = Field(
         max_length=60,
-        description="Nombre del rango de peso, en texto libre. Es lo que se muestra al público.",
-        examples=["Hasta 45kg"],
+        description="Nombre de la división de peso. Es lo que se muestra al público.",
+        examples=["48.1–55 kg"],
     )
     min_weight: float | None = Field(
         default=None,
