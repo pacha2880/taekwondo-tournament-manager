@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -31,20 +33,22 @@ def _ensure_ci_is_free(db: Session, ci: str | None, athlete_id: int | None = Non
         raise HTTPException(status_code=409, detail="Ya existe un atleta con ese CI")
 
 
+FIELDS_THAT_AFFECT_CATEGORY = ("gender", "weight_kg", "grade", "birth_date")
+
+
 def _withdraw_registrations_that_no_longer_fit(db: Session, athlete: Athlete, changes: dict, confirmed: bool):
-    gender = changes.get("gender", athlete.gender)
-    weight_kg = changes.get("weight_kg", athlete.weight_kg)
-    if (gender, weight_kg) == (athlete.gender, athlete.weight_kg):
+    proposed = SimpleNamespace(
+        **{field: changes.get(field, getattr(athlete, field)) for field in FIELDS_THAT_AFFECT_CATEGORY}
+    )
+    if all(getattr(proposed, field) == getattr(athlete, field) for field in FIELDS_THAT_AFFECT_CATEGORY):
         return
 
     for registration in athlete.registrations:
         tournament = registration.category.tournament
-        if tournament.status == TournamentStatus.IN_PROGRESS and category_mismatch(
-            gender, weight_kg, registration.category
-        ):
+        if tournament.status == TournamentStatus.IN_PROGRESS and category_mismatch(proposed, registration.category):
             raise HTTPException(
                 status_code=409,
-                detail="No se puede cambiar el género ni el peso: el atleta dejaría de encajar en su categoría "
+                detail="No se puede hacer este cambio: el atleta dejaría de encajar en su categoría "
                 f"del torneo en curso «{tournament.name}»",
             )
 
@@ -52,7 +56,7 @@ def _withdraw_registrations_that_no_longer_fit(db: Session, athlete: Athlete, ch
         registration
         for registration in athlete.registrations
         if registration.category.tournament.status == TournamentStatus.DRAFT
-        and category_mismatch(gender, weight_kg, registration.category)
+        and category_mismatch(proposed, registration.category)
     ]
     if not no_longer_fit:
         return
@@ -130,7 +134,7 @@ def get_athlete(athlete_id: int, db: Session = Depends(get_db)):
     summary="Actualizar un atleta",
     description=(
         "Modifica solo los campos que se envían (un `null` en un campo que no sea `ci` se ignora). `ci` con "
-        "`null` o texto vacío lo borra. Si el cambio de **género o peso** afecta inscripciones: en un torneo "
+        "`null` o texto vacío lo borra. Si el cambio de **género, peso, grado o fecha de nacimiento** afecta inscripciones: en un torneo "
         "en curso se rechaza (409) si el atleta deja de cumplir las reglas de su categoría; en un torneo en "
         "`draft` (inscripciones abiertas), si el atleta deja de cumplir las reglas de la "
         "categoría hay que confirmar con `confirm_withdrawal=true`, y entonces se lo retira de ella (sin la "

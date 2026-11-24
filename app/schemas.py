@@ -113,13 +113,17 @@ class AthleteUpdate(BaseModel):
         json_schema_extra={"pattern": f"^{CI_REGEX}$"},
     )
     birth_date: datetime.date | None = Field(
-        default=None, description="Nueva fecha de nacimiento (`YYYY-MM-DD`). Si no se envía, no cambia."
+        default=None,
+        description="Nueva fecha de nacimiento (`YYYY-MM-DD`). Si no se envía, no cambia. Ver las reglas con inscripciones en la operación.",
     )
     gender: Gender | None = Field(
         default=None,
         description="Nuevo género. Si no se envía, no cambia. Ver las reglas con inscripciones en la operación.",
     )
-    grade: Grade | None = Field(default=None, description="Nuevo grado. Si no se envía, no cambia.")
+    grade: Grade | None = Field(
+        default=None,
+        description="Nuevo grado. Si no se envía, no cambia. Ver las reglas con inscripciones en la operación.",
+    )
     weight_kg: WeightKg | None = Field(
         default=None,
         description="Nuevo peso en kilogramos, con un decimal como máximo. Si no se envía, no cambia. Ver las reglas con inscripciones en la operación.",

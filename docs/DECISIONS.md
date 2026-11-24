@@ -586,3 +586,14 @@ nota (el mínimo de cada división ya se redondea a décimas).
 
 **Solo en los schemas de entrada:** los `*Read` también validan lo que devuelven, y un peso con más decimales
 guardado antes de esta regla haría fallar la lectura con un 500. Los datos existentes no se tocan.
+
+## 2026-11-23 — `category_mismatch` revisa edad y grado
+
+**Edad por año:** edad = año del torneo menos año de nacimiento (Art. 4 WT), no por fecha exacta; así nacer el 31-dic o
+el 1-ene del mismo año da el mismo resultado.
+
+**Categorías históricas sin revisar edad ni grado:** su `min_age`/`belt_group` los cargó el admin a mano y no hay
+grupo de grado contra el cual comparar; solo se revisan género y peso, como antes.
+
+**Atleta sin grado no encaja:** solo ocurre con datos de la 0.6.0; en una categoría con grupo no se puede saber si
+corresponde, y fallar es mejor que aceptar en silencio.

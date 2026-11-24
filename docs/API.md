@@ -73,6 +73,15 @@ motivo y no cambia nada. Con `?validate_only=true` devuelve cómo quedaría (est
 sirve para una vista previa. Lo que el usuario todavía no guardó puede quedar en el navegador (por ejemplo en
 `localStorage`), pero lo oficial es lo que devuelve el `GET`.
 
+## Inscripciones
+
+`POST /api/v1/registrations` responde `422` (con `detail` en español) si el atleta no encaja en la categoría: género
+distinto; peso fuera de `min_weight`/`max_weight` (si los tiene); y, en las categorías con estructura, edad fuera de
+`min_age`–`max_age` (edad = año del torneo menos año de nacimiento) o grado fuera del grupo de grado de la categoría
+(un atleta sin grado no encaja en categorías con grupo). Festival no tiene grupo ni pesos: solo revisa género y edad.
+Las categorías de torneos anteriores a la 0.8.0 solo revisan género y peso. Además: `409` si el torneo ya empezó o si
+el atleta ya está inscrito en esa categoría o en otra del mismo torneo.
+
 ## Cómo leer una llave
 
 La llave trae **todos los combates de todas las rondas** en una lista plana (`matches`). Para dibujar el
@@ -104,7 +113,7 @@ Para mostrar nombres no hace falta pedir cada atleta: cada combate trae `athlete
 distinguir mayúsculas ni tildes (`perez` encuentra a `Pérez`). Sin `q`, o con `q` vacío, devuelve todos.
 
 **Editar:** `PATCH /api/v1/athletes/{id}` cambia solo los campos que se envían. Para quitar el CI se envía
-`"ci": null` (o `""`). Si el cambio de **género o peso** deja al atleta fuera de una categoría en la que
+`"ci": null` (o `""`). Si el cambio de **género, peso, grado o fecha de nacimiento** deja al atleta fuera de una categoría en la que
 está inscrito:
 
 - En un torneo **en borrador** responde `409` y no cambia nada; `detail` nombra las categorías afectadas.

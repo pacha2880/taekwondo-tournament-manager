@@ -20,7 +20,7 @@ router = APIRouter(prefix="/api/v1/registrations", tags=[TAG_REGISTRATIONS])
     status_code=201,
     dependencies=ADMIN_ONLY,
     summary="Inscribir un atleta en una categoría",
-    description="Reglas: el torneo debe estar en `draft`: al pasar a `in_progress` las inscripciones se cierran (409); el género del atleta debe coincidir con el de la categoría (422); su peso debe estar dentro de `min_weight`/`max_weight` si la categoría los define (422); no puede inscribirse dos veces en la misma categoría (409) ni en más de una categoría del mismo torneo (409). Requiere token.",
+    description="Reglas: el torneo debe estar en `draft`: al pasar a `in_progress` las inscripciones se cierran (409); el género del atleta debe coincidir con el de la categoría (422); su peso debe estar dentro de `min_weight`/`max_weight` si la categoría los define (422); en las categorías con estructura, su edad (año del torneo menos año de nacimiento) debe estar entre `min_age` y `max_age` y, si la categoría tiene grupo de grado, su grado debe pertenecer al grupo (422; un atleta sin grado no encaja en categorías con grupo); las categorías históricas solo revisan género y peso; no puede inscribirse dos veces en la misma categoría (409) ni en más de una categoría del mismo torneo (409). Requiere token.",
     responses=errors({404: "El atleta o la categoría no existe.", 409: "Las inscripciones están cerradas (el torneo ya empezó), o el atleta ya está inscrito en esa categoría o en otra del mismo torneo."}, auth=True),
 )
 def create_registration(payload: RegistrationCreate, db: Session = Depends(get_db)):
@@ -31,7 +31,7 @@ def create_registration(payload: RegistrationCreate, db: Session = Depends(get_d
     require_tournament_status(
         category.tournament, TournamentStatus.DRAFT, "Las inscripciones están cerradas: el torneo ya empezó"
     )
-    mismatch = category_mismatch(athlete.gender, athlete.weight_kg, category)
+    mismatch = category_mismatch(athlete, category)
     if mismatch:
         raise HTTPException(status_code=422, detail=mismatch)
     existing = db.scalar(

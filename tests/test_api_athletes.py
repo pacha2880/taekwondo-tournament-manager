@@ -230,6 +230,42 @@ def test_update_that_no_longer_fits_is_rejected_while_the_tournament_is_in_progr
     assert len(_registrations(client, category)) == 1
 
 
+def test_grade_change_out_of_the_category_needs_confirmation_in_draft(client, athlete, category):
+    client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
+    url = f"/api/v1/athletes/{athlete['id']}"
+
+    resp = client.patch(url, json={"grade": "kup_5"})
+
+    assert resp.status_code == 409
+    assert client.get(url).json() == athlete
+    resp = client.patch(url, params={"confirm_withdrawal": True}, json={"grade": "kup_5"})
+    assert resp.status_code == 200
+    assert _registrations(client, category) == []
+
+
+def test_birth_date_change_out_of_the_category_is_rejected_while_the_tournament_is_in_progress(
+    client, athlete, category, tournament, set_tournament_status
+):
+    client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
+    set_tournament_status(client, tournament["id"], "in_progress")
+
+    resp = client.patch(f"/api/v1/athletes/{athlete['id']}", json={"birth_date": "2010-01-01"})
+
+    assert resp.status_code == 409
+    assert "torneo en curso «Copa Nacional»" in resp.json()["detail"]
+    assert len(_registrations(client, category)) == 1
+
+
+@pytest.mark.parametrize("change", [{"grade": "kup_7"}, {"birth_date": "2012-12-31"}])
+def test_grade_or_birth_date_change_that_still_fits_keeps_the_registration(client, athlete, category, change):
+    client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
+
+    resp = client.patch(f"/api/v1/athletes/{athlete['id']}", json=change)
+
+    assert resp.status_code == 200
+    assert len(_registrations(client, category)) == 1
+
+
 def test_update_that_still_fits_is_allowed_while_the_tournament_is_in_progress(
     client, athlete, category, tournament, set_tournament_status
 ):

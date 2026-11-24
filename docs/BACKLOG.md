@@ -35,9 +35,9 @@ Va primero porque la inscripción pública (0.11.0) necesita saber en qué categ
       (`PUT /tournaments/{id}/category-structure`) y las categorías se recalculan.
 - [x] **Quitar `POST /categories`**: las categorías salen solo de la estructura. Es incompatible: va marcado en el
       CHANGELOG y se avisa al frontend. Los torneos anteriores a la 0.8.0 se quedan con las categorías que tienen.
-- [ ] **Edad por año de nacimiento** (Art. 4 del reglamento WT), no por fecha exacta. Ya se documenta así, pero
+- [x] **Edad por año de nacimiento** (Art. 4 del reglamento WT), no por fecha exacta. Ya se documenta así, pero
       todavía no se aplica en ninguna regla.
-- [ ] **`category_mismatch` revisa también edad y grupo de grado**, además de género y peso. Cambia
+- [x] **`category_mismatch` revisa también edad y grupo de grado**, además de género y peso. Cambia
       `POST /registrations`: rechaza inscripciones que hoy acepta (va al CHANGELOG). En las categorías sin estructura
       (anteriores a la 0.8.0) solo se revisan género y peso, como hoy.
 - [ ] **Estatura del atleta**, opcional. Ninguna categoría filtra por estatura.

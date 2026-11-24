@@ -29,7 +29,7 @@ están en `.claude/rules/` y se cargan solas al tocar esos archivos.
 ## Reusar, no duplicar
 
 - Nombres de atletas de una llave o combate: `resolve_athlete_names` (`app/services/brackets.py`).
-- Regla de género/peso de un atleta contra una categoría: `category_mismatch` (`app/services/eligibility.py`).
+- Regla de encaje de un atleta en una categoría (género, peso, edad, grado): `category_mismatch` (`app/services/eligibility.py`).
 - Reglas de estado del torneo: `app/api/lifecycle.py`. El estado cambia solo con `POST .../start` y
   `.../finish`, nunca con `PATCH`.
 - Formato de CI: solo `CI_REGEX` de `app/schemas.py`.

@@ -27,6 +27,13 @@ funcionando sobre una base ya migrada.
 - **Incompatible — pesos con un decimal como máximo:** `POST`/`PATCH /api/v1/athletes` (`weight_kg`) responden
   `422` si el peso tiene más de un decimal (`48.05`). Antes se aceptaba, y ese atleta no cabía en ninguna división de
   peso. Los datos ya guardados no cambian.
+- **Incompatible — `POST /api/v1/registrations` revisa edad y grado:** en las categorías con estructura responde `422`
+  si la edad del atleta (año del torneo menos año de nacimiento) no está entre `min_age` y `max_age`, o si su grado
+  no pertenece al grupo de la categoría (un atleta sin grado no encaja en categorías con grupo). Antes solo se
+  revisaban género y peso. Las categorías anteriores a la 0.8.0 siguen revisando solo género y peso.
+  `PATCH /api/v1/athletes/{id}` aplica la misma regla de retiro (409 en torneo en curso, `confirm_withdrawal` en
+  borrador) también al cambiar **grado** o **fecha de nacimiento**, no solo género o peso. El `detail` del 409 en
+  torneo en curso cambió a «No se puede hacer este cambio: …».
 
 ### Removed
 - **Incompatible — `POST /api/v1/categories`:** ya no existe (responde `405`). Las categorías salen solo de la
