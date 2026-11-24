@@ -8,8 +8,8 @@ from app.database import Base
 
 
 class TournamentStatus(str, enum.Enum):
-    """Estado del torneo: `draft` (inscripciones abiertas: se crean las categorías y se inscribe a los atletas),
-    `in_progress` (en curso: ya no se crean categorías ni se inscribe) y `finished` (finalizado). El estado
+    """Estado del torneo: `draft` (inscripciones abiertas: se edita la estructura de categorías y se inscribe a los
+    atletas), `in_progress` (en curso: ya no se edita la estructura ni se inscribe) y `finished` (finalizado). El estado
     solo avanza en ese orden; no se vuelve a uno anterior."""
 
     DRAFT = "draft"
@@ -87,6 +87,7 @@ class Athlete(Base):
     # Nullable solo en la base, para que la 0.6.0 pueda seguir creando atletas si se vuelve atrás; la API lo exige.
     grade: Mapped[Grade | None] = mapped_column(Enum(Grade), nullable=True)
     weight_kg: Mapped[float] = mapped_column(Float, nullable=False)
+    height_cm: Mapped[int | None] = mapped_column(Integer, nullable=True)
     club_id: Mapped[int] = mapped_column(ForeignKey("clubs.id"), nullable=False)
 
     club: Mapped["Club"] = relationship(back_populates="athletes")
@@ -113,6 +114,57 @@ class Tournament(Base):
     categories: Mapped[list["Category"]] = relationship(
         back_populates="tournament", cascade="all, delete-orphan"
     )
+    grade_groups: Mapped[list["GradeGroup"]] = relationship(
+        back_populates="tournament", cascade="all, delete-orphan", order_by="GradeGroup.position"
+    )
+    age_divisions: Mapped[list["AgeDivision"]] = relationship(
+        back_populates="tournament", cascade="all, delete-orphan", order_by="AgeDivision.position"
+    )
+
+
+# Estructura de categorías de un torneo (ver docs/DECISIONS.md, 2026-11-16). Grupos de grado y divisiones de edad
+# se guardan como cortes: cada uno dice desde dónde empieza y termina donde empieza el siguiente, así que no puede
+# haber huecos ni solapes. Las categorías se derivan de la estructura: grupo × género × edad × división de peso.
+class GradeGroup(Base):
+    __tablename__ = "grade_groups"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    tournament_id: Mapped[int] = mapped_column(ForeignKey("tournaments.id"), nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    name: Mapped[str] = mapped_column(String(60), nullable=False)
+    from_grade: Mapped[Grade] = mapped_column(Enum(Grade), nullable=False)
+
+    tournament: Mapped["Tournament"] = relationship(back_populates="grade_groups")
+
+
+class AgeDivision(Base):
+    __tablename__ = "age_divisions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    tournament_id: Mapped[int] = mapped_column(ForeignKey("tournaments.id"), nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    name: Mapped[str] = mapped_column(String(60), nullable=False)
+    from_age: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    tournament: Mapped["Tournament"] = relationship(back_populates="age_divisions")
+    weight_limits: Mapped[list["WeightLimit"]] = relationship(
+        back_populates="age_division", cascade="all, delete-orphan", order_by="WeightLimit.position"
+    )
+
+
+class WeightLimit(Base):
+    """Límite superior de una división de peso: hasta X kg. La última división de cada edad y género es
+    «más de» su último límite, así que N límites dan N + 1 divisiones."""
+
+    __tablename__ = "weight_limits"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    age_division_id: Mapped[int] = mapped_column(ForeignKey("age_divisions.id"), nullable=False)
+    gender: Mapped[Gender] = mapped_column(Enum(Gender), nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    upper_limit: Mapped[float] = mapped_column(Float, nullable=False)
+
+    age_division: Mapped["AgeDivision"] = relationship(back_populates="weight_limits")
 
 
 class Category(Base):
@@ -132,8 +184,14 @@ class Category(Base):
     min_weight: Mapped[float | None] = mapped_column(Float, nullable=True)
     max_weight: Mapped[float | None] = mapped_column(Float, nullable=True)
     rounds_to_win: Mapped[int] = mapped_column(Integer, nullable=False, default=2)
+    # Las tres son NULL en las categorías históricas, creadas a mano antes de la estructura (0.8.0).
+    grade_group_id: Mapped[int | None] = mapped_column(ForeignKey("grade_groups.id"), nullable=True)
+    age_division_id: Mapped[int | None] = mapped_column(ForeignKey("age_divisions.id"), nullable=True)
+    weight_position: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     tournament: Mapped["Tournament"] = relationship(back_populates="categories")
+    grade_group: Mapped["GradeGroup | None"] = relationship()
+    age_division: Mapped["AgeDivision | None"] = relationship()
     registrations: Mapped[list["Registration"]] = relationship(
         back_populates="category", cascade="all, delete-orphan"
     )

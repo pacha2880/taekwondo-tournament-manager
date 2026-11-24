@@ -7,7 +7,8 @@ from app.api_docs import TAG_TOURNAMENTS, errors
 from app.auth import ADMIN_ONLY
 from app.database import get_db
 from app.models import Tournament, TournamentStatus
-from app.schemas import TournamentCreate, TournamentRead, TournamentUpdate
+from app.schemas import Int4, TournamentCreate, TournamentRead, TournamentUpdate
+from app.services.category_structure import add_default_structure, sync_categories
 
 router = APIRouter(prefix="/api/v1/tournaments", tags=[TAG_TOURNAMENTS])
 
@@ -25,12 +26,16 @@ def get_tournament_or_404(db: Session, tournament_id: int) -> Tournament:
     status_code=201,
     dependencies=ADMIN_ONLY,
     summary="Crear un torneo",
-    description="Crea un torneo en estado `draft` (inscripciones abiertas). Requiere token.",
+    description="Crea un torneo en estado `draft` (inscripciones abiertas). Nace con la estructura de categorías "
+    "de la Copa Diamante y todas sus categorías ya creadas (ver `GET /tournaments/{id}/category-structure`). "
+    "Requiere token.",
     responses=errors(auth=True),
 )
 def create_tournament(payload: TournamentCreate, db: Session = Depends(get_db)):
     tournament = Tournament(**payload.model_dump())
     db.add(tournament)
+    add_default_structure(tournament)
+    sync_categories(db, tournament)
     db.commit()
     db.refresh(tournament)
     return tournament
@@ -54,7 +59,7 @@ def list_tournaments(db: Session = Depends(get_db)):
     description="Devuelve un torneo por su id. Es público.",
     responses=errors({404: "El torneo no existe."}),
 )
-def get_tournament(tournament_id: int, db: Session = Depends(get_db)):
+def get_tournament(tournament_id: Int4, db: Session = Depends(get_db)):
     return get_tournament_or_404(db, tournament_id)
 
 
@@ -67,7 +72,7 @@ def get_tournament(tournament_id: int, db: Session = Depends(get_db)):
     "ver `start` y `finish`. Requiere token.",
     responses=errors({404: "El torneo no existe."}, auth=True),
 )
-def update_tournament(tournament_id: int, payload: TournamentUpdate, db: Session = Depends(get_db)):
+def update_tournament(tournament_id: Int4, payload: TournamentUpdate, db: Session = Depends(get_db)):
     tournament = get_tournament_or_404(db, tournament_id)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(tournament, field, value)
@@ -81,11 +86,11 @@ def update_tournament(tournament_id: int, payload: TournamentUpdate, db: Session
     response_model=TournamentRead,
     dependencies=ADMIN_ONLY,
     summary="Iniciar un torneo",
-    description="Pasa el torneo de `draft` a `in_progress`: se cierran las inscripciones y la creación de "
-    "categorías, y se pueden generar las llaves. Es irreversible. Requiere token.",
+    description="Pasa el torneo de `draft` a `in_progress`: se cierran las inscripciones y la edición de la "
+    "estructura de categorías, y se pueden generar las llaves. Es irreversible. Requiere token.",
     responses=errors({404: "El torneo no existe.", 409: "El torneo ya empezó."}, auth=True),
 )
-def start_tournament(tournament_id: int, db: Session = Depends(get_db)):
+def start_tournament(tournament_id: Int4, db: Session = Depends(get_db)):
     tournament = get_tournament_or_404(db, tournament_id)
     require_tournament_status(tournament, TournamentStatus.DRAFT, "El torneo ya empezó")
     tournament.status = TournamentStatus.IN_PROGRESS
@@ -106,7 +111,7 @@ def start_tournament(tournament_id: int, db: Session = Depends(get_db)):
         {404: "El torneo no existe.", 409: "El torneo no está en curso, o quedan combates por jugar."}, auth=True
     ),
 )
-def finish_tournament(tournament_id: int, db: Session = Depends(get_db)):
+def finish_tournament(tournament_id: Int4, db: Session = Depends(get_db)):
     tournament = get_tournament_or_404(db, tournament_id)
     require_tournament_status(tournament, TournamentStatus.IN_PROGRESS, "Solo se puede finalizar un torneo en curso")
     require_all_matches_played(tournament)

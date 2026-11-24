@@ -16,7 +16,7 @@ de ejemplo.
 ## Acceso
 
 Lecturas **públicas**: torneos, categorías, clubes, llaves, combates y la lista de inscritos de cada
-categoría (solo nombre y club). Todo `POST`/`PATCH` y las
+categoría (solo nombre y club). Todo `POST`, `PUT`, `PATCH` y `DELETE` y las
 lecturas de **atletas e inscripciones** piden `Authorization: Bearer <token>` (esas respuestas
 incluyen fecha de nacimiento y peso, y hay menores). El token se obtiene en
 `POST /api/v1/auth/login` (formulario con `username` y `password`), dura 8 horas y no se renueva solo:
@@ -42,6 +42,54 @@ Las listas no se paginan: devuelven todos los elementos. Sin filtro, las de cate
 todos los torneos, así que conviene pedirlas filtradas: `GET /categories?tournament_id=` y
 `GET /registrations?tournament_id=` o `?category_id=` (con token). Más adelante el filtro va a ser obligatorio;
 se avisará antes en el CHANGELOG.
+
+## Estructura de categorías
+
+Desde la 0.8.0, `POST /categories` ya no existe (responde `405`): las categorías de un torneo salen de su **estructura**, que se lee con
+`GET /api/v1/tournaments/{id}/category-structure` (sin token):
+
+- **Grupos de grado** (`grade_groups`): cada uno va de `from_grade` a `to_grade`. Entre todos cubren cada grado
+  una sola vez, y el último siempre llega hasta `dan`.
+- **Divisiones de edad** (`age_divisions`): cada una va de `from_age` a `to_age` (nulo en la última, sin tope). La
+  edad se cuenta por año de nacimiento: año del torneo menos año de nacimiento.
+- **Divisiones de peso** (`weight_limits` de cada edad, por género): límites superiores en kg. Con
+  `[48, 55, 63, 73]` las divisiones son «Hasta 48 kg», «48.1–55 kg», «55.1–63 kg», «63.1–73 kg» y «Más de 73 kg».
+  Si `has_weight_divisions` es `false` (Festival), hay una sola división, «Todos los pesos».
+- **Pesos con un decimal como máximo**, en toda la API: los límites de la estructura y `weight_kg` del
+  atleta. Con más decimales responde `422`: un atleta de 48.05 kg no cabría en
+  «Hasta 48 kg» ni en «48.1–55 kg».
+
+Cada combinación de grupo × género × edad × peso es una categoría, salvo **Festival**: la primera división de
+edad, siempre presente y fija (hasta 9 años, contados por año de nacimiento: en un torneo de 2026 entra quien nació
+en 2017 o después). Festival no tiene grupos de grado ni pesos: es una lista general por género, 2 categorías. Un
+torneo nuevo nace con la estructura de la Copa Diamante (212 categorías). Los torneos creados antes de la 0.8.0 no tienen estructura (`404`).
+
+Para cambiarla (con token y solo con el torneo en `draft`), `PUT /api/v1/tournaments/{id}/category-structure`
+recibe la estructura completa sin Festival: los grupos con `id`, `name` y `from_grade`, y las divisiones con `id`,
+`name`, `from_age` y `weight_limits`. Lo que trae `id` se conserva (y sus categorías también), lo que no trae `id`
+se crea y lo que falta se borra; el último grupo no se puede quitar. Los nombres tienen hasta 60 caracteres,
+`from_age` llega hasta 120 y cada lista de límites de peso tiene hasta 30. Si algo no es válido responde `422` con el
+motivo y no cambia nada. Con `?validate_only=true` devuelve cómo quedaría (estructura y categorías) sin guardar:
+sirve para una vista previa. Lo que el usuario todavía no guardó puede quedar en el navegador (por ejemplo en
+`localStorage`), pero lo oficial es lo que devuelve el `GET`.
+
+## Inscripciones
+
+`POST /api/v1/registrations` responde `422` (con `detail` en español) si el atleta no encaja en la categoría: género
+distinto; peso fuera de `min_weight`/`max_weight` (si los tiene); y, en las categorías con estructura, edad fuera de
+`min_age`–`max_age` (edad = año del torneo menos año de nacimiento) o grado fuera del grupo de grado de la categoría
+(un atleta sin grado no encaja en categorías con grupo). Festival no tiene grupo ni pesos: solo revisa género y edad.
+Las categorías de torneos anteriores a la 0.8.0 solo revisan género y peso. Además: `409` si el torneo ya empezó o si
+el atleta ya está inscrito en esa categoría o en otra del mismo torneo.
+
+Para inscribir, listá los que encajan con `GET /api/v1/categories/{id}/eligible-athletes` (requiere token): devuelve
+los atletas que cumplen esa regla, ordenados por nombre, e incluye a los ya inscritos; quiénes son lo da
+`GET /registrations?category_id=`.
+
+La consulta inversa es `GET /api/v1/athletes/{id}/eligible-categories?tournament_id=` (requiere token; `tournament_id`
+es obligatorio): devuelve las categorías de ese torneo en las que encaja el atleta, ordenadas por id, sin mirar si ya
+está inscrito ni el estado del torneo. Con la estructura de la Copa Diamante normalmente es una sola; las categorías
+históricas pueden dar más. `404` si el atleta o el torneo no existen.
 
 ## Cómo leer una llave
 
@@ -70,11 +118,14 @@ Para mostrar nombres no hace falta pedir cada atleta: cada combate trae `athlete
 
 ## Atletas
 
+**Estatura:** `height_cm` es opcional, un entero de 50 a 250 (cm); fuera de rango o con decimales responde `422`.
+Solo informa: ninguna regla de categorías la usa. Como el peso, no sale en los endpoints públicos.
+
 **Buscar:** `GET /api/v1/athletes?q=texto` devuelve los atletas cuyo nombre o CI contienen el texto, sin
 distinguir mayúsculas ni tildes (`perez` encuentra a `Pérez`). Sin `q`, o con `q` vacío, devuelve todos.
 
 **Editar:** `PATCH /api/v1/athletes/{id}` cambia solo los campos que se envían. Para quitar el CI se envía
-`"ci": null` (o `""`). Si el cambio de **género o peso** deja al atleta fuera de una categoría en la que
+`"ci": null` (o `""`); para quitar la estatura, `"height_cm": null`. Si el cambio de **género, peso, grado o fecha de nacimiento** deja al atleta fuera de una categoría en la que
 está inscrito:
 
 - En un torneo **en borrador** responde `409` y no cambia nada; `detail` nombra las categorías afectadas.
@@ -93,8 +144,8 @@ El estado no se cambia con `PATCH` sino con dos acciones, y solo avanza (`409` s
 paso):
 
 - `POST /api/v1/tournaments/{id}/start`: de `draft` a `in_progress`. Mientras el torneo está en `draft` se
-  crean las categorías y se inscribe (o se retira, con `DELETE /registrations/{id}`) a los atletas; al
-  iniciarlo esas cosas se cierran (`POST /categories`, `POST /registrations` y `DELETE /registrations/{id}`
+  edita la estructura de categorías y se inscribe (o se retira, con `DELETE /registrations/{id}`) a los atletas; al
+  iniciarlo esas cosas se cierran (`POST /registrations`, `PUT /category-structure` y `DELETE /registrations/{id}`
   responden `409`). Con el torneo en curso se generan las
   llaves y se cargan los resultados; en `draft` o `finished` ambas cosas responden `409`.
 - `POST /api/v1/tournaments/{id}/finish`: de `in_progress` a `finished`, los resultados quedan como
@@ -120,6 +171,12 @@ Los errores responden `{"detail": "mensaje en español"}`, pensado para mostrarl
 En los `422` de formato (campo faltante, tipo incorrecto), `detail` no es un texto sino una **lista** con
 el formato estándar de FastAPI (`loc`, `msg`, `type` por cada error). Cada endpoint de `/docs` lista los
 códigos que puede devolver.
+
+Cada texto tiene un largo máximo, que `/docs` muestra como `maxLength` (por ejemplo 120 para el nombre de un club o
+atleta y 150 para el nombre de un torneo): conviene usarlo como `maxlength` del input. Pasarse responde `422`.
+
+Los ids (en la ruta o en filtros como `?tournament_id=`) van de -2147483648 a 2147483647; fuera de ese rango responde
+`422`. Un id dentro del rango que no existe sigue dando `404`.
 
 ## Valores de los enums
 
@@ -147,23 +204,23 @@ TOKEN=$(curl -s -X POST $BASE/api/v1/auth/login -d "username=admin&password=TU_C
 AUTH="Authorization: Bearer $TOKEN"
 JSON="Content-Type: application/json"
 
-# 2) Club, torneo y categoría
+# 2) Club y torneo (nace con sus categorías ya creadas)
 curl -s -X POST $BASE/api/v1/clubs -H "$AUTH" -H "$JSON" -d '{"name": "Dojang Central"}'
 curl -s -X POST $BASE/api/v1/tournaments -H "$AUTH" -H "$JSON" \
   -d '{"name": "Copa Cochabamba", "date": "2026-11-15", "location": "Cochabamba, Bolivia"}'
-curl -s -X POST $BASE/api/v1/categories -H "$AUTH" -H "$JSON" \
-  -d '{"tournament_id": 1, "gender": "male", "age_label": "Cadete", "min_age": 12, "max_age": 14,
-       "belt_group": "color", "weight_label": "Hasta 45kg", "max_weight": 45}'
 
-# 3) Atletas e inscripciones (repetir por cada atleta; la llave necesita al menos 2)
+# 3) Atletas, la categoría en la que encajan e inscripciones (repetir por cada atleta; la llave necesita al menos 2)
 curl -s -X POST $BASE/api/v1/athletes -H "$AUTH" -H "$JSON" \
   -d '{"name": "Mateo Quispe", "ci": "1234567", "birth_date": "2012-03-14", "gender": "male",
        "grade": "kup_6", "weight_kg": 38.5, "club_id": 1}'
-curl -s -X POST $BASE/api/v1/registrations -H "$AUTH" -H "$JSON" -d '{"athlete_id": 1, "category_id": 1}'
+CATEGORY=$(curl -s "$BASE/api/v1/athletes/1/eligible-categories?tournament_id=1" -H "$AUTH" \
+  | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['id'])")
+curl -s -X POST $BASE/api/v1/registrations -H "$AUTH" -H "$JSON" -d "{\"athlete_id\": 1, \"category_id\": $CATEGORY}"
 
-# 4) Generar la llave y consultarla (la consulta es pública)
-curl -s -X POST $BASE/api/v1/categories/1/bracket -H "$AUTH"
-curl -s $BASE/api/v1/categories/1/bracket
+# 4) Iniciar el torneo, generar la llave y consultarla (la consulta es pública)
+curl -s -X POST $BASE/api/v1/tournaments/1/start -H "$AUTH"
+curl -s -X POST $BASE/api/v1/categories/$CATEGORY/bracket -H "$AUTH"
+curl -s $BASE/api/v1/categories/$CATEGORY/bracket
 
 # 5) Cargar un round: su número (el siguiente) y los puntos; no admite empates
 curl -s -X POST $BASE/api/v1/matches/1/rounds -H "$AUTH" -H "$JSON" \

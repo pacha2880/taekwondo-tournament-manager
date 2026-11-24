@@ -1,6 +1,6 @@
 """Borra los datos de prueba que carga seed_demo_api.py, conectándose directo a la base.
 
-Borra solo: los torneos «Copa de Prueba (...)», sus categorías, inscripciones, llaves y combates, y los
+Borra solo: los torneos «Copa de Prueba (...)», su estructura, categorías, inscripciones, llaves y combates, y los
 atletas de los clubes «Dojang Prueba ...» junto con esos clubes. No toca nada más.
 
 Uso, desde la raíz del repo y con el entorno virtual activado:
@@ -24,6 +24,7 @@ CLUB_NAMES = ["Dojang Prueba Norte", "Dojang Prueba Sur", "Dojang Prueba Este"]
 
 DEMO_TOURNAMENTS = "SELECT id FROM tournaments WHERE name IN :tournaments"
 DEMO_CATEGORIES = f"SELECT id FROM categories WHERE tournament_id IN ({DEMO_TOURNAMENTS})"
+DEMO_AGE_DIVISIONS = f"SELECT id FROM age_divisions WHERE tournament_id IN ({DEMO_TOURNAMENTS})"
 DEMO_BRACKETS = f"SELECT id FROM brackets WHERE category_id IN ({DEMO_CATEGORIES})"
 DEMO_MATCHES = f"SELECT id FROM matches WHERE bracket_id IN ({DEMO_BRACKETS})"
 DEMO_ATHLETES = "SELECT id FROM athletes WHERE club_id IN (SELECT id FROM clubs WHERE name IN :clubs)"
@@ -35,6 +36,9 @@ STEPS = [
     ("llaves", "brackets", f"category_id IN ({DEMO_CATEGORIES})"),
     ("inscripciones", "registrations", f"category_id IN ({DEMO_CATEGORIES}) OR athlete_id IN ({DEMO_ATHLETES})"),
     ("categorías", "categories", f"tournament_id IN ({DEMO_TOURNAMENTS})"),
+    ("límites de peso", "weight_limits", f"age_division_id IN ({DEMO_AGE_DIVISIONS})"),
+    ("divisiones de edad", "age_divisions", f"tournament_id IN ({DEMO_TOURNAMENTS})"),
+    ("grupos de grado", "grade_groups", f"tournament_id IN ({DEMO_TOURNAMENTS})"),
     ("torneos", "tournaments", "name IN :tournaments"),
     ("atletas", "athletes", f"id IN ({DEMO_ATHLETES})"),
     ("clubes", "clubs", "name IN :clubs"),

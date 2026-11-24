@@ -29,7 +29,7 @@ están en `.claude/rules/` y se cargan solas al tocar esos archivos.
 ## Reusar, no duplicar
 
 - Nombres de atletas de una llave o combate: `resolve_athlete_names` (`app/services/brackets.py`).
-- Regla de género/peso de un atleta contra una categoría: `category_mismatch` (`app/services/eligibility.py`).
+- Regla de encaje de un atleta en una categoría (género, peso, edad, grado): `category_mismatch` (`app/services/eligibility.py`).
 - Reglas de estado del torneo: `app/api/lifecycle.py`. El estado cambia solo con `POST .../start` y
   `.../finish`, nunca con `PATCH`.
 - Formato de CI: solo `CI_REGEX` de `app/schemas.py`.
@@ -48,9 +48,9 @@ están en `.claude/rules/` y se cargan solas al tocar esos archivos.
 - `Match`/`RoundScore` son específicos de combate (sparring). Si se agregan Poomsae o
   Rompimiento, **no reusar estas tablas** — crear modelos de resultado propios
   (`PoomsaeScore`, `BreakingAttempt`) que cuelguen de `Category`/`Registration`.
-- No hardcodear tablas oficiales de peso por cinturón/edad/género. `Category.weight_label`
-  es texto libre que define el admin al crear la categoría — las tablas de peso varían por
-  federación y no son parte del problema que este proyecto resuelve.
+- Los pesos, edades y grupos de grado salen de la estructura de cada torneo
+  (`app/services/category_structure.py`), editable en `draft`. La Copa Diamante es solo el valor inicial: no
+  hardcodear sus números en otra regla.
 - `Athlete.ci` es opcional (hay niños sin CI) y único cuando se informa.
 - `Club` es una entidad propia (`id`, `name`). `Athlete.club_id` es una FK obligatoria — el
   club es un atributo fijo del atleta, no algo que se elija por torneo/inscripción.

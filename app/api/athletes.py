@@ -1,13 +1,17 @@
+from types import SimpleNamespace
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.api.clubs import get_club_or_404
+from app.api.tournaments import get_tournament_or_404
 from app.api_docs import TAG_ATHLETES, errors
 from app.auth import ADMIN_ONLY
 from app.database import get_db
-from app.models import Athlete, TournamentStatus
-from app.schemas import AthleteCreate, AthleteRead, AthleteUpdate
+from app.models import Athlete, Category, TournamentStatus
+from app.schemas import AthleteCreate, AthleteRead, AthleteUpdate, CategoryRead, Int4
 from app.services.athlete_search import search_athletes
 from app.services.eligibility import category_mismatch
 
@@ -31,20 +35,22 @@ def _ensure_ci_is_free(db: Session, ci: str | None, athlete_id: int | None = Non
         raise HTTPException(status_code=409, detail="Ya existe un atleta con ese CI")
 
 
+FIELDS_THAT_AFFECT_CATEGORY = ("gender", "weight_kg", "grade", "birth_date")
+
+
 def _withdraw_registrations_that_no_longer_fit(db: Session, athlete: Athlete, changes: dict, confirmed: bool):
-    gender = changes.get("gender", athlete.gender)
-    weight_kg = changes.get("weight_kg", athlete.weight_kg)
-    if (gender, weight_kg) == (athlete.gender, athlete.weight_kg):
+    proposed = SimpleNamespace(
+        **{field: changes.get(field, getattr(athlete, field)) for field in FIELDS_THAT_AFFECT_CATEGORY}
+    )
+    if all(getattr(proposed, field) == getattr(athlete, field) for field in FIELDS_THAT_AFFECT_CATEGORY):
         return
 
     for registration in athlete.registrations:
         tournament = registration.category.tournament
-        if tournament.status == TournamentStatus.IN_PROGRESS and category_mismatch(
-            gender, weight_kg, registration.category
-        ):
+        if tournament.status == TournamentStatus.IN_PROGRESS and category_mismatch(proposed, registration.category):
             raise HTTPException(
                 status_code=409,
-                detail="No se puede cambiar el género ni el peso: el atleta dejaría de encajar en su categoría "
+                detail="No se puede hacer este cambio: el atleta dejaría de encajar en su categoría "
                 f"del torneo en curso «{tournament.name}»",
             )
 
@@ -52,7 +58,7 @@ def _withdraw_registrations_that_no_longer_fit(db: Session, athlete: Athlete, ch
         registration
         for registration in athlete.registrations
         if registration.category.tournament.status == TournamentStatus.DRAFT
-        and category_mismatch(gender, weight_kg, registration.category)
+        and category_mismatch(proposed, registration.category)
     ]
     if not no_longer_fit:
         return
@@ -119,8 +125,37 @@ def list_athletes(
     description="Devuelve un atleta por su id. Incluye fecha de nacimiento y peso, por eso requiere token.",
     responses=errors({404: "El atleta no existe."}, auth=True),
 )
-def get_athlete(athlete_id: int, db: Session = Depends(get_db)):
+def get_athlete(athlete_id: Int4, db: Session = Depends(get_db)):
     return get_athlete_or_404(db, athlete_id)
+
+
+@router.get(
+    "/{athlete_id}/eligible-categories",
+    response_model=list[CategoryRead],
+    dependencies=ADMIN_ONLY,
+    summary="Listar las categorías en las que encaja un atleta",
+    description="Devuelve, ordenadas por id, las categorías del torneo `tournament_id` que cumplen la regla de "
+    "`POST /registrations` para este atleta (género, peso, y en las categorías con estructura, edad y grupo de "
+    "grado). Es la consulta inversa de `GET /categories/{id}/eligible-athletes`; la usará la inscripción pública. "
+    "Con la estructura de la Copa Diamante un atleta normalmente encaja en exactamente una categoría; las "
+    "categorías históricas (sin estructura) pueden dar más de una. No mira si el atleta ya está inscrito ni el "
+    "estado del torneo. Requiere token.",
+    responses=errors({404: "El atleta o el torneo no existe."}, auth=True),
+)
+def list_eligible_categories(
+    athlete_id: Int4,
+    tournament_id: Annotated[Int4, Query(description="Torneo en el que se buscan las categorías.")],
+    db: Session = Depends(get_db),
+):
+    athlete = get_athlete_or_404(db, athlete_id)
+    get_tournament_or_404(db, tournament_id)
+    categories = db.scalars(
+        select(Category)
+        .options(selectinload(Category.bracket))
+        .where(Category.tournament_id == tournament_id)
+        .order_by(Category.id)
+    )
+    return [c for c in categories if category_mismatch(athlete, c) is None]
 
 
 @router.patch(
@@ -129,8 +164,8 @@ def get_athlete(athlete_id: int, db: Session = Depends(get_db)):
     dependencies=ADMIN_ONLY,
     summary="Actualizar un atleta",
     description=(
-        "Modifica solo los campos que se envían (un `null` en un campo que no sea `ci` se ignora). `ci` con "
-        "`null` o texto vacío lo borra. Si el cambio de **género o peso** afecta inscripciones: en un torneo "
+        "Modifica solo los campos que se envían (un `null` en un campo que no sea `ci` ni `height_cm` se ignora). `ci` con "
+        "`null` o texto vacío lo borra; `height_cm` con `null` también. Si el cambio de **género, peso, grado o fecha de nacimiento** afecta inscripciones: en un torneo "
         "en curso se rechaza (409) si el atleta deja de cumplir las reglas de su categoría; en un torneo en "
         "`draft` (inscripciones abiertas), si el atleta deja de cumplir las reglas de la "
         "categoría hay que confirmar con `confirm_withdrawal=true`, y entonces se lo retira de ella (sin la "
@@ -147,7 +182,7 @@ def get_athlete(athlete_id: int, db: Session = Depends(get_db)):
     ),
 )
 def update_athlete(
-    athlete_id: int,
+    athlete_id: Int4,
     payload: AthleteUpdate,
     confirm_withdrawal: bool = Query(
         default=False,
@@ -159,7 +194,7 @@ def update_athlete(
     changes = {
         field: value
         for field, value in payload.model_dump(exclude_unset=True).items()
-        if value is not None or field == "ci"
+        if value is not None or field in ("ci", "height_cm")
     }
     if "club_id" in changes:
         get_club_or_404(db, changes["club_id"])

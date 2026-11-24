@@ -2,13 +2,14 @@ import os
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.auth import create_access_token
 from app.database import Base, get_db
 from app.main import app
+from app.models import BeltGroup, Category, Gender, GradeGroup
 
 
 @pytest.fixture(autouse=True)
@@ -43,9 +44,16 @@ def _test_db():
             db.close()
 
     app.dependency_overrides[get_db] = override_get_db
-    yield
+    yield TestingSessionLocal
     app.dependency_overrides.clear()
     engine.dispose()
+
+
+@pytest.fixture()
+def db_session(_test_db):
+    session = _test_db()
+    yield session
+    session.close()
 
 
 @pytest.fixture()
@@ -77,22 +85,52 @@ def tournament(client):
 
 
 @pytest.fixture()
-def category(client, tournament):
-    resp = client.post(
-        "/api/v1/categories",
-        json={
-            "tournament_id": tournament["id"],
-            "gender": "male",
+def find_category(client, db_session):
+    """La categoría generada por la estructura del torneo, como la devuelve la API."""
+
+    def _find(tournament_id, gender, age_label, weight_label, grade_group="Principiantes"):
+        found = db_session.scalars(
+            select(Category)
+            .join(GradeGroup, Category.grade_group_id == GradeGroup.id)
+            .where(
+                Category.tournament_id == tournament_id,
+                Category.gender == Gender(gender),
+                Category.age_label == age_label,
+                Category.weight_label == weight_label,
+                GradeGroup.name == grade_group,
+            )
+        ).one()
+        return client.get(f"/api/v1/categories/{found.id}").json()
+
+    return _find
+
+
+@pytest.fixture()
+def historical_category(client, db_session):
+    """Categoría creada a mano, sin estructura (grade_group_id NULL), como las de antes de 0.8.0."""
+
+    def _create(tournament_id, **fields):
+        defaults = {
+            "gender": Gender.MALE,
             "age_label": "Cadete",
             "min_age": 12,
             "max_age": 14,
-            "belt_group": "color",
+            "belt_group": BeltGroup.COLOR,
             "weight_label": "Hasta 45kg",
-            "min_weight": None,
             "max_weight": 45,
-        },
-    )
-    return resp.json()
+        }
+        category = Category(tournament_id=tournament_id, **{**defaults, **fields})
+        db_session.add(category)
+        db_session.commit()
+        return client.get(f"/api/v1/categories/{category.id}").json()
+
+    return _create
+
+
+@pytest.fixture()
+def category(find_category, tournament):
+    """La categoría generada que le corresponde al fixture `athlete` (14 años, kup_6, 40,5 kg)."""
+    return find_category(tournament["id"], "male", "Cadete", "37.1–41 kg")
 
 
 @pytest.fixture()

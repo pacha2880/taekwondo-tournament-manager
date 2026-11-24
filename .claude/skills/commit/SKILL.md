@@ -13,11 +13,14 @@ Solo con una orden directa y actual ("commiteá", "hacé el commit"). Si no la h
    (`git apply --cached` con un parche parcial; `git add -p` no funciona acá porque es interactivo).
 3. Mensaje `feat:` / `fix:` / `chore:` / `docs:` (`feat!:` si es incompatible), en español. La línea de
    `CHANGELOG.md` va en el mismo commit que el cambio.
-4. Push a `origin dev` solo si lo pidió. Si con eso se cierra una versión, proponer `/release`; si no, no
-   mencionar tags.
-5. Si había un `git stash` guardado para aislar este cambio (`git stash list`), después del commit recuperarlo con
+4. Push a `origin dev` solo si lo pidió. Si con eso se cierra una versión, proponer `/release`; si no, no mencionar
+   tags.
+5. Antes de ese push, correr el subagente `revisor` y mostrarle al usuario sus hallazgos, con el arreglo que propone
+   cada uno. Si hay alguno, no pushear hasta que el usuario decida: corregir (en la conversación principal, no el
+   revisor) o pushear igual.
+6. Si había un `git stash` guardado para aislar este cambio (`git stash list`), después del commit recuperarlo con
    `git stash pop`. Si choca (típico en `CHANGELOG.md`), resolver dejando las dos partes y avisar.
-6. Después del push a `dev`, si cambió la API (algo nuevo o incompatible), sumar el aviso en la sección
+7. Después del push a `dev`, si cambió la API (algo nuevo o incompatible), sumar el aviso en la sección
    «Avisos para el frontend (Kike)» de la página Taekwondo Torneos de Notion: versión, si es incompatible, y qué
    tiene que cambiar el frontend. En la misma pasada, actualizar «Progreso» y «Siguiente paso» de la fila del
    proyecto en Proyectos. Antes del push no: el aviso describe lo que ya está en el servicio `dev`. Un cambio

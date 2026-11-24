@@ -7,7 +7,7 @@ from app.auth import ADMIN_ONLY
 from app.database import get_db
 from app.api.lifecycle import require_tournament_status
 from app.models import Bracket, Category, TournamentStatus
-from app.schemas import BracketRead
+from app.schemas import BracketRead, Int4
 from app.services.brackets import (
     BracketAlreadyExists,
     NotEnoughAthletes,
@@ -37,7 +37,7 @@ def _bracket_read(db: Session, bracket: Bracket) -> BracketRead:
     description="Sortea al azar a los inscritos en una llave de eliminación simple. Si el número de inscritos no es potencia de 2, se reparten pases directos (`bye`) en la primera ronda. Solo se genera con el torneo en curso (409 si todavía está en `draft` o ya terminó). Hacen falta al menos 2 inscritos y solo se puede generar una llave por categoría. Requiere token.",
     responses=errors({400: "La categoría tiene menos de 2 inscritos.", 404: "La categoría no existe.", 409: "El torneo no está en curso, o la categoría ya tiene una llave."}, auth=True),
 )
-def create_bracket(category_id: int, db: Session = Depends(get_db)):
+def create_bracket(category_id: Int4, db: Session = Depends(get_db)):
     category = db.get(Category, category_id)
     if not category:
         raise HTTPException(status_code=404, detail="Categoría no encontrada")
@@ -60,7 +60,7 @@ def create_bracket(category_id: int, db: Session = Depends(get_db)):
     description="Devuelve todos los combates de todas las rondas. Cada combate indica el combate de la siguiente ronda al que avanza su ganador (`next_match_id`). Es público.",
     responses=errors({404: "La categoría no existe o todavía no tiene llave."}),
 )
-def get_bracket(category_id: int, db: Session = Depends(get_db)):
+def get_bracket(category_id: Int4, db: Session = Depends(get_db)):
     if not db.get(Category, category_id):
         raise HTTPException(status_code=404, detail="Categoría no encontrada")
     bracket = db.scalar(select(Bracket).where(Bracket.category_id == category_id))

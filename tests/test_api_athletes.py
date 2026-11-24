@@ -1,4 +1,9 @@
+import json
+
 import pytest
+from sqlalchemy import delete
+
+from app.models import Category, Gender
 
 
 def test_create_athlete_requires_existing_club(client):
@@ -65,6 +70,23 @@ def test_valid_ci_is_accepted(client, club, ci):
 )
 def test_invalid_ci_is_rejected(client, club, ci):
     resp = client.post("/api/v1/athletes", json=_athlete_payload(club, ci=ci))
+
+    assert resp.status_code == 422
+
+
+def test_weight_with_more_than_one_decimal_is_rejected(client, club, athlete):
+    created = client.post("/api/v1/athletes", json=_athlete_payload(club, weight_kg=48.05))
+    updated = client.patch(f"/api/v1/athletes/{athlete['id']}", json={"weight_kg": 48.05})
+
+    assert created.status_code == updated.status_code == 422
+    assert "un decimal como máximo" in created.json()["detail"][0]["msg"]
+    assert client.post("/api/v1/athletes", json=_athlete_payload(club, weight_kg=48.1)).status_code == 201
+
+
+def test_infinite_weight_is_rejected(client, club):
+    # json.dumps writes the non-standard `Infinity` token, which the API's JSON parser accepts.
+    body = json.dumps(_athlete_payload(club, weight_kg=float("inf")))
+    resp = client.post("/api/v1/athletes", content=body, headers={"Content-Type": "application/json"})
 
     assert resp.status_code == 422
 
@@ -164,7 +186,7 @@ def test_update_requires_existing_athlete_and_club(client, athlete):
 def test_update_keeps_the_registration_when_the_athlete_still_fits(client, athlete, category):
     client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
 
-    resp = client.patch(f"/api/v1/athletes/{athlete['id']}", json={"weight_kg": 44})
+    resp = client.patch(f"/api/v1/athletes/{athlete['id']}", json={"weight_kg": 41})
 
     assert resp.status_code == 200
     assert len(_registrations(client, category)) == 1
@@ -177,7 +199,7 @@ def test_update_that_no_longer_fits_needs_confirmation_and_changes_nothing(clien
     resp = client.patch(f"/api/v1/athletes/{athlete['id']}", json=change)
 
     assert resp.status_code == 409
-    assert "Este cambio retira al atleta de: Cadete Hasta 45kg (Copa Nacional)" in resp.json()["detail"]
+    assert "Este cambio retira al atleta de: Cadete 37.1–41 kg (Copa Nacional)" in resp.json()["detail"]
     assert client.get(f"/api/v1/athletes/{athlete['id']}").json() == athlete
     assert len(_registrations(client, category)) == 1
 
@@ -211,16 +233,52 @@ def test_update_that_no_longer_fits_is_rejected_while_the_tournament_is_in_progr
     assert len(_registrations(client, category)) == 1
 
 
+def test_grade_change_out_of_the_category_needs_confirmation_in_draft(client, athlete, category):
+    client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
+    url = f"/api/v1/athletes/{athlete['id']}"
+
+    resp = client.patch(url, json={"grade": "kup_5"})
+
+    assert resp.status_code == 409
+    assert client.get(url).json() == athlete
+    resp = client.patch(url, params={"confirm_withdrawal": True}, json={"grade": "kup_5"})
+    assert resp.status_code == 200
+    assert _registrations(client, category) == []
+
+
+def test_birth_date_change_out_of_the_category_is_rejected_while_the_tournament_is_in_progress(
+    client, athlete, category, tournament, set_tournament_status
+):
+    client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
+    set_tournament_status(client, tournament["id"], "in_progress")
+
+    resp = client.patch(f"/api/v1/athletes/{athlete['id']}", json={"birth_date": "2010-01-01"})
+
+    assert resp.status_code == 409
+    assert "torneo en curso «Copa Nacional»" in resp.json()["detail"]
+    assert len(_registrations(client, category)) == 1
+
+
+@pytest.mark.parametrize("change", [{"grade": "kup_7"}, {"birth_date": "2012-12-31"}])
+def test_grade_or_birth_date_change_that_still_fits_keeps_the_registration(client, athlete, category, change):
+    client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
+
+    resp = client.patch(f"/api/v1/athletes/{athlete['id']}", json=change)
+
+    assert resp.status_code == 200
+    assert len(_registrations(client, category)) == 1
+
+
 def test_update_that_still_fits_is_allowed_while_the_tournament_is_in_progress(
     client, athlete, category, tournament, set_tournament_status
 ):
     client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
     set_tournament_status(client, tournament["id"], "in_progress")
 
-    resp = client.patch(f"/api/v1/athletes/{athlete['id']}", json={"weight_kg": 44})
+    resp = client.patch(f"/api/v1/athletes/{athlete['id']}", json={"weight_kg": 41})
 
     assert resp.status_code == 200
-    assert resp.json() == {**athlete, "weight_kg": 44}
+    assert resp.json() == {**athlete, "weight_kg": 41}
     assert len(_registrations(client, category)) == 1
 
 
@@ -232,11 +290,11 @@ def test_other_fields_can_still_be_edited_while_the_tournament_is_in_progress(
 
     resp = client.patch(
         f"/api/v1/athletes/{athlete['id']}",
-        json={"name": "Juan P.", "grade": "kup_4", "weight_kg": athlete["weight_kg"], "gender": "male"},
+        json={"name": "Juan P.", "grade": "kup_7", "weight_kg": athlete["weight_kg"], "gender": "male"},
     )
 
     assert resp.status_code == 200
-    assert resp.json()["grade"] == "kup_4"
+    assert resp.json()["grade"] == "kup_7"
 
 
 def test_update_is_allowed_after_the_tournament_finished_and_keeps_the_registration(
@@ -252,26 +310,14 @@ def test_update_is_allowed_after_the_tournament_finished_and_keeps_the_registrat
 
 
 def test_only_draft_tournaments_withdraw_the_athlete(
-    client, athlete, category, tournament, set_tournament_status
+    client, athlete, category, tournament, set_tournament_status, find_category
 ):
     client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
     set_tournament_status(client, tournament["id"], "finished")
     next_tournament = client.post(
         "/api/v1/tournaments", json={"name": "Copa Siguiente", "date": "2027-03-01", "location": "La Paz"}
     ).json()
-    next_category = client.post(
-        "/api/v1/categories",
-        json={
-            "tournament_id": next_tournament["id"],
-            "gender": "male",
-            "age_label": "Cadete",
-            "min_age": 12,
-            "max_age": 14,
-            "belt_group": "color",
-            "weight_label": "Hasta 45kg",
-            "max_weight": 45,
-        },
-    ).json()
+    next_category = find_category(next_tournament["id"], "male", "Junior", "Hasta 48 kg")
     client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": next_category["id"]})
 
     resp = client.patch(f"/api/v1/athletes/{athlete['id']}", params={"confirm_withdrawal": True}, json={"weight_kg": 50})
@@ -364,13 +410,98 @@ def test_grade_can_be_edited(client, athlete):
     assert resp.json()["grade"] == "dan"
 
 
-def test_the_legacy_belt_rank_column_follows_the_grade(client, athlete):
+def test_the_legacy_belt_rank_column_follows_the_grade(client, athlete, db_session):
     # La columna belt_rank sigue en la base hasta la 1.0.0 para poder volver a la 0.6.0 (que la lee).
-    from app.database import get_db
-    from app.main import app
     from app.models import Athlete
 
     client.patch(f"/api/v1/athletes/{athlete['id']}", json={"grade": "kup_1"})
 
-    db = next(app.dependency_overrides[get_db]())
-    assert db.get(Athlete, athlete["id"]).belt_rank == "kup_1"
+    assert db_session.get(Athlete, athlete["id"]).belt_rank == "kup_1"
+
+
+def test_height_is_optional_and_stored(client, club):
+    without = client.post("/api/v1/athletes", json=_athlete_payload(club, ci=None))
+    with_height = client.post("/api/v1/athletes", json=_athlete_payload(club, height_cm=152))
+
+    assert without.status_code == 201
+    assert without.json()["height_cm"] is None
+    assert with_height.status_code == 201
+    assert with_height.json()["height_cm"] == 152
+
+
+def test_update_changes_and_clears_the_height(client, athlete):
+    url = f"/api/v1/athletes/{athlete['id']}"
+
+    assert client.patch(url, json={"height_cm": 160}).json()["height_cm"] == 160
+    assert client.patch(url, json={"name": "Otro Nombre"}).json()["height_cm"] == 160
+    assert client.patch(url, json={"height_cm": None}).json()["height_cm"] is None
+
+
+@pytest.mark.parametrize("height", [49, 251, 150.5])
+def test_invalid_height_is_rejected(client, club, athlete, height):
+    created = client.post("/api/v1/athletes", json=_athlete_payload(club, height_cm=height))
+    updated = client.patch(f"/api/v1/athletes/{athlete['id']}", json={"height_cm": height})
+
+    assert created.status_code == 422
+    assert updated.status_code == 422
+
+
+def _eligible_categories(client, athlete, tournament):
+    return client.get(f"/api/v1/athletes/{athlete['id']}/eligible-categories", params={"tournament_id": tournament["id"]})
+
+
+def test_eligible_categories_with_default_structure_is_exactly_one(client, athlete, tournament, category):
+    resp = _eligible_categories(client, athlete, tournament)
+
+    assert resp.status_code == 200
+    assert [c["id"] for c in resp.json()] == [category["id"]]
+
+
+def test_eligible_categories_empty_when_athlete_fits_none(client, club, tournament, db_session):
+    ana = client.post("/api/v1/athletes", json=_athlete_payload(club)).json()
+    db_session.execute(delete(Category).where(Category.gender == Gender.FEMALE))
+    db_session.commit()
+
+    assert _eligible_categories(client, ana, tournament).json() == []
+
+
+def test_eligible_categories_only_from_the_requested_tournament(client, athlete, tournament, category):
+    other = client.post("/api/v1/tournaments", json={"name": "Otra Copa", "date": "2026-12-01", "location": "Sucre"}).json()
+
+    resp = _eligible_categories(client, athlete, other)
+
+    assert resp.status_code == 200
+    assert category["id"] not in [c["id"] for c in resp.json()]
+    assert all(c["tournament_id"] == other["id"] for c in resp.json())
+
+
+def test_eligible_categories_includes_a_fitting_historical_one_sorted_by_id(
+    client, athlete, tournament, category, historical_category
+):
+    historical = historical_category(tournament["id"])
+
+    resp = _eligible_categories(client, athlete, tournament)
+
+    assert [c["id"] for c in resp.json()] == [category["id"], historical["id"]]
+
+
+def test_eligible_categories_athlete_not_found(client, tournament):
+    resp = client.get("/api/v1/athletes/9999/eligible-categories", params={"tournament_id": tournament["id"]})
+
+    assert resp.status_code == 404
+    assert resp.json()["detail"] == "Atleta no encontrado"
+
+
+def test_eligible_categories_tournament_not_found(client, athlete):
+    resp = client.get(f"/api/v1/athletes/{athlete['id']}/eligible-categories", params={"tournament_id": 9999})
+
+    assert resp.status_code == 404
+    assert resp.json()["detail"] == "Torneo no encontrado"
+
+
+def test_eligible_categories_requires_tournament_id(client, athlete):
+    assert client.get(f"/api/v1/athletes/{athlete['id']}/eligible-categories").status_code == 422
+
+
+def test_eligible_categories_requires_token(anon_client, athlete, tournament):
+    assert _eligible_categories(anon_client, athlete, tournament).status_code == 401

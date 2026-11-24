@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from app.config import check_production_settings
 from app.cors import add_cors, parse_origins
+from app.main import app
 
 ALLOWED = "https://frontend-amigo.example"
 OTHER = "https://sitio-ajeno.example"
@@ -69,7 +70,7 @@ def test_preflight_allows_authorization_header_and_patch():
     assert "authorization" in resp.headers["access-control-allow-headers"].lower()
 
 
-@pytest.mark.parametrize("method", ["GET", "POST", "PATCH", "DELETE"])
+@pytest.mark.parametrize("method", sorted({m.upper() for ops in app.openapi()["paths"].values() for m in ops}))
 def test_preflight_allows_every_method_the_api_uses(method):
     resp = _client([ALLOWED]).options(
         "/ping", headers={"Origin": ALLOWED, "Access-Control-Request-Method": method}

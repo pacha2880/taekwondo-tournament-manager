@@ -11,6 +11,55 @@ funcionando sobre una base ya migrada.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-24
+
+### Added
+- **Categorías en las que encaja un atleta:** `GET /api/v1/athletes/{id}/eligible-categories?tournament_id=` (requiere
+  token) devuelve, ordenadas por id, las categorías de ese torneo que cumplen la misma regla que `POST /registrations`,
+  sin mirar si ya está inscrito. Con la estructura de la Copa Diamante normalmente es una sola.
+- **Atletas que encajan en una categoría:** `GET /api/v1/categories/{id}/eligible-athletes` (requiere token) devuelve,
+  ordenados por nombre, los atletas que cumplen la misma regla que `POST /registrations`, incluidos los ya inscritos.
+- **Estatura del atleta:** campo opcional `height_cm` (entero, 50 a 250 cm) al crear y editar atletas; en
+  `PATCH`, `null` la borra. No se usa en ninguna regla de categorías y no sale en los endpoints públicos.
+- **Estructura de categorías del torneo:** `GET /api/v1/tournaments/{id}/category-structure` (público) devuelve los
+  grupos de grado, las divisiones de edad y las divisiones de peso del torneo. Todo torneo nuevo nace con la
+  estructura de la Copa Diamante y con todas sus categorías ya creadas (grupo × género × edad × peso; 212 en total).
+  Festival (hasta 9 años por año de nacimiento) está siempre y es una lista general por género, sin grupos de grado
+  ni pesos.
+- **Editar la estructura de categorías:** `PUT /api/v1/tournaments/{id}/category-structure` reemplaza de una vez
+  los grupos de grado y las divisiones de edad y peso (Festival es fijo y no se envía), solo con el torneo en
+  `draft`. Las categorías se recalculan: las que siguen correspondiendo conservan su id. Si la estructura no es
+  válida responde `422` sin cambiar nada; con `validate_only=true` devuelve cómo quedaría sin guardar.
+  Los torneos anteriores no tienen estructura (responde `404`) y sus categorías no cambian.
+
+### Changed
+- **Incompatible — pesos con un decimal como máximo:** `POST`/`PATCH /api/v1/athletes` (`weight_kg`) responden
+  `422` si el peso tiene más de un decimal (`48.05`). Antes se aceptaba, y ese atleta no cabía en ninguna división de
+  peso. Los datos ya guardados no cambian.
+- **Incompatible — `POST /api/v1/registrations` revisa edad y grado:** en las categorías con estructura responde `422`
+  si la edad del atleta (año del torneo menos año de nacimiento) no está entre `min_age` y `max_age`, o si su grado
+  no pertenece al grupo de la categoría (un atleta sin grado no encaja en categorías con grupo). Antes solo se
+  revisaban género y peso. Las categorías anteriores a la 0.8.0 siguen revisando solo género y peso.
+  `PATCH /api/v1/athletes/{id}` aplica la misma regla de retiro (409 en torneo en curso, `confirm_withdrawal` en
+  borrador) también al cambiar **grado** o **fecha de nacimiento**, no solo género o peso. El `detail` del 409 en
+  torneo en curso cambió a «No se puede hacer este cambio: …».
+
+### Removed
+- **Incompatible — `POST /api/v1/categories`:** ya no existe (responde `405`). Las categorías salen solo de la
+  estructura del torneo (`PUT /api/v1/tournaments/{id}/category-structure`). Las categorías de torneos anteriores
+  se siguen leyendo igual.
+
+### Fixed
+- **CORS permite `PUT`:** desde un navegador, `PUT /api/v1/tournaments/{id}/category-structure` fallaba en el
+  *preflight* (`400`) aunque el origen estuviera autorizado.
+- **`Infinity` o `NaN` en un número del body** responden `422` en toda la API. Antes un peso `Infinity` se guardaba y
+  hacía fallar con `500` cada lectura de ese atleta o categoría.
+- **Ids de la ruta y de los filtros fuera del rango de `int4`** (`/clubs/{id}`, `?tournament_id=`, `?category_id=`…)
+  responden `422` en vez de `500` en Postgres. Los ids dentro del rango que no existen siguen dando `404`.
+- **Textos y números que no caben en la base** responden `422` en vez de `500`: nombres de club y atleta (hasta 120
+  caracteres), nombre y lugar del torneo (150), y los enteros de rounds e ids del body
+  (hasta 2.147.483.647). El límite de cada texto sale como `maxLength` en `/docs`.
+
 ## [0.7.0] - 2026-11-15
 
 ### Removed
@@ -201,7 +250,8 @@ https://taekwondo-tournament-manager.onrender.com.
 - `pool_pre_ping=True` en la conexión a la base de datos: Neon suspende el cómputo por
   inactividad y la primera conexión tras un rato inactivo pudo fallar con un error 500.
 
-[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.4.0...v0.5.0

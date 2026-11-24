@@ -1,10 +1,9 @@
 # Torneos de Taekwondo
 
 Sistema de gestión de torneos de taekwondo: inscripción de atletas, generación aleatoria de
-llaves (con byes cuando el número de inscritos no es potencia de 2), categorías por edad,
-género, cinturón (colores desde amarillo, y negro con su propia categoría absoluta) y peso,
-carga de resultados de combate por round/puntaje. Es solo una API JSON: la interfaz es un
-frontend externo.
+llaves (con byes cuando el número de inscritos no es potencia de 2), categorías por grupo de
+grado, género, edad y peso que salen de la estructura de cada torneo, y carga de resultados de
+combate por round/puntaje. Es solo una API JSON: la interfaz es un frontend externo.
 
 Pensado para poder extenderse más adelante a otras disciplinas (formas/poomsae,
 rompimiento) sin rehacer lo ya construido — ver [`docs/DECISIONS.md`](docs/DECISIONS.md).
@@ -126,7 +125,7 @@ pytest -v
 ## Autenticación de la API
 
 Las lecturas de torneos, categorías, clubes, llaves y combates son **públicas**. Todo lo que
-escribe (`POST`/`PATCH`) y las lecturas de **atletas e inscripciones** (llevan fecha de
+escribe (`POST`, `PUT`, `PATCH` y `DELETE`) y las lecturas de **atletas e inscripciones** (llevan fecha de
 nacimiento y peso, y hay menores) exigen un token. Se obtiene con el mismo usuario y clave del
 admin (variables `ADMIN_USERNAME`/`ADMIN_PASSWORD`, ver [`.env.example`](.env.example); por
 defecto `admin`/`admin`) y dura 8 horas, sin renovación automática. `SECRET_KEY` firma los tokens:
@@ -169,4 +168,4 @@ endpoints a mano, además de los tests automáticos:
 - [x] Fase 8 — Despliegue (Neon + Render) — en producción: https://taekwondo-tournament-manager.onrender.com
 - [ ] Fase 9 — Mejoras post-deploy (backlog abierto en [`docs/BACKLOG.md`](docs/BACKLOG.md))
 
-Detalle de cada fase en el plan original y en [`CLAUDE.md`](CLAUDE.md).
+Qué trajo cada versión está en [`CHANGELOG.md`](CHANGELOG.md).
