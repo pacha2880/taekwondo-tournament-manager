@@ -34,38 +34,38 @@ CLUB_NAMES = ["Dojang Prueba Norte", "Dojang Prueba Sur", "Dojang Prueba Este"]
 MALE_NAMES = ["Mateo", "Santiago", "Diego", "Luis", "Carlos", "Andrés", "Bruno", "Marcelo", "Sebastián", "Joaquín", "Rodrigo", "Gabriel"]
 FEMALE_NAMES = ["Valentina", "Camila", "Sofía", "Lucía", "Daniela", "Fernanda", "Paola", "Andrea", "Mariana", "Isabella", "Carla", "Gabriela"]
 SURNAMES = ["Quispe", "Mamani", "Flores", "Condori", "Rojas", "Vargas", "Gutiérrez", "Choque", "Pérez", "Fernández", "Torrico", "Salazar", "Arce", "Cabrera", "Villarroel", "Rivera"]
-GRADES = {
-    "color": [f"kup_{n}" for n in range(10, 0, -1)],
-    "black": ["dan"],
-}
+BEGINNERS = [f"kup_{n}" for n in range(10, 5, -1)]
+ADVANCED = ["kup_1", "dan"]
 
 # Qué se juega en cada llave, en orden:
 #   ("all",)                        todos los combates hasta terminar la llave
 #   ("rounds", n)                   todos los combates de las rondas 1 a n
 #   ("some", ronda, k)              k combates listos de esa ronda, terminados
 #   ("half", ronda, k, rounds)      k combates listos de esa ronda con `rounds` rounds cargados y sin terminar
-# (género, grupo de edad, edad mín., edad máx., cinturón, etiqueta de peso, peso mín., peso máx.,
-#  años de nacimiento, rango de pesos de los atletas, atletas, inscritos, qué se juega)
+# (género, división de edad y de peso que le toca (solo para mostrar), grados, años de nacimiento, rango de pesos,
+#  atletas, inscritos, qué se juega)
+# La categoría no se crea: es la de la estructura del torneo en la que encajan esos atletas, así que sus grados, años y
+# pesos tienen que caer todos en la misma (ver COPA_DIAMANTE_* en app/services/category_structure.py).
 CATEGORY_SPECS = [
-    ("male", "Cadete", 12, 14, "color", "Hasta 45 kg", None, 45, (2012, 2014), (30, 45), 7, 7, [("all",)]),
-    ("male", "Cadete", 12, 14, "color", "45 a 55 kg", 45, 55, (2012, 2014), (45.5, 55), 6, 6, [("all",)]),
-    ("female", "Cadete", 12, 14, "color", "Hasta 45 kg", None, 45, (2012, 2014), (30, 45), 5, 5, [("rounds", 1), ("half", 2, 1, 1)]),
-    ("male", "Juvenil", 15, 17, "color", "Hasta 60 kg", None, 60, (2009, 2011), (45, 60), 10, 10, [("rounds", 1), ("some", 2, 2), ("half", 2, 1, 2)]),
-    ("female", "Juvenil", 15, 17, "color", "Hasta 55 kg", None, 55, (2009, 2011), (40, 55), 6, 6, [("some", 1, 1), ("half", 1, 1, 1)]),
-    ("male", "Adulto", 18, 35, "black", "Hasta 68 kg", None, 68, (1992, 2008), (55, 68), 8, 8, [("rounds", 1), ("some", 2, 1), ("half", 2, 1, 1)]),
-    ("female", "Adulto", 18, 35, "black", "Hasta 57 kg", None, 57, (1992, 2008), (45, 57), 8, 5, []),
+    ("male", "Cadete 41.1–45 kg", BEGINNERS, (2012, 2014), (41.1, 45), 7, 7, [("all",)]),
+    ("male", "Cadete 49.1–53 kg", BEGINNERS, (2012, 2014), (49.1, 53), 6, 6, [("all",)]),
+    ("female", "Cadete 37.1–41 kg", BEGINNERS, (2012, 2014), (37.1, 41), 5, 5, [("rounds", 1), ("half", 2, 1, 1)]),
+    ("male", "Junior 55.1–63 kg", BEGINNERS, (2009, 2011), (55.1, 63), 10, 10, [("rounds", 1), ("some", 2, 2), ("half", 2, 1, 2)]),
+    ("female", "Junior 49.1–55 kg", BEGINNERS, (2009, 2011), (49.1, 55), 6, 6, [("some", 1, 1), ("half", 1, 1, 1)]),
+    ("male", "Mayores 58.1–68 kg", ADVANCED, (1997, 2008), (58.1, 68), 8, 8, [("rounds", 1), ("some", 2, 1), ("half", 2, 1, 1)]),
+    ("female", "Mayores 49.1–57 kg", ADVANCED, (1997, 2008), (49.1, 57), 8, 5, []),
 ]
-DRAFT_CATEGORY_SPEC = ("female", "Juvenil", 15, 17, "color", "Hasta 55 kg", None, 55, (2009, 2011), (40, 55), 5, 5, [])
+DRAFT_CATEGORY_SPEC = ("female", "Junior 49.1–55 kg", BEGINNERS, (2010, 2012), (49.1, 55), 5, 5, [])
 
 
 def build_category(spec, rng: random.Random, used_cis: set[str]) -> dict:
-    """Devuelve el payload de la categoría, sus atletas (con `club` por nombre y `register`) y qué se juega."""
-    gender, age_label, min_age, max_age, belt_group, weight_label, min_weight, max_weight, years, weights, count, registered, plan = spec
+    """Devuelve el nombre de la categoría, sus atletas (con `club` por nombre y `register`) y qué se juega."""
+    gender, label, grades, years, weights, count, registered, plan = spec
     first_names = MALE_NAMES if gender == "male" else FEMALE_NAMES
     athletes = []
     for i in range(count):
         ci = None
-        if not (age_label == "Cadete" and rng.random() < 0.3):
+        if not (label.startswith("Cadete") and rng.random() < 0.3):
             while ci is None or ci in used_cis:
                 ci = str(rng.randint(4_000_000, 9_000_000))
                 if rng.random() < 0.1:
@@ -77,23 +77,14 @@ def build_category(spec, rng: random.Random, used_cis: set[str]) -> dict:
                 "ci": ci,
                 "birth_date": date(rng.randint(*years), rng.randint(1, 12), rng.randint(1, 28)).isoformat(),
                 "gender": gender,
-                "grade": rng.choice(GRADES[belt_group]),
+                "grade": rng.choice(grades),
                 "weight_kg": round(rng.uniform(*weights), 1),
                 "club": rng.choice(CLUB_NAMES),
                 "register": i < registered,
             }
         )
     return {
-        "category": {
-            "gender": gender,
-            "age_label": age_label,
-            "min_age": min_age,
-            "max_age": max_age,
-            "belt_group": belt_group,
-            "weight_label": weight_label,
-            "min_weight": min_weight,
-            "max_weight": max_weight,
-        },
+        "label": f"{label} ({gender})",
         "athletes": athletes,
         "plan": plan,
     }
@@ -121,16 +112,19 @@ def call(base_url: str, method: str, path: str, token: str | None = None, body=N
 
 
 def load_category(api, tournament_id: int, club_ids: dict, entry: dict) -> int:
-    category = api("POST", "/api/v1/categories", {**entry["category"], "tournament_id": tournament_id})
-    print(f"  {category['age_label']} {category['weight_label']} ({category['gender']}): ", end="", flush=True)
+    print(f"  {entry['label']}: ", end="", flush=True)
+    category_id = None
     for data in entry["athletes"]:
         payload = {k: v for k, v in data.items() if k not in ("club", "register")}
         athlete = api("POST", "/api/v1/athletes", {**payload, "club_id": club_ids[data["club"]]})
+        if category_id is None:
+            [category] = api("GET", f"/api/v1/athletes/{athlete['id']}/eligible-categories?tournament_id={tournament_id}")
+            category_id = category["id"]
         if data["register"]:
-            api("POST", "/api/v1/registrations", {"athlete_id": athlete["id"], "category_id": category["id"]})
+            api("POST", "/api/v1/registrations", {"athlete_id": athlete["id"], "category_id": category_id})
         print(".", end="", flush=True)
     print()
-    return category["id"]
+    return category_id
 
 
 def ready_matches(api, category_id: int, round_number: int) -> list[dict]:
