@@ -11,6 +11,8 @@ funcionando sobre una base ya migrada.
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-11-25
+
 ### Added
 - **Nombre completo de la categoría:** `name` en cada categoría, listo para mostrar (por ejemplo
   `Principiantes · Cadete · Masculino · 37.1–41 kg`). Antes Principiantes y Novatos se veían idénticas.
@@ -268,7 +270,8 @@ https://taekwondo-tournament-manager.onrender.com.
 - `pool_pre_ping=True` en la conexión a la base de datos: Neon suspende el cómputo por
   inactividad y la primera conexión tras un rato inactivo pudo fallar con un error 500.
 
-[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.5.0...v0.6.0
