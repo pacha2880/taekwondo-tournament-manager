@@ -36,9 +36,10 @@ actualiza el estado acá.
 | 2026-11-12 | [Filtros de los listados otra vez opcionales](#2026-11-12--filtros-de-los-listados-otra-vez-opcionales) | Vigente |
 | 2026-11-13 | [Grado fijo del atleta y cómo se retira `belt_rank` (0.7.0)](#2026-11-13--grado-fijo-del-atleta-y-cómo-se-retira-belt_rank-070) | Vigente |
 | 2026-11-14 | [Solo API: se eliminaron las vistas HTML](#2026-11-14--solo-api-se-eliminaron-las-vistas-html) | Vigente |
-| 2026-11-16 | [Estructura de categorías del torneo (0.8.0)](#2026-11-16--estructura-de-categorías-del-torneo-080) | Vigente |
+| 2026-11-16 | [Estructura de categorías del torneo (0.8.0)](#2026-11-16--estructura-de-categorías-del-torneo-080) | Reemplazada en parte por 2026-11-25: `belt_group` ya no está en la API |
 | 2026-11-22 | [Pesos con un decimal como máximo](#2026-11-22--pesos-con-un-decimal-como-máximo) | Vigente |
 | 2026-11-23 | [`category_mismatch` revisa edad y grado](#2026-11-23--category_mismatch-revisa-edad-y-grado) | Vigente |
+| 2026-11-25 | [Las categorías se distinguen por su grupo; `belt_group` sale de la API (0.8.1)](#2026-11-25--las-categorías-se-distinguen-por-su-grupo-belt_group-sale-de-la-api-081) | Vigente |
 
 ## 2026-09-11 — Render + Neon en vez de Railway/Fly.io/Render-Postgres
 
@@ -634,3 +635,20 @@ grupo de grado contra el cual comparar; solo se revisan género y peso, como ant
 
 **Atleta sin grado no encaja:** solo ocurre con datos de la 0.6.0; en una categoría con grupo no se puede saber si
 corresponde, y fallar es mejor que aceptar en silencio.
+
+## 2026-11-25 — Las categorías se distinguen por su grupo; `belt_group` sale de la API (0.8.1)
+
+**Principiantes y Novatos se veían idénticas.** Con la estructura de la 0.8.0 dos categorías de la misma edad, género
+y peso solo difieren en el grupo de grado, pero la API no lo decía. Ahora la categoría trae `grade_group_id`,
+`grade_group_name` y `name` (nombre completo, listo para mostrar), y `GET /categories` filtra por grupo, género y
+si tiene inscritos. Los `detail` de `409` que nombran categorías usan `name`.
+
+**`belt_group` sale de la API.** Con el grupo, «color/negro» sobra y confundía: no es lo que separa las categorías.
+Es un cambio incompatible, pero la 0.8.0 se había publicado un día antes y esto la completa: se publica como 0.8.1 y
+no como minor, por decisión del usuario.
+
+**La columna `categories.belt_group` se queda**, porque dentro de `0.x` no se borran columnas y la 0.8.0 todavía la
+lee (hay que poder volver a ese tag). Se borra en la 1.0.0 (ver BACKLOG).
+
+**En las categorías históricas el cinturón va dentro de `name`:** no tienen grupo y `belt_group` es el único dato que
+separa las de color de las de cinturón negro; sin él en el nombre, esas categorías se verían iguales.

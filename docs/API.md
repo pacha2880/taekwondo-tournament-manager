@@ -32,7 +32,9 @@ desarrollo. La API no usa cookies: el token viaja siempre en la cabecera.
 Para una vista pública alcanza con tres llamadas, todas sin token:
 
 1. `GET /api/v1/tournaments` — la lista de torneos.
-2. `GET /api/v1/categories?tournament_id={id}` — las categorías de un torneo.
+2. `GET /api/v1/categories?tournament_id={id}` — las categorías de un torneo. Cada una trae `name`, el nombre
+   completo listo para mostrar (`Principiantes · Cadete · Masculino · 37.1–41 kg`); mostrá ese, no armes el nombre
+   con las partes.
 3. Según el campo `has_bracket` de la categoría:
    - `true`: `GET /api/v1/categories/{id}/bracket` — la llave.
    - `false`: `GET /api/v1/categories/{id}/registrants` — los inscritos, solo con nombre y club, ordenados por
@@ -42,6 +44,10 @@ Las listas no se paginan: devuelven todos los elementos. Sin filtro, las de cate
 todos los torneos, así que conviene pedirlas filtradas: `GET /categories?tournament_id=` y
 `GET /registrations?tournament_id=` o `?category_id=` (con token). Más adelante el filtro va a ser obligatorio;
 se avisará antes en el CHANGELOG.
+
+`GET /categories` admite además `grade_group_id`, `gender` (`male` / `female`) y `has_registrants`, todos opcionales y
+combinables con `tournament_id`. Con `has_registrants=true` solo salen las categorías con al menos un inscrito (para no
+mostrar las vacías); con `false`, las que no tienen ninguno.
 
 ## Estructura de categorías
 
@@ -63,6 +69,11 @@ Cada combinación de grupo × género × edad × peso es una categoría, salvo *
 edad, siempre presente y fija (hasta 9 años, contados por año de nacimiento: en un torneo de 2026 entra quien nació
 en 2017 o después). Festival no tiene grupos de grado ni pesos: es una lista general por género, 2 categorías. Un
 torneo nuevo nace con la estructura de la Copa Diamante (212 categorías). Los torneos creados antes de la 0.8.0 no tienen estructura (`404`).
+
+Cada categoría dice a qué grupo pertenece con `grade_group_id` y `grade_group_name` (por ejemplo `Novatos`), y
+`name` incluye el grupo: sin él, dos categorías de la misma edad, género y peso se verían iguales. Ambos campos son
+nulos en Festival y en las categorías anteriores a la 0.8.0; en estas últimas el cinturón (de color o negro) va
+dentro de `name`.
 
 Para cambiarla (con token y solo con el torneo en `draft`), `PUT /api/v1/tournaments/{id}/category-structure`
 recibe la estructura completa sin Festival: los grupos con `id`, `name` y `from_grade`, y las divisiones con `id`,
@@ -187,7 +198,6 @@ Viajan en inglés; para mostrarlos al usuario, esta es la traducción sugerida:
 | `status` de un torneo | `draft` / `in_progress` / `finished` | Inscripciones abiertas / En curso / Finalizado |
 | `status` de un combate | `pending` / `bye` / `finished` | Pendiente / Pase directo / Finalizado |
 | `gender` | `male` / `female` | Masculino / Femenino |
-| `belt_group` | `color` / `black` | Cinturón de color / Cinturón negro |
 | `grade` de un atleta | `kup_10` … `kup_1` / `dan` | 10mo Kup … 1er Kup / Dan |
 | `discipline` | `sparring` | Combate |
 

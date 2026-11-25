@@ -127,7 +127,7 @@ def _desired_categories(tournament: Tournament) -> dict[tuple, dict]:
         # Festival es una lista general por género: sin grupos de grado ni pesos.
         division_groups = [None] if is_festival(division) else groups
         for group in division_groups:
-            # Columna vieja: sigue en la API hasta que se retire (ver BACKLOG) y se llena para poder volver a la 0.7.0.
+            # Columna vieja: ya no está en la API; se llena para poder volver a la 0.8.0 y se borra en la 1.0.0.
             # El último grupo es el único que incluye Dan.
             belt_group = BeltGroup.BLACK if group is not None and group is groups[-1] else BeltGroup.COLOR
             for gender in Gender:

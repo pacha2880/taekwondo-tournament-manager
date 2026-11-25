@@ -92,6 +92,8 @@ Al final, cuando todo el ciclo funcione con kyorugi.
 ## 1.0.0
 
 - [ ] Borrar la columna `athletes.belt_rank` (reemplazada por `grade` en la 0.7.0; ver `DECISIONS.md`, 2026-11-13).
+- [ ] Borrar la columna `categories.belt_group` y el enum `BeltGroup` (salió de la API en la 0.8.1; ver `DECISIONS.md`,
+      2026-11-25). Antes hay que resolver que el `name` de las categorías históricas la usa para separar color de negro.
 
 ## Más adelante / sin versión
 

@@ -203,6 +203,20 @@ class Category(Base):
     def has_bracket(self) -> bool:
         return self.bracket is not None
 
+    @property
+    def grade_group_name(self) -> str | None:
+        return self.grade_group.name if self.grade_group else None
+
+    @property
+    def name(self) -> str:
+        """Nombre completo para mostrar; sin el grupo, dos categorías que solo difieren en él se ven iguales."""
+        gender = "Masculino" if self.gender == Gender.MALE else "Femenino"
+        belt = None
+        if self.age_division_id is None:
+            belt = "Cinturón negro" if self.belt_group == BeltGroup.BLACK else "Cinturón de color"
+        parts = [self.grade_group_name, self.age_label, gender, belt, self.weight_label]
+        return " · ".join(part for part in parts if part)
+
 
 class Registration(Base):
     __tablename__ = "registrations"

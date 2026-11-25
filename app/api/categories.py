@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import exists, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api_docs import TAG_CATEGORIES, errors
 from app.auth import ADMIN_ONLY
 from app.database import get_db
-from app.models import Category
+from app.models import Category, Gender, Registration
 from app.schemas import AthleteRead, CategoryRead, Int4, RegistrantRead
 from app.services.athlete_search import search_athletes
 from app.services.eligibility import category_mismatch
@@ -19,15 +19,34 @@ router = APIRouter(prefix="/api/v1/categories", tags=[TAG_CATEGORIES])
     response_model=list[CategoryRead],
     summary="Listar categorías",
     description=(
-        "Devuelve las categorías en el orden en que se crearon. Con el parámetro `tournament_id` devuelve solo las de "
-        "ese torneo. Es público."
+        "Devuelve las categorías en el orden en que se crearon. Filtros opcionales, combinables entre sí: "
+        "`tournament_id` (solo las de ese torneo), `grade_group_id` (solo las de ese grupo de grado), `gender` "
+        "(`male` o `female`) y `has_registrants` (`true`: con al menos un inscrito; `false`: sin ninguno). "
+        "Es público."
     ),
     responses=errors(),
 )
-def list_categories(tournament_id: Int4 | None = None, db: Session = Depends(get_db)):
-    query = select(Category).options(selectinload(Category.bracket)).order_by(Category.id)
+def list_categories(
+    tournament_id: Int4 | None = None,
+    grade_group_id: Int4 | None = None,
+    gender: Gender | None = None,
+    has_registrants: bool | None = None,
+    db: Session = Depends(get_db),
+):
+    query = (
+        select(Category)
+        .options(selectinload(Category.bracket), selectinload(Category.grade_group))
+        .order_by(Category.id)
+    )
     if tournament_id is not None:
         query = query.where(Category.tournament_id == tournament_id)
+    if grade_group_id is not None:
+        query = query.where(Category.grade_group_id == grade_group_id)
+    if gender is not None:
+        query = query.where(Category.gender == gender)
+    if has_registrants is not None:
+        has_any = exists().where(Registration.category_id == Category.id)
+        query = query.where(has_any if has_registrants else ~has_any)
     return db.scalars(query).all()
 
 

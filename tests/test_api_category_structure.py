@@ -58,11 +58,10 @@ def test_every_combination_of_the_structure_is_a_category(client, tournament):
 def test_generated_categories_carry_their_age_and_weight_range(client, tournament):
     junior_male = [
         c for c in _categories(client, tournament)
-        if c["age_label"] == "Junior" and c["gender"] == "male" and c["belt_group"] == "color"
+        if c["age_label"] == "Junior" and c["gender"] == "male" and c["grade_group_name"] == "Principiantes"
     ]
-    first_group = junior_male[: len(junior_male) // 2]
 
-    assert [(c["weight_label"], c["min_weight"], c["max_weight"]) for c in first_group] == [
+    assert [(c["weight_label"], c["min_weight"], c["max_weight"]) for c in junior_male] == [
         ("Hasta 48 kg", None, 48),
         ("48.1–55 kg", 48.1, 55),
         ("55.1–63 kg", 55.1, 63),

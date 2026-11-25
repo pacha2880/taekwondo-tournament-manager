@@ -19,5 +19,5 @@ def _has_matches_to_play(category: Category) -> bool:
 def require_all_matches_played(tournament: Tournament) -> None:
     pending = [c for c in tournament.categories if _has_matches_to_play(c)]
     if pending:
-        names = ", ".join(f"{c.age_label} {c.weight_label}" for c in pending)
+        names = ", ".join(c.name for c in pending)
         raise HTTPException(status_code=409, detail=f"Quedan combates por jugar en: {names}")
