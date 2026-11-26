@@ -114,7 +114,9 @@ el merge.
 6. Verificar `/health` (debe mostrar la versión nueva).
 
 Para volver a una versión anterior: `git checkout v0.1.0` (o redeploy de ese commit desde
-Render). Es seguro porque, dentro de `0.x`, las migraciones solo agregan columnas opcionales.
+Render). Es seguro porque, dentro de `0.x`, las migraciones solo agregan columnas opcionales. Excepción: desde la
+versión que trae la migración `e5c7a3f90b18` (borra columnas viejas) no se puede volver a la 0.8.1 o anterior sobre una
+base ya migrada.
 
 ## Tests
 

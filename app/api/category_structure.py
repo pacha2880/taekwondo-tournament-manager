@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.lifecycle import require_tournament_status
@@ -6,18 +6,11 @@ from app.api.tournaments import get_tournament_or_404
 from app.api_docs import TAG_CATEGORIES, errors
 from app.auth import ADMIN_ONLY
 from app.database import get_db
-from app.models import Tournament, TournamentStatus
+from app.models import TournamentStatus
 from app.schemas import CategoryStructureRead, CategoryStructureResult, CategoryStructureUpdate, Int4
 from app.services.category_structure import apply_structure, describe_structure, preview_categories
 
 router = APIRouter(prefix="/api/v1/tournaments", tags=[TAG_CATEGORIES])
-
-
-def _get_tournament_with_structure(db: Session, tournament_id: int) -> Tournament:
-    tournament = get_tournament_or_404(db, tournament_id)
-    if not tournament.grade_groups:
-        raise HTTPException(status_code=404, detail="Este torneo no tiene estructura de categorías")
-    return tournament
 
 
 @router.get(
@@ -27,13 +20,12 @@ def _get_tournament_with_structure(db: Session, tournament_id: int) -> Tournamen
     description=(
         "Devuelve los grupos de grado, las divisiones de edad y las divisiones de peso del torneo. Sus categorías "
         "(`GET /categories?tournament_id=`) son todas las combinaciones de grupo, género, edad y peso; Festival (la "
-        "primera división de edad, fija) es una sola categoría por género. Los torneos creados antes de la 0.8.0 no "
-        "tienen estructura: sus categorías se cargaron a mano y responde 404. Es público."
+        "primera división de edad, fija) es una sola categoría por género. Es público."
     ),
-    responses=errors({404: "El torneo no existe, o no tiene estructura de categorías."}),
+    responses=errors({404: "El torneo no existe."}),
 )
 def get_category_structure(tournament_id: Int4, db: Session = Depends(get_db)):
-    return describe_structure(_get_tournament_with_structure(db, tournament_id))
+    return describe_structure(get_tournament_or_404(db, tournament_id))
 
 
 @router.put(
@@ -51,7 +43,7 @@ def get_category_structure(tournament_id: Int4, db: Session = Depends(get_db)):
         "definitivos). Requiere token."
     ),
     responses=errors(
-        {404: "El torneo no existe, o no tiene estructura de categorías.", 409: "El torneo ya empezó."}, auth=True
+        {404: "El torneo no existe.", 409: "El torneo ya empezó."}, auth=True
     ),
 )
 def update_category_structure(
@@ -60,7 +52,7 @@ def update_category_structure(
     validate_only: bool = Query(default=False, description="Si es `true`, valida y devuelve el resultado sin guardarlo."),
     db: Session = Depends(get_db),
 ):
-    tournament = _get_tournament_with_structure(db, tournament_id)
+    tournament = get_tournament_or_404(db, tournament_id)
     require_tournament_status(
         tournament, TournamentStatus.DRAFT, "La estructura de categorías solo se cambia antes de iniciar el torneo"
     )

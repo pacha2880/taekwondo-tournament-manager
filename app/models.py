@@ -2,7 +2,7 @@ import enum
 from datetime import date, datetime
 
 from sqlalchemy import Date, DateTime, Enum, Float, ForeignKey, Integer, String, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
 
@@ -49,13 +49,6 @@ class Grade(str, enum.Enum):
     DAN = "dan"
 
 
-class BeltGroup(str, enum.Enum):
-    """Grupo de cinturón: `color` (cinturones de color, desde amarillo) o `black` (cinturón negro)."""
-
-    COLOR = "color"
-    BLACK = "black"
-
-
 class MatchStatus(str, enum.Enum):
     """Estado del combate: `pending` (pendiente: por jugar o esperando a sus atletas), `bye` (pase directo:
     el atleta avanza sin pelear) y `finished` (terminado: ya tiene ganador)."""
@@ -82,22 +75,13 @@ class Athlete(Base):
     ci: Mapped[str | None] = mapped_column(String(12), unique=True, index=True)
     birth_date: Mapped[date] = mapped_column(Date, nullable=False)
     gender: Mapped[Gender] = mapped_column(Enum(Gender), nullable=False)
-    # Reemplazado por `grade`; la columna se borra en la 1.0.0 (ver docs/DECISIONS.md, 2026-11-13).
-    belt_rank: Mapped[str] = mapped_column(String(60), nullable=False)
-    # Nullable solo en la base, para que la 0.6.0 pueda seguir creando atletas si se vuelve atrás; la API lo exige.
-    grade: Mapped[Grade | None] = mapped_column(Enum(Grade), nullable=True)
+    grade: Mapped[Grade] = mapped_column(Enum(Grade), nullable=False)
     weight_kg: Mapped[float] = mapped_column(Float, nullable=False)
     height_cm: Mapped[int | None] = mapped_column(Integer, nullable=True)
     club_id: Mapped[int] = mapped_column(ForeignKey("clubs.id"), nullable=False)
 
     club: Mapped["Club"] = relationship(back_populates="athletes")
     registrations: Mapped[list["Registration"]] = relationship(back_populates="athlete")
-
-    @validates("grade")
-    def _fill_legacy_belt_rank(self, _key, grade):
-        if grade is not None:
-            self.belt_rank = Grade(grade).value
-        return grade
 
 
 class Tournament(Base):
@@ -179,19 +163,18 @@ class Category(Base):
     age_label: Mapped[str] = mapped_column(String(60), nullable=False)
     min_age: Mapped[int] = mapped_column(Integer, nullable=False)
     max_age: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    belt_group: Mapped[BeltGroup] = mapped_column(Enum(BeltGroup), nullable=False)
     weight_label: Mapped[str] = mapped_column(String(60), nullable=False)
     min_weight: Mapped[float | None] = mapped_column(Float, nullable=True)
     max_weight: Mapped[float | None] = mapped_column(Float, nullable=True)
     rounds_to_win: Mapped[int] = mapped_column(Integer, nullable=False, default=2)
-    # Las tres son NULL en las categorías históricas, creadas a mano antes de la estructura (0.8.0).
+    # Festival no tiene grupo de grado ni posición de peso.
     grade_group_id: Mapped[int | None] = mapped_column(ForeignKey("grade_groups.id"), nullable=True)
-    age_division_id: Mapped[int | None] = mapped_column(ForeignKey("age_divisions.id"), nullable=True)
+    age_division_id: Mapped[int] = mapped_column(ForeignKey("age_divisions.id"), nullable=False)
     weight_position: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     tournament: Mapped["Tournament"] = relationship(back_populates="categories")
     grade_group: Mapped["GradeGroup | None"] = relationship()
-    age_division: Mapped["AgeDivision | None"] = relationship()
+    age_division: Mapped["AgeDivision"] = relationship()
     registrations: Mapped[list["Registration"]] = relationship(
         back_populates="category", cascade="all, delete-orphan"
     )
@@ -211,10 +194,7 @@ class Category(Base):
     def name(self) -> str:
         """Nombre completo para mostrar; sin el grupo, dos categorías que solo difieren en él se ven iguales."""
         gender = "Masculino" if self.gender == Gender.MALE else "Femenino"
-        belt = None
-        if self.age_division_id is None:
-            belt = "Cinturón negro" if self.belt_group == BeltGroup.BLACK else "Cinturón de color"
-        parts = [self.grade_group_name, self.age_label, gender, belt, self.weight_label]
+        parts = [self.grade_group_name, self.age_label, gender, self.weight_label]
         return " · ".join(part for part in parts if part)
 
 

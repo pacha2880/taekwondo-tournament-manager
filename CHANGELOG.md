@@ -7,9 +7,18 @@ según [Semantic Versioning](https://semver.org/lang/es/). La versión vive en
 Mientras la versión sea `0.y.z` (desarrollo inicial) la API puede cambiar entre versiones
 minor. Dentro de `0.x`, las migraciones de base de datos solo agregan (columnas nuevas
 opcionales; nunca borrar ni renombrar), para que volver al tag de una versión anterior siga
-funcionando sobre una base ya migrada.
+funcionando sobre una base ya migrada. Única excepción: la migración que borra las columnas viejas (ver
+`[0.8.2]`), tras la cual no se puede volver a la 0.8.1 o anterior.
 
 ## [Unreleased]
+
+## [0.8.2] - 2026-11-26
+
+### Removed
+- **Sin categorías históricas:** todo torneo tiene estructura de categorías. `GET` y `PUT
+  /api/v1/tournaments/{id}/category-structure` ya no responden `404` por un torneo sin estructura.
+- La migración borra las columnas viejas (`athletes.belt_rank` y `categories.belt_group`) y vuelve obligatorios
+  `athletes.grade` y `categories.age_division_id`. No se puede volver a la 0.8.1 o anterior sobre una base migrada.
 
 ## [0.8.1] - 2026-11-25
 
@@ -270,7 +279,8 @@ https://taekwondo-tournament-manager.onrender.com.
 - `pool_pre_ping=True` en la conexión a la base de datos: Neon suspende el cómputo por
   inactividad y la primera conexión tras un rato inactivo pudo fallar con un error 500.
 
-[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.8.2...HEAD
+[0.8.2]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.6.0...v0.7.0

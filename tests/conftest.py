@@ -9,7 +9,7 @@ from sqlalchemy.pool import StaticPool
 from app.auth import create_access_token
 from app.database import Base, get_db
 from app.main import app
-from app.models import BeltGroup, Category, Gender, GradeGroup
+from app.models import Category, Gender, GradeGroup
 
 
 @pytest.fixture(autouse=True)
@@ -103,28 +103,6 @@ def find_category(client, db_session):
         return client.get(f"/api/v1/categories/{found.id}").json()
 
     return _find
-
-
-@pytest.fixture()
-def historical_category(client, db_session):
-    """Categoría creada a mano, sin estructura (grade_group_id NULL), como las de antes de 0.8.0."""
-
-    def _create(tournament_id, **fields):
-        defaults = {
-            "gender": Gender.MALE,
-            "age_label": "Cadete",
-            "min_age": 12,
-            "max_age": 14,
-            "belt_group": BeltGroup.COLOR,
-            "weight_label": "Hasta 45kg",
-            "max_weight": 45,
-        }
-        category = Category(tournament_id=tournament_id, **{**defaults, **fields})
-        db_session.add(category)
-        db_session.commit()
-        return client.get(f"/api/v1/categories/{category.id}").json()
-
-    return _create
 
 
 @pytest.fixture()

@@ -34,12 +34,13 @@ actualiza el estado acá.
 | 2026-11-02 | [Lista pública de inscritos en la API (0.6.0)](#2026-11-02--lista-pública-de-inscritos-en-la-api-060) | Vigente |
 | 2026-11-10 | [Listados de categorías e inscripciones siempre filtrados](#2026-11-10--listados-de-categorías-e-inscripciones-siempre-filtrados) | Revertida por 2026-11-12 |
 | 2026-11-12 | [Filtros de los listados otra vez opcionales](#2026-11-12--filtros-de-los-listados-otra-vez-opcionales) | Vigente |
-| 2026-11-13 | [Grado fijo del atleta y cómo se retira `belt_rank` (0.7.0)](#2026-11-13--grado-fijo-del-atleta-y-cómo-se-retira-belt_rank-070) | Vigente |
+| 2026-11-13 | [Grado fijo del atleta y cómo se retira `belt_rank` (0.7.0)](#2026-11-13--grado-fijo-del-atleta-y-cómo-se-retira-belt_rank-070) | Reemplazada en parte por 2026-11-26: la columna `belt_rank` ya se borró |
 | 2026-11-14 | [Solo API: se eliminaron las vistas HTML](#2026-11-14--solo-api-se-eliminaron-las-vistas-html) | Vigente |
-| 2026-11-16 | [Estructura de categorías del torneo (0.8.0)](#2026-11-16--estructura-de-categorías-del-torneo-080) | Reemplazada en parte por 2026-11-25: `belt_group` ya no está en la API |
+| 2026-11-16 | [Estructura de categorías del torneo (0.8.0)](#2026-11-16--estructura-de-categorías-del-torneo-080) | Reemplazada en parte por 2026-11-25 y 2026-11-26: `belt_group` ya no está; ya no hay categorías históricas |
 | 2026-11-22 | [Pesos con un decimal como máximo](#2026-11-22--pesos-con-un-decimal-como-máximo) | Vigente |
-| 2026-11-23 | [`category_mismatch` revisa edad y grado](#2026-11-23--category_mismatch-revisa-edad-y-grado) | Vigente |
-| 2026-11-25 | [Las categorías se distinguen por su grupo; `belt_group` sale de la API (0.8.1)](#2026-11-25--las-categorías-se-distinguen-por-su-grupo-belt_group-sale-de-la-api-081) | Vigente |
+| 2026-11-23 | [`category_mismatch` revisa edad y grado](#2026-11-23--category_mismatch-revisa-edad-y-grado) | Reemplazada en parte por 2026-11-26: ya no hay categorías históricas ni atletas sin grado |
+| 2026-11-25 | [Las categorías se distinguen por su grupo; `belt_group` sale de la API (0.8.1)](#2026-11-25--las-categorías-se-distinguen-por-su-grupo-belt_group-sale-de-la-api-081) | Reemplazada en parte por 2026-11-26: la columna `belt_group` ya se borró y no hay categorías históricas |
+| 2026-11-26 | [Bases vaciadas y fuera el soporte de datos viejos](#2026-11-26--bases-vaciadas-y-fuera-el-soporte-de-datos-viejos) | Vigente |
 
 ## 2026-09-11 — Render + Neon en vez de Railway/Fly.io/Render-Postgres
 
@@ -652,3 +653,17 @@ lee (hay que poder volver a ese tag). Se borra en la 1.0.0 (ver BACKLOG).
 
 **En las categorías históricas el cinturón va dentro de `name`:** no tienen grupo y `belt_group` es el único dato que
 separa las de color de las de cinturón negro; sin él en el nombre, esas categorías se verían iguales.
+
+## 2026-11-26 — Bases vaciadas y fuera el soporte de datos viejos
+
+**Los datos viejos no servían.** El 2026-11-26 se vaciaron todas las bases (local, `dev` y producción) y se recargaron
+con la versión actual (`scripts/reset_data.py`). Ya no hay atletas sin grado, categorías sin estructura ni torneos
+anteriores a la 0.8.0.
+
+**Se borró lo que solo cuidaba esos datos**, porque cada rama y cada test de compatibilidad costaba en cada cambio:
+las columnas `athletes.belt_rank` y `categories.belt_group` y el enum `BeltGroup`, las categorías históricas con sus
+ramas (el `404` de `category-structure` por torneo sin estructura, revisar solo género y peso, el cinturón dentro de
+`name`) y el caso «atleta sin grado». `athletes.grade` y `categories.age_division_id` pasan a ser obligatorias.
+
+**Es la única excepción a «dentro de `0.x` las migraciones solo agregan»** (migración `e5c7a3f90b18`). La regla sigue
+para lo que venga. Consecuencia: sobre una base migrada ya no se puede volver a un tag ≤ 0.8.1.

@@ -215,11 +215,10 @@ class CategoryRead(CategoryBase):
 
     id: int = Field(description="Identificador de la categoría.")
     grade_group_id: int | None = Field(
-        description="Id del grupo de grado de la categoría. Es nulo en Festival y en las categorías anteriores a la 0.8.0."
+        description="Id del grupo de grado de la categoría. Es nulo en Festival."
     )
     grade_group_name: str | None = Field(
-        description="Nombre del grupo de grado (por ejemplo `Novatos`). Es nulo en Festival y en las categorías "
-        "anteriores a la 0.8.0.",
+        description="Nombre del grupo de grado (por ejemplo `Novatos`). Es nulo en Festival.",
         examples=["Novatos"],
     )
     name: str = Field(

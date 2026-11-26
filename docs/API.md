@@ -51,7 +51,7 @@ mostrar las vacías); con `false`, las que no tienen ninguno.
 
 ## Estructura de categorías
 
-Desde la 0.8.0, `POST /categories` ya no existe (responde `405`): las categorías de un torneo salen de su **estructura**, que se lee con
+Las categorías de un torneo salen de su **estructura** (no hay `POST /categories`), que se lee con
 `GET /api/v1/tournaments/{id}/category-structure` (sin token):
 
 - **Grupos de grado** (`grade_groups`): cada uno va de `from_grade` a `to_grade`. Entre todos cubren cada grado
@@ -68,12 +68,10 @@ Desde la 0.8.0, `POST /categories` ya no existe (responde `405`): las categoría
 Cada combinación de grupo × género × edad × peso es una categoría, salvo **Festival**: la primera división de
 edad, siempre presente y fija (hasta 9 años, contados por año de nacimiento: en un torneo de 2026 entra quien nació
 en 2017 o después). Festival no tiene grupos de grado ni pesos: es una lista general por género, 2 categorías. Un
-torneo nuevo nace con la estructura de la Copa Diamante (212 categorías). Los torneos creados antes de la 0.8.0 no tienen estructura (`404`).
-
+torneo nuevo nace con la estructura de la Copa Diamante (212 categorías).
 Cada categoría dice a qué grupo pertenece con `grade_group_id` y `grade_group_name` (por ejemplo `Novatos`), y
 `name` incluye el grupo: sin él, dos categorías de la misma edad, género y peso se verían iguales. Ambos campos son
-nulos en Festival y en las categorías anteriores a la 0.8.0; en estas últimas el cinturón (de color o negro) va
-dentro de `name`.
+nulos en Festival.
 
 Para cambiarla (con token y solo con el torneo en `draft`), `PUT /api/v1/tournaments/{id}/category-structure`
 recibe la estructura completa sin Festival: los grupos con `id`, `name` y `from_grade`, y las divisiones con `id`,
@@ -87,10 +85,9 @@ sirve para una vista previa. Lo que el usuario todavía no guardó puede quedar 
 ## Inscripciones
 
 `POST /api/v1/registrations` responde `422` (con `detail` en español) si el atleta no encaja en la categoría: género
-distinto; peso fuera de `min_weight`/`max_weight` (si los tiene); y, en las categorías con estructura, edad fuera de
-`min_age`–`max_age` (edad = año del torneo menos año de nacimiento) o grado fuera del grupo de grado de la categoría
-(un atleta sin grado no encaja en categorías con grupo). Festival no tiene grupo ni pesos: solo revisa género y edad.
-Las categorías de torneos anteriores a la 0.8.0 solo revisan género y peso. Además: `409` si el torneo ya empezó o si
+distinto; peso fuera de `min_weight`/`max_weight` (si los tiene); edad fuera de
+`min_age`–`max_age` (edad = año del torneo menos año de nacimiento) o grado fuera del grupo de grado de la categoría.
+Festival no tiene grupo ni pesos: solo revisa género y edad. Además: `409` si el torneo ya empezó o si
 el atleta ya está inscrito en esa categoría o en otra del mismo torneo.
 
 Para inscribir, listá los que encajan con `GET /api/v1/categories/{id}/eligible-athletes` (requiere token): devuelve
@@ -99,8 +96,7 @@ los atletas que cumplen esa regla, ordenados por nombre, e incluye a los ya insc
 
 La consulta inversa es `GET /api/v1/athletes/{id}/eligible-categories?tournament_id=` (requiere token; `tournament_id`
 es obligatorio): devuelve las categorías de ese torneo en las que encaja el atleta, ordenadas por id, sin mirar si ya
-está inscrito ni el estado del torneo. Con la estructura de la Copa Diamante normalmente es una sola; las categorías
-históricas pueden dar más. `404` si el atleta o el torneo no existen.
+está inscrito ni el estado del torneo. Con la estructura de la Copa Diamante normalmente es una sola. `404` si el atleta o el torneo no existen.
 
 ## Cómo leer una llave
 

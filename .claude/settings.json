@@ -7,7 +7,9 @@
       "Bash(git checkout main*)",
       "Bash(git switch main*)",
       "Bash(git push origin main*)",
-      "Bash(git push origin dev:main*)"
+      "Bash(git push origin dev:main*)",
+      "Agent(Explore)",
+      "Task(Explore)"
     ]
   },
   "hooks": {

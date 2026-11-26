@@ -11,7 +11,7 @@ Lo aceptado y ordenado en versiones. Las versiones ya liberadas están en [`CHAN
 - **[`DECISIONS.md`](DECISIONS.md):** el porqué de cada decisión técnica.
 
 Reglas de cada versión: `pytest` en verde (SQLite en local; Postgres lo corre el CI del PR); migraciones solo
-aditivas; los cambios incompatibles de la API se juntan en la versión, y cada cambio de la API se le avisa al frontend externo
+aditivas (única excepción: 2026-11-26, ver `DECISIONS.md`); los cambios incompatibles de la API se juntan en la versión, y cada cambio de la API se le avisa al frontend externo
 en Notion apenas llega a `dev` (después del push; ver la skill `commit`). **Solo API:** la interfaz es el frontend externo.
 
 ## Ciclo de vida objetivo del torneo
@@ -36,9 +36,8 @@ Cambia el comportamiento de la API: va marcado como incompatible en el CHANGELOG
       lista de inscritos**: hoy `GET /categories/{id}/registrants` la muestra y el frontend externo la usa, así que
       ocultarla se acuerda antes con Kike. Se sale solo por la fecha límite, hacia Pesaje. Falta decidir si el
       admin puede seguir yendo directo a En curso con `POST .../start`.
-- [ ] **Migración de los torneos en `draft`**: pasan a `registration_open`, para que los que ya existen (también el
-      torneo demo de producción) sigan visibles y aceptando inscripciones. Las reglas de `app/api/lifecycle.py` pasan de
-      `draft` a `registration_open`.
+- [ ] **Reglas de `app/api/lifecycle.py`**: lo que hoy se permite en `draft` (inscribir, retirar) pasa a
+      `registration_open`.
 - [ ] **Fecha límite de inscripción** (guardada en UTC, mostrada en hora de Bolivia). Pasada la fecha, el torneo
       queda en Pesaje solo. El estado se calcula al consultarlo con una función pura del torneo y la hora; leer no
       escribe en la base, y no hace falta un cron.
@@ -88,12 +87,6 @@ Al final, cuando todo el ciclo funcione con kyorugi.
       [Notion](https://app.notion.com/p/415fae3be03b81a9b769d4ac7a91532d)
 - [ ] **Inscribirse en kyorugi y en poomsae** del mismo torneo: la regla «un atleta, una categoría por torneo» pasa
       a ser por modalidad.
-
-## 1.0.0
-
-- [ ] Borrar la columna `athletes.belt_rank` (reemplazada por `grade` en la 0.7.0; ver `DECISIONS.md`, 2026-11-13).
-- [ ] Borrar la columna `categories.belt_group` y el enum `BeltGroup` (salió de la API en la 0.8.1; ver `DECISIONS.md`,
-      2026-11-25). Antes hay que resolver que el `name` de las categorías históricas la usa para separar color de negro.
 
 ## Más adelante / sin versión
 
