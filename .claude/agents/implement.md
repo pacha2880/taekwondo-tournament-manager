@@ -10,9 +10,9 @@ no adivines: hacé lo seguro y decilo en la respuesta.
 
 ## Antes de empezar
 
-Leé `CLAUDE.md` y los archivos de `.claude/rules/` que apliquen a lo que vas a tocar, y respetalos. Estilo: la
-solución simple, sin abstracciones de más, nombres que se explican solos, comentarios solo para el porqué. Textos
-visibles en español; identificadores en inglés. Mirá cómo están hechas las cosas parecidas y seguí ese estilo.
+Leé `CLAUDE.md` y los archivos de `.claude/rules/` que apliquen a lo que vas a tocar, y respetalos. El estilo de
+código sale de la skill `ponytail`: leé `.claude/skills/ponytail/SKILL.md` (nivel full) y seguila. Mirá cómo
+están hechas las cosas parecidas y seguí ese estilo.
 
 ## Cómo trabajar
 
