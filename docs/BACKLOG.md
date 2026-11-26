@@ -24,44 +24,84 @@ La 0.6.0 deja tres de esos estados (inscripciones abiertas, en curso, finalizado
 
 ## 0.9.0 — Ciclo nuevo y pesaje
 
-Cambia el comportamiento de la API: va marcado como incompatible en el CHANGELOG.
+Spec acordado el 2026-11-26 (porqués en `DECISIONS.md`, 2026-11-26). Cambia la API de forma incompatible: va marcado
+en el CHANGELOG y se acuerda con Kike **antes** del push a `dev`.
 
-- [ ] **Estado «En preparación»** (`draft`, el valor que ya existe): pasa a ser el inicial y cambia de
-      significado. El torneo no se ve en público y el admin arma las categorías; todavía no se inscribe a nadie.
+**Ciclo:** En preparación (`draft`) → Inscripciones abiertas (`registration_open`) → Pesaje (`weigh_in`) → En curso
+(`in_progress`) → Finalizado (`finished`). Un solo camino, sin volver atrás: no se puede pasar de Inscripciones
+abiertas a En curso sin el Pesaje.
+
+**Visibilidad:** la API oculta sin token los torneos en preparación y la lista de inscritos antes del Pesaje; con token
+devuelve todo, en los mismos endpoints. La vista pública del frontend no los muestra nunca, haya sesión o no (regla
+del frontend, avisada a Kike en Notion).
+
+### Bloque 1 — Estados, fecha límite y visibilidad
+
+- [ ] **En preparación (`draft`)**: sin token, `GET /tournaments` no lo lista y el torneo, sus categorías, su
+      estructura y sus llaves responden `404`; con token se ve. Se arman las categorías (`PUT /category-structure`,
+      solo en `draft`); todavía no se inscribe a nadie (`409`).
       [Notion](https://app.notion.com/p/415fae3be03b818fa550dabd0c34074a)
-- [ ] **Estado «Inscripciones abiertas»** (`registration_open`, valor nuevo): se llega desde En preparación cuando
-      el admin abre las inscripciones, con una acción nueva como `start` y `finish`. Las categorías quedan como
-      vienen de En preparación. Se inscribe y se retira como hoy en `draft` (`category_mismatch`, una categoría por
-      torneo, `confirm_withdrawal`); llaves y resultados siguen dando `409`. El público ve el torneo, pero **no la
-      lista de inscritos**: hoy `GET /categories/{id}/registrants` la muestra y el frontend externo la usa, así que
-      ocultarla se acuerda antes con Kike. Se sale solo por la fecha límite, hacia Pesaje. Falta decidir si el
-      admin puede seguir yendo directo a En curso con `POST .../start`.
-- [ ] **Reglas de `app/api/lifecycle.py`**: lo que hoy se permite en `draft` (inscribir, retirar) pasa a
-      `registration_open`.
-- [ ] **Fecha límite de inscripción** (guardada en UTC, mostrada en hora de Bolivia). Pasada la fecha, el torneo
-      queda en Pesaje solo. El estado se calcula al consultarlo con una función pura del torneo y la hora; leer no
-      escribe en la base, y no hace falta un cron.
-- [ ] **Estado «Pesaje»**: se cierran las inscripciones y la lista de inscritos se hace pública (hasta entonces
-      está oculta). El admin pasa a En curso a mano. [Notion](https://app.notion.com/p/415fae3be03b81568bd7f3cfcc2df971)
-- [ ] **Pesaje con segundo intento**: el admin anota el peso; si no entra en la categoría, hay un segundo pesaje;
-      si tampoco entra o no se presenta, queda descalificado (DSQ, Art. 16 de WT). No se lo pasa a otra categoría.
-      [Notion](https://app.notion.com/p/415fae3be03b8125a671c9bf214adff8)
-- [ ] **Todas las llaves juntas al pasar a En curso.** Desaparece la generación por categoría. El descalificado
-      va en la llave y pierde su combate sin pelear. [Notion](https://app.notion.com/p/415fae3be03b81e59b41cdd9c6196e7f)
-- [ ] **Sorteo separando clubes en la primera ronda**: dos atletas del mismo club no se enfrentan en la primera
-      ronda, salvo que no se pueda evitar. Desde la segunda ronda no importa.
-- [ ] **Festival (hasta 9 años)**: categoría sin llave ni división de peso; se muestra como lista con nombre y
-      club. [Notion](https://app.notion.com/p/415fae3be03b81909a7ee26f2cd969c4)
+- [ ] **Fecha límite de inscripción** (`registration_deadline`, guardada en UTC; el frontend la muestra en hora de
+      Bolivia): se fija con `PATCH /tournaments/{id}` y se puede mover (adelantar o atrasar) mientras no haya vencido;
+      después, `409`.
+- [ ] **Abrir inscripciones**: acción nueva `POST /tournaments/{id}/open-registration`, solo desde `draft` y con una
+      fecha límite futura (si no, `409`). El torneo pasa a ser público.
+- [ ] **Inscripciones abiertas (`registration_open`)**: se inscribe y se retira como hoy en `draft`
+      (`category_mismatch`, una categoría por torneo, `confirm_withdrawal`); fuera de este estado, `409`. Las reglas de
+      `app/api/lifecycle.py` que hoy dicen `draft` pasan a `registration_open`.
+- [ ] **Pesaje (`weigh_in`)**: el torneo entra solo cuando vence la fecha límite. El estado se calcula al leer (función
+      pura del torneo y la hora); leer no escribe en la base y no hace falta un cron. Inscripciones cerradas; editar un
+      atleta inscrito responde como en En curso.
+- [ ] **Lista de inscritos oculta hasta el Pesaje**: sin token, `GET /categories/{id}/registrants` responde `403` antes
+      del Pesaje; desde el Pesaje es pública. [Notion](https://app.notion.com/p/415fae3be03b81568bd7f3cfcc2df971)
+- [ ] **Iniciar**: `POST /tournaments/{id}/start` solo desde `weigh_in` (antes, `409`).
+- [ ] `scripts/seed_demo_api.py` sigue el ciclo nuevo.
 
-## 0.10.0 — Campeones y ranking
+### Bloque 2 — Pesaje
 
-- [ ] Categoría con un solo inscrito: ese atleta es campeón sin pelea, sin llave ni combate artificial.
-- [ ] Al iniciar el torneo, tabla aparte con las categorías de un solo inscrito.
+- [ ] **Pesaje oficial en la inscripción**, no en el atleta (`weight_kg` queda como el peso declarado). Solo en
+      `weigh_in`. Sin tolerancia. [Notion](https://app.notion.com/p/415fae3be03b8125a671c9bf214adff8)
+  - Primer pesaje: si entra en su categoría, queda habilitado. Si no, el admin elige: habilitar un segundo pesaje o
+    descalificarlo directo (DSQ, Art. 16 de WT).
+  - Segundo pesaje: si no entra, queda descalificado directo.
+  - No se lo pasa a otra categoría. Las confirmaciones («¿habilitar segundo pesaje?», «¿seguro?») son del frontend.
+- [ ] **No presentado**: al iniciar el torneo, quien no quedó habilitado queda descalificado, y `start` devuelve la
+      lista de los que no se pesaron para mostrarla.
+- [ ] Festival no tiene divisiones de peso: no necesita pesaje.
+
+### Bloque 3 — Llaves al iniciar
+
+- [ ] **Todas las llaves juntas al iniciar**: `POST /start` sortea las llaves de todas las categorías con 2 o más
+      inscritos, salvo Festival. Desaparece `POST /categories/{id}/bracket` (`405`).
+      [Notion](https://app.notion.com/p/415fae3be03b81e59b41cdd9c6196e7f)
+- [ ] **Sorteo separando clubes en la primera ronda**: dos atletas del mismo club no se enfrentan en la primera ronda,
+      salvo que no se pueda evitar. Desde la segunda ronda no importa.
+- [ ] **Descalificados en la llave**: van en la llave, marcados, y pierden sin pelear.
+  - El sorteo empareja primero a cada descalificado con un habilitado; solo si sobran, se enfrentan entre ellos.
+  - Entre dos descalificados no avanza nadie, y su rival de la ronda siguiente gana sin pelear.
+  - El combate ganado sin pelear tiene un estado propio, distinto de uno jugado.
+  - Si todos los inscritos de una categoría quedan descalificados, no hay ganador: se muestra con todos marcados.
+- [ ] **Festival sin llave**: solo una lista de varones y otra de damas, con nombre y club. Los combates se organizan
+      en persona y no se registran (pedido de Abel, 2026-11-26). Todos llevan medalla de oro. No impide finalizar el
+      torneo. [Notion](https://app.notion.com/p/415fae3be03b81909a7ee26f2cd969c4)
+
+## 0.10.0 — Llaves de exhibición, campeones y ranking
+
+- [ ] **Sin pelea**: el único inscrito de su categoría, o el único habilitado cuando todos los demás quedaron
+      descalificados, es campeón sin pelea. Si todos quedaron descalificados, no hay campeón.
+- [ ] **Lista de los que quedaron sin pelea**, aparte (los de arriba). Es la lista de candidatos a exhibición.
       [Notion](https://app.notion.com/p/415fae3be03b81728aefc395fb241292)
+- [ ] **Llaves de exhibición, armadas a mano**, con el torneo en curso: el frontend manda la lista de atletas
+      elegidos, la API valida que puedan entrar y genera una llave más del grupo «Exhibición» (puede haber varias).
+  - Solo entran los que quedaron sin pelea (ver la lista de arriba).
+  - Un atleta puede estar en más de una; la API marca a los que ya tienen pelea en ellas.
+  - Finalizar el torneo exige que estas llaves también estén terminadas.
 - [ ] Podio: oro el ganador de la final, plata el que perdió la final y **un solo bronce**, el semifinalista que
       perdió con el campeón. No hay combate por el bronce.
       [Notion](https://app.notion.com/p/415fae3be03b81b088fae8cc4f877e8a)
-- [ ] Ranking de clubes: oro 7, plata 3, bronce 1 y categoría sin pelea 1, configurable por torneo.
+- [ ] **Ranking de clubes**, configurable por torneo: oro 7, plata 3, bronce 1 y sin pelea 1 (el único inscrito o el
+      único habilitado). Cada niño de Festival suma como un oro (7). Las llaves de exhibición no suman. Sin campeón
+      (todos descalificados), nadie suma. Reemplaza al ranking que hoy calcula el frontend.
       [Notion](https://app.notion.com/p/415fae3be03b817fb311feac5e158ed2)
 
 ## 0.11.0 — Cuentas e inscripción pública
@@ -90,9 +130,14 @@ Al final, cuando todo el ciclo funcione con kyorugi.
 
 ## Más adelante / sin versión
 
-- [ ] Mesa de inspección y estados del combate (pendiente → inspección → listo → en combate → terminado).
-      [Notion](https://app.notion.com/p/415fae3be03b8180a362fde6c857ac45)
-- [ ] Área de combate de cada categoría o combate (área 1, área 2…), cuando haya mesa de inspección.
+- [ ] **El día del evento** (pedido de Abel, 2026-11-26; va después del ciclo completo).
+      [Notion](https://app.notion.com/p/424fae3be03b816cb6b4d0d4ac47579e)
+  - Mesa de inspección: habilitar a cada competidor cuando pasa por la mesa, y estados del combate (pendiente →
+    inspección → listo → en combate → terminado). [Notion](https://app.notion.com/p/415fae3be03b8180a362fde6c857ac45)
+  - Numeración de los combates al sortear las llaves: qué pelea va primero.
+  - Áreas de competición: cuántas hay en el torneo y a qué área va cada combate.
+  - Horario estimado de cada combate.
+  - Poder cambiar esa planificación (orden, área, hora) durante el evento.
 - [ ] Roles de pesaje e inspector; por ahora todo lo hace el admin.
       [Notion](https://app.notion.com/p/415fae3be03b8164b7b5e59d660226c7)
 - [ ] Vista pública de los combates pendientes o siguientes.
@@ -100,7 +145,6 @@ Al final, cuando todo el ciclo funcione con kyorugi.
 - [ ] Permitir editar un round ya cargado (ver `DECISIONS.md`, 2026-10-26: hoy no hace falta y es el cambio con
       más riesgo de dejar datos inconsistentes).
 - [ ] Acta de resultados imprimible por categoría, a partir de la plantilla `.docx` de la planilla física.
-- [ ] Auto-refresh en vivo de la vista pública.
 - [ ] Reglamento público en la vista de visitantes.
       [Notion](https://app.notion.com/p/415fae3be03b814682eec3c95ba1dd9b)
 - [ ] Fotos del torneo (sin definir). [Notion](https://app.notion.com/p/415fae3be03b81a085b8d1443e8cbcfd)
