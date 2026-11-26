@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app.api.lifecycle import current_status
+from app.models import current_status
 from app.models import Tournament, TournamentStatus
 
 DEADLINE = datetime(2027, 6, 1, 12, 0)  # UTC sin zona, como se guarda
@@ -62,7 +62,7 @@ def test_each_action_only_works_from_its_own_status(client, tournament, set_tour
     assert finish_from_draft.status_code == 409
     assert finish_from_draft.json()["detail"] == "Solo se puede finalizar un torneo en curso"
     assert start_with_registration_open.status_code == 409
-    assert start_with_registration_open.json()["detail"] == "Las inscripciones todavía no cerraron"
+    assert start_with_registration_open.json()["detail"] == "El torneo solo se inicia desde el pesaje"
     assert start_again.status_code == 409
     assert start_again.json()["detail"] == "El torneo ya empezó"
     assert finish_again.status_code == 409

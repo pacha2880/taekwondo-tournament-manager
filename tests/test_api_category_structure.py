@@ -223,13 +223,15 @@ def test_out_of_range_values_are_rejected_before_reaching_the_database(client, d
     assert _structure(client, draft_tournament).json() == before
 
 
-def test_the_structure_only_changes_while_the_tournament_is_a_draft(client, draft_tournament, set_tournament_status):
+@pytest.mark.parametrize("status", ["registration_open", "weigh_in", "in_progress", "finished"])
+def test_the_structure_only_changes_while_the_tournament_is_a_draft(client, draft_tournament, set_tournament_status, status):
     body = _editable(_structure(client, draft_tournament).json())
-    set_tournament_status(client, draft_tournament["id"], "in_progress")
+    set_tournament_status(client, draft_tournament["id"], status)
 
     resp = _put(client, draft_tournament, body)
 
     assert resp.status_code == 409
+    assert resp.json()["detail"] == "La estructura de categorías solo se cambia con el torneo en preparación"
 
 
 def test_changing_the_structure_requires_login(anon_client, client, draft_tournament):

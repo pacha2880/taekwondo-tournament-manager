@@ -43,7 +43,7 @@ def get_category_structure(tournament_id: Int4, db: Session = Depends(get_db)):
         "definitivos). Requiere token."
     ),
     responses=errors(
-        {404: "El torneo no existe.", 409: "El torneo ya empezó."}, auth=True
+        {404: "El torneo no existe.", 409: "El torneo ya no está en preparación ()."}, auth=True
     ),
 )
 def update_category_structure(
@@ -54,7 +54,7 @@ def update_category_structure(
 ):
     tournament = get_tournament_or_404(db, tournament_id)
     require_tournament_status(
-        tournament, TournamentStatus.DRAFT, "La estructura de categorías solo se cambia antes de iniciar el torneo"
+        tournament, TournamentStatus.DRAFT, "La estructura de categorías solo se cambia con el torneo en preparación"
     )
     apply_structure(db, tournament, payload)
     result = {**describe_structure(tournament), "categories": preview_categories(tournament)}

@@ -63,6 +63,16 @@ class MatchStatus(str, enum.Enum):
     FINISHED = "finished"
 
 
+def current_status(
+    stored_status: TournamentStatus, registration_deadline: datetime | None, now: datetime
+) -> TournamentStatus:
+    """El pesaje no se guarda: empieza solo cuando vence la fecha límite (UTC sin zona; `now`, con zona UTC)."""
+    deadline_passed = registration_deadline is not None and now.replace(tzinfo=None) >= registration_deadline
+    if stored_status == TournamentStatus.REGISTRATION_OPEN and deadline_passed:
+        return TournamentStatus.WEIGH_IN
+    return stored_status
+
+
 class Club(Base):
     __tablename__ = "clubs"
 
@@ -114,8 +124,6 @@ class Tournament(Base):
 
     @property
     def status(self) -> TournamentStatus:
-        from app.api.lifecycle import current_status  # import local: lifecycle importa este módulo
-
         return current_status(self.stored_status, self.registration_deadline, clock.utc_now())
 
 

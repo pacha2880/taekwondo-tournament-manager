@@ -175,7 +175,7 @@ def start_tournament(tournament_id: Int4, db: Session = Depends(get_db)):
     tournament = get_tournament_or_404(db, tournament_id)
     if tournament.status in (TournamentStatus.IN_PROGRESS, TournamentStatus.FINISHED):
         raise HTTPException(status_code=409, detail="El torneo ya empezó")
-    require_tournament_status(tournament, TournamentStatus.WEIGH_IN, "Las inscripciones todavía no cerraron")
+    require_tournament_status(tournament, TournamentStatus.WEIGH_IN, "El torneo solo se inicia desde el pesaje")
     tournament.stored_status = TournamentStatus.IN_PROGRESS
     db.commit()
     db.refresh(tournament)
