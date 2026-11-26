@@ -6,12 +6,13 @@ from sqlalchemy.orm import Session
 
 from app import clock
 from app.api.lifecycle import (
+    is_hidden_from_public,
     require_all_matches_played,
     require_registration_deadline_in_the_future,
     require_tournament_status,
 )
 from app.api_docs import TAG_TOURNAMENTS, errors
-from app.auth import ADMIN_ONLY
+from app.auth import ADMIN_ONLY, OPTIONAL_TOKEN, is_admin_request
 from app.database import get_db
 from app.models import Tournament, TournamentStatus
 from app.schemas import Int4, TournamentCreate, TournamentRead, TournamentUpdate
@@ -23,6 +24,13 @@ router = APIRouter(prefix="/api/v1/tournaments", tags=[TAG_TOURNAMENTS])
 def get_tournament_or_404(db: Session, tournament_id: int) -> Tournament:
     tournament = db.get(Tournament, tournament_id)
     if not tournament:
+        raise HTTPException(status_code=404, detail="Torneo no encontrado")
+    return tournament
+
+
+def get_visible_tournament_or_404(db: Session, tournament_id: int, is_admin: bool) -> Tournament:
+    tournament = get_tournament_or_404(db, tournament_id)
+    if is_hidden_from_public(tournament) and not is_admin:
         raise HTTPException(status_code=404, detail="Torneo no encontrado")
     return tournament
 
@@ -52,22 +60,29 @@ def create_tournament(payload: TournamentCreate, db: Session = Depends(get_db)):
     "",
     response_model=list[TournamentRead],
     summary="Listar torneos",
-    description="Devuelve los torneos, del más reciente al más antiguo. Es público.",
-    responses=errors(),
+    description="Devuelve los torneos, del más reciente al más antiguo. Es público, pero sin token no incluye los "
+    "torneos en preparación (`draft`); con token los devuelve todos.",
+    responses=errors(auth=True),
+    openapi_extra=OPTIONAL_TOKEN,
 )
-def list_tournaments(db: Session = Depends(get_db)):
-    return db.scalars(select(Tournament).order_by(Tournament.date.desc())).all()
+def list_tournaments(is_admin: bool = Depends(is_admin_request), db: Session = Depends(get_db)):
+    query = select(Tournament).order_by(Tournament.date.desc())
+    if not is_admin:
+        query = query.where(Tournament.stored_status != TournamentStatus.DRAFT)
+    return db.scalars(query).all()
 
 
 @router.get(
     "/{tournament_id}",
     response_model=TournamentRead,
     summary="Obtener un torneo",
-    description="Devuelve un torneo por su id. Es público.",
-    responses=errors({404: "El torneo no existe."}),
+    description="Devuelve un torneo por su id. Es público, pero un torneo en preparación (`draft`) solo existe "
+    "para quien manda token: sin token responde 404.",
+    responses=errors({404: "El torneo no existe (o está en preparación y no se envió token)."}, auth=True),
+    openapi_extra=OPTIONAL_TOKEN,
 )
-def get_tournament(tournament_id: Int4, db: Session = Depends(get_db)):
-    return get_tournament_or_404(db, tournament_id)
+def get_tournament(tournament_id: Int4, is_admin: bool = Depends(is_admin_request), db: Session = Depends(get_db)):
+    return get_visible_tournament_or_404(db, tournament_id, is_admin)
 
 
 @router.patch(

@@ -6,6 +6,16 @@ from app.models import Category, MatchStatus, Tournament, TournamentStatus
 FINAL_MATCH_STATUSES = (MatchStatus.FINISHED, MatchStatus.BYE)
 
 
+def is_hidden_from_public(tournament: Tournament) -> bool:
+    """Un torneo en preparación solo lo ve el admin."""
+    return tournament.stored_status == TournamentStatus.DRAFT
+
+
+def registrants_are_public(tournament: Tournament) -> bool:
+    """La lista de inscritos se publica desde el Pesaje."""
+    return tournament.status in (TournamentStatus.WEIGH_IN, TournamentStatus.IN_PROGRESS, TournamentStatus.FINISHED)
+
+
 def require_registration_deadline_in_the_future(tournament: Tournament) -> None:
     deadline = tournament.registration_deadline
     if deadline is None or deadline <= clock.utc_now().replace(tzinfo=None):

@@ -8,7 +8,9 @@ paths:
 # Endpoints de `/api/v1`
 
 - **Auth**: por defecto `dependencies=ADMIN_ONLY`. Una lectura pública a propósito va también en
-  `PUBLIC_ENDPOINTS` de `tests/test_api_auth.py`. **Nunca público un endpoint que devuelva fecha de
+  `PUBLIC_ENDPOINTS` de `tests/test_api_auth.py`. Una lectura pública que con token devuelve más (torneos en
+  `draft`, inscritos antes del Pesaje) usa `is_admin_request` + `openapi_extra=OPTIONAL_TOKEN` y va en
+  `OPTIONAL_TOKEN_ENDPOINTS`; la regla de qué se oculta vive en `app/api/lifecycle.py`. **Nunca público un endpoint que devuelva fecha de
   nacimiento o peso** (hay menores); para mostrar inscritos sin token, `list_registrants` (solo nombre y club).
 - **Docs** (`tests/test_api_docs.py` falla si falta algo):
   - `summary`, `description`, `tags=[TAG_...]` de `app/api_docs.py`.

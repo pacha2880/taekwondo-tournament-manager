@@ -36,6 +36,10 @@ def _unauthorized(detail: str) -> HTTPException:
 def require_api_admin(token: str | None = Depends(oauth2_scheme)) -> str:
     if token is None:
         raise _unauthorized("No autenticado: falta el token de acceso")
+    return _admin_username(token)
+
+
+def _admin_username(token: str) -> str:
     try:
         payload = jwt.decode(
             token,
@@ -53,4 +57,15 @@ def require_api_admin(token: str | None = Depends(oauth2_scheme)) -> str:
     return payload["sub"]
 
 
+def is_admin_request(token: str | None = Depends(oauth2_scheme)) -> bool:
+    """Para lecturas públicas que con token de admin devuelven más: sin token es anónimo, con token inválido es 401."""
+    if token is None:
+        return False
+    _admin_username(token)
+    return True
+
+
 ADMIN_ONLY = [Depends(require_api_admin)]
+# El esquema de `is_admin_request` ya queda en `security`; esto le suma la alternativa vacía (sin token) para que
+# OpenAPI y Swagger lo muestren como opcional. FastAPI concatena las listas de `security`.
+OPTIONAL_TOKEN = {"security": [{}]}

@@ -16,7 +16,8 @@ de ejemplo.
 ## Acceso
 
 Lecturas **públicas**: torneos, categorías, clubes, llaves, combates y la lista de inscritos de cada
-categoría (solo nombre y club). Todo `POST`, `PUT`, `PATCH` y `DELETE` y las
+categoría (solo nombre y club), salvo los torneos en preparación y los inscritos antes del Pesaje (ver «Qué se ve sin
+token» en «Ciclo de vida de un torneo»). Todo `POST`, `PUT`, `PATCH` y `DELETE` y las
 lecturas de **atletas e inscripciones** piden `Authorization: Bearer <token>` (esas respuestas
 incluyen fecha de nacimiento y peso, y hay menores). El token se obtiene en
 `POST /api/v1/auth/login` (formulario con `username` y `password`), dura 8 horas y no se renueva solo:
@@ -47,7 +48,8 @@ se avisará antes en el CHANGELOG.
 
 `GET /categories` admite además `grade_group_id`, `gender` (`male` / `female`) y `has_registrants`, todos opcionales y
 combinables con `tournament_id`. Con `has_registrants=true` solo salen las categorías con al menos un inscrito (para no
-mostrar las vacías); con `false`, las que no tienen ninguno.
+mostrar las vacías); con `false`, las que no tienen ninguno. Sin token, `has_registrants` solo se acepta desde el
+Pesaje (ver «Qué se ve sin token»).
 
 ## Estructura de categorías
 
@@ -170,9 +172,19 @@ que ocurre solo al vencer la fecha límite:
   definitivos. Exige que no queden combates por jugar: si falta alguno responde `409` y `detail` nombra las
   categorías pendientes.
 
-Las lecturas públicas (`GET /tournaments`, `GET /categories`…) devuelven torneos en cualquier estado,
-incluidos los `draft`. Mientras una categoría no tiene llave, lo que se muestra al público es la lista de
-inscritos: con `has_bracket` y `/registrants` (ver «Recorrer los datos»).
+**Qué se ve sin token.** Las lecturas públicas aceptan token opcional y, con token, devuelven todo. Sin token:
+
+- Un torneo en `draft` no existe: `GET /tournaments` no lo lista, y el torneo, su estructura, sus categorías (también
+  en `GET /categories`), sus inscritos y sus llaves responden `404`.
+- La lista de inscritos (`GET /categories/{id}/registrants`) es pública **desde el Pesaje**: con las inscripciones
+  abiertas responde `403`. Por lo mismo, el filtro `has_registrants` de `GET /categories` solo se acepta junto con un
+  `tournament_id` de un torneo en `weigh_in`, `in_progress` o `finished`; si no, `403`.
+- Un token inválido o vencido responde `401` también en estas lecturas: si la sesión venció, hay que volver a
+  iniciarla o dejar de mandar el token.
+
+La vista pública del frontend no muestra los torneos en preparación ni los inscritos antes del Pesaje aunque haya
+sesión de admin. Mientras una categoría no tiene llave, lo que se muestra al público es la lista de inscritos: con
+`has_bracket` y `/registrants` (ver «Recorrer los datos»).
 
 ## Errores
 

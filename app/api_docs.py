@@ -23,7 +23,9 @@ inscripciones, llaves de eliminación simple con pases directos (*byes*) y resul
 
 ## Autenticación
 
-Las lecturas de **torneos, categorías, clubes, llaves y combates son públicas**. Todo lo que escribe
+Las lecturas de **torneos, categorías, clubes, llaves y combates son públicas**, salvo dos cosas que sin token no
+se ven: los torneos en preparación (`draft`, responden 404) y la lista de inscritos antes del Pesaje (403). Con token
+esas mismas lecturas devuelven todo; un token inválido o vencido responde 401 también ahí. Todo lo que escribe
 (`POST`, `PUT`, `PATCH` y `DELETE`) y las lecturas de **atletas e inscripciones** (llevan fecha de nacimiento y peso, y
 hay menores) requieren un token:
 

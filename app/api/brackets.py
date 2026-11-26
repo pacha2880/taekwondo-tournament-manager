@@ -3,7 +3,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api_docs import TAG_BRACKETS, errors
-from app.auth import ADMIN_ONLY
+from app.api.categories import get_visible_category_or_404
+from app.auth import ADMIN_ONLY, OPTIONAL_TOKEN, is_admin_request
 from app.database import get_db
 from app.api.lifecycle import require_tournament_status
 from app.models import Bracket, Category, TournamentStatus
@@ -57,12 +58,12 @@ def create_bracket(category_id: Int4, db: Session = Depends(get_db)):
     "/{category_id}/bracket",
     response_model=BracketRead,
     summary="Obtener la llave de una categoría",
-    description="Devuelve todos los combates de todas las rondas. Cada combate indica el combate de la siguiente ronda al que avanza su ganador (`next_match_id`). Es público.",
-    responses=errors({404: "La categoría no existe o todavía no tiene llave."}),
+    description="Devuelve todos los combates de todas las rondas. Cada combate indica el combate de la siguiente ronda al que avanza su ganador (`next_match_id`). Es público, pero con el torneo en preparación (`draft`) sin token responde 404.",
+    responses=errors({404: "La categoría no existe (o su torneo está en preparación y no se envió token) o todavía no tiene llave."}, auth=True),
+    openapi_extra=OPTIONAL_TOKEN,
 )
-def get_bracket(category_id: Int4, db: Session = Depends(get_db)):
-    if not db.get(Category, category_id):
-        raise HTTPException(status_code=404, detail="Categoría no encontrada")
+def get_bracket(category_id: Int4, is_admin: bool = Depends(is_admin_request), db: Session = Depends(get_db)):
+    get_visible_category_or_404(db, category_id, is_admin)
     bracket = db.scalar(select(Bracket).where(Bracket.category_id == category_id))
     if not bracket:
         raise HTTPException(status_code=404, detail="Esta categoría todavía no tiene una llave")
