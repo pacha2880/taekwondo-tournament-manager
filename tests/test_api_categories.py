@@ -1,3 +1,6 @@
+from app.models import BeltGroup
+
+
 def test_categories_cannot_be_created_by_hand(client, tournament):
     resp = client.post("/api/v1/categories", json={"tournament_id": tournament["id"]})
 
@@ -102,3 +105,65 @@ def test_eligible_athletes_requires_token(anon_client, category):
     resp = anon_client.get(f"/api/v1/categories/{category['id']}/eligible-athletes")
 
     assert resp.status_code == 401
+
+
+def test_categories_that_differ_only_in_grade_group_have_different_names(tournament, find_category):
+    beginners = find_category(tournament["id"], "male", "Cadete", "37.1–41 kg", grade_group="Principiantes")
+    novices = find_category(tournament["id"], "male", "Cadete", "37.1–41 kg", grade_group="Novatos")
+
+    assert beginners["name"] == "Principiantes · Cadete · Masculino · 37.1–41 kg"
+    assert novices["name"] == "Novatos · Cadete · Masculino · 37.1–41 kg"
+    assert (beginners["grade_group_name"], novices["grade_group_name"]) == ("Principiantes", "Novatos")
+    assert beginners["grade_group_id"] != novices["grade_group_id"]
+    assert "belt_group" not in beginners
+
+
+def test_festival_name_has_no_grade_group(client, tournament):
+    festival = [
+        c for c in client.get("/api/v1/categories", params={"tournament_id": tournament["id"]}).json()
+        if c["age_label"] == "Festival" and c["gender"] == "male"
+    ]
+
+    assert [(c["name"], c["grade_group_id"], c["grade_group_name"]) for c in festival] == [
+        ("Festival · Masculino · Todos los pesos", None, None)
+    ]
+
+
+def test_historical_category_names_keep_the_belt_group(tournament, historical_category):
+    color = historical_category(tournament["id"])
+    black = historical_category(tournament["id"], belt_group=BeltGroup.BLACK)
+
+    assert color["name"] == "Cadete · Masculino · Cinturón de color · Hasta 45kg"
+    assert black["name"] == "Cadete · Masculino · Cinturón negro · Hasta 45kg"
+    assert color["grade_group_id"] is None and color["grade_group_name"] is None
+
+
+def test_list_categories_filtered_by_grade_group_and_gender(client, tournament, find_category):
+    novices = find_category(tournament["id"], "male", "Cadete", "37.1–41 kg", grade_group="Novatos")
+    params = {"tournament_id": tournament["id"], "grade_group_id": novices["grade_group_id"]}
+
+    by_group = client.get("/api/v1/categories", params=params).json()
+    by_group_and_gender = client.get("/api/v1/categories", params={**params, "gender": "female"}).json()
+
+    assert {c["grade_group_name"] for c in by_group} == {"Novatos"}
+    assert {c["gender"] for c in by_group} == {"male", "female"}
+    assert {(c["grade_group_name"], c["gender"]) for c in by_group_and_gender} == {("Novatos", "female")}
+    assert novices["id"] in [c["id"] for c in by_group]
+    assert novices["id"] not in [c["id"] for c in by_group_and_gender]
+
+
+def test_list_categories_with_an_invalid_gender_is_422(client):
+    assert client.get("/api/v1/categories", params={"gender": "otro"}).status_code == 422
+
+
+def test_list_categories_filtered_by_having_registrants(client, club, tournament, category, register_n_athletes):
+    register_n_athletes(client, club, category, 1)
+    params = {"tournament_id": tournament["id"]}
+
+    with_registrants = client.get("/api/v1/categories", params={**params, "has_registrants": True}).json()
+    without_registrants = client.get("/api/v1/categories", params={**params, "has_registrants": False}).json()
+    everything = client.get("/api/v1/categories", params=params).json()
+
+    assert [c["id"] for c in with_registrants] == [category["id"]]
+    assert category["id"] not in [c["id"] for c in without_registrants]
+    assert len(with_registrants) + len(without_registrants) == len(everything)

@@ -8,7 +8,7 @@ from typing import Annotated
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator
 
-from app.models import BeltGroup, Discipline, Gender, Grade, MatchStatus, TournamentStatus
+from app.models import Discipline, Gender, Grade, MatchStatus, TournamentStatus
 
 
 # Postgres `Integer` (int4). SQLite doesn't enforce it, so a bigger number passed the tests and was a 500 in Postgres.
@@ -190,10 +190,9 @@ class CategoryBase(BaseModel):
     max_age: Int4 | None = Field(
         default=None, description="Edad máxima, en años. Si es nulo, no hay tope.", examples=[14]
     )
-    belt_group: BeltGroup = Field(description="Grupo de cinturón de la categoría.")
     weight_label: str = Field(
         max_length=60,
-        description="Nombre de la división de peso. Es lo que se muestra al público.",
+        description="Nombre de la división de peso.",
         examples=["48.1–55 kg"],
     )
     min_weight: float | None = Field(
@@ -215,6 +214,19 @@ class CategoryRead(CategoryBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int = Field(description="Identificador de la categoría.")
+    grade_group_id: int | None = Field(
+        description="Id del grupo de grado de la categoría. Es nulo en Festival y en las categorías anteriores a la 0.8.0."
+    )
+    grade_group_name: str | None = Field(
+        description="Nombre del grupo de grado (por ejemplo `Novatos`). Es nulo en Festival y en las categorías "
+        "anteriores a la 0.8.0.",
+        examples=["Novatos"],
+    )
+    name: str = Field(
+        description="Nombre completo de la categoría, listo para mostrar: grupo de grado, edad, género y peso, "
+        "separados por ` · `. Distingue categorías que solo difieren en el grupo de grado.",
+        examples=["Principiantes · Cadete · Masculino · 37.1–41 kg"],
+    )
     has_bracket: bool = Field(
         description="Si la categoría ya tiene la llave generada. Mientras es `false`, lo que se muestra al público es "
         "la lista de inscritos (`GET /categories/{id}/registrants`)."

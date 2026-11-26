@@ -199,7 +199,7 @@ def test_update_that_no_longer_fits_needs_confirmation_and_changes_nothing(clien
     resp = client.patch(f"/api/v1/athletes/{athlete['id']}", json=change)
 
     assert resp.status_code == 409
-    assert "Este cambio retira al atleta de: Cadete 37.1–41 kg (Copa Nacional)" in resp.json()["detail"]
+    assert "Este cambio retira al atleta de: Principiantes · Cadete · Masculino · 37.1–41 kg (Copa Nacional)" in resp.json()["detail"]
     assert client.get(f"/api/v1/athletes/{athlete['id']}").json() == athlete
     assert len(_registrations(client, category)) == 1
 

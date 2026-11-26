@@ -63,7 +63,7 @@ def test_finish_is_rejected_while_a_bracket_has_matches_to_play(client, club, ca
     after = client.post(f"{url}/finish")
 
     assert before.status_code == 409
-    assert before.json()["detail"] == "Quedan combates por jugar en: Cadete 37.1–41 kg"
+    assert before.json()["detail"] == "Quedan combates por jugar en: Principiantes · Cadete · Masculino · 37.1–41 kg"
     assert after.status_code == 200
 
 

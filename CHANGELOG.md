@@ -11,6 +11,26 @@ funcionando sobre una base ya migrada.
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-11-25
+
+### Added
+- **Nombre completo de la categoría:** `name` en cada categoría, listo para mostrar (por ejemplo
+  `Principiantes · Cadete · Masculino · 37.1–41 kg`). Antes Principiantes y Novatos se veían idénticas.
+- **Grupo de grado de la categoría:** `grade_group_id` y `grade_group_name`. Son nulos en Festival y en las categorías
+  anteriores a la 0.8.0.
+- **Filtros de `GET /api/v1/categories`:** `grade_group_id`, `gender` (`male` / `female`) y `has_registrants`
+  (`true`: con inscritos; `false`: sin ninguno), combinables entre sí y con `tournament_id`. Con
+  `has_registrants=true` se ocultan las categorías vacías.
+
+### Changed
+- El `detail` de los `409` que nombran categorías (`PATCH /api/v1/athletes/{id}` y
+  `POST /api/v1/tournaments/{id}/finish`) usa el nombre completo (`name`).
+
+### Removed
+- **Incompatible — `belt_group`:** ya no sale en las categorías. Para mostrar la categoría usá `name` (o
+  `grade_group_name`). En las categorías anteriores a la 0.8.0, que no tienen grupo, el cinturón (de color o negro)
+  va dentro de `name`. La columna sigue en la base y se borra en la 1.0.0.
+
 ## [0.8.0] - 2026-11-24
 
 ### Added
@@ -250,7 +270,8 @@ https://taekwondo-tournament-manager.onrender.com.
 - `pool_pre_ping=True` en la conexión a la base de datos: Neon suspende el cómputo por
   inactividad y la primera conexión tras un rato inactivo pudo fallar con un error 500.
 
-[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.5.0...v0.6.0

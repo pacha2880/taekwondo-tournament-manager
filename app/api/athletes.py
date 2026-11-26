@@ -63,9 +63,7 @@ def _withdraw_registrations_that_no_longer_fit(db: Session, athlete: Athlete, ch
     if not no_longer_fit:
         return
     if not confirmed:
-        names = ", ".join(
-            f"{r.category.age_label} {r.category.weight_label} ({r.category.tournament.name})" for r in no_longer_fit
-        )
+        names = ", ".join(f"{r.category.name} ({r.category.tournament.name})" for r in no_longer_fit)
         raise HTTPException(
             status_code=409,
             detail=f"Este cambio retira al atleta de: {names}. Hay que confirmar el retiro para continuar",
@@ -151,7 +149,7 @@ def list_eligible_categories(
     get_tournament_or_404(db, tournament_id)
     categories = db.scalars(
         select(Category)
-        .options(selectinload(Category.bracket))
+        .options(selectinload(Category.bracket), selectinload(Category.grade_group))
         .where(Category.tournament_id == tournament_id)
         .order_by(Category.id)
     )

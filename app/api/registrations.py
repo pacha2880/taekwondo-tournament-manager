@@ -75,7 +75,11 @@ def list_registrations(
 ):
     query = (
         select(Registration)
-        .options(selectinload(Registration.category).selectinload(Category.bracket))
+        .options(
+            selectinload(Registration.category).options(
+                selectinload(Category.bracket), selectinload(Category.grade_group)
+            )
+        )
         .order_by(Registration.id)
     )
     if category_id is not None:
