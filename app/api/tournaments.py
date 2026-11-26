@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app import clock
 from app.api.lifecycle import (
+    VISIBLE_TO_PUBLIC,
     is_hidden_from_public,
     require_all_matches_played,
     require_registration_deadline_in_the_future,
@@ -68,7 +69,7 @@ def create_tournament(payload: TournamentCreate, db: Session = Depends(get_db)):
 def list_tournaments(is_admin: bool = Depends(is_admin_request), db: Session = Depends(get_db)):
     query = select(Tournament).order_by(Tournament.date.desc())
     if not is_admin:
-        query = query.where(Tournament.stored_status != TournamentStatus.DRAFT)
+        query = query.where(VISIBLE_TO_PUBLIC)
     return db.scalars(query).all()
 
 

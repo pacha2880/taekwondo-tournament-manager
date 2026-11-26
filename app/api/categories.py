@@ -2,11 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import exists, select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.lifecycle import is_hidden_from_public, registrants_are_public
+from app.api.lifecycle import VISIBLE_TO_PUBLIC, is_hidden_from_public, registrants_are_public
 from app.api_docs import TAG_CATEGORIES, errors
 from app.auth import ADMIN_ONLY, OPTIONAL_TOKEN, is_admin_request
 from app.database import get_db
-from app.models import Category, Gender, Registration, Tournament, TournamentStatus
+from app.models import Category, Gender, Registration, Tournament
 from app.schemas import AthleteRead, CategoryRead, Int4, RegistrantRead
 from app.services.athlete_search import search_athletes
 from app.services.eligibility import category_mismatch
@@ -60,7 +60,7 @@ def list_categories(
         .order_by(Category.id)
     )
     if not is_admin:
-        query = query.where(Category.tournament.has(Tournament.stored_status != TournamentStatus.DRAFT))
+        query = query.where(Category.tournament.has(VISIBLE_TO_PUBLIC))
     if tournament_id is not None:
         query = query.where(Category.tournament_id == tournament_id)
     if grade_group_id is not None:

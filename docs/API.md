@@ -30,7 +30,7 @@ desarrollo. La API no usa cookies: el token viaja siempre en la cabecera.
 
 ## Recorrer los datos
 
-Para una vista pública alcanza con tres llamadas, todas sin token:
+Para una vista pública alcanza con tres llamadas sin token:
 
 1. `GET /api/v1/tournaments` — la lista de torneos.
 2. `GET /api/v1/categories?tournament_id={id}` — las categorías de un torneo. Cada una trae `name`, el nombre
@@ -39,7 +39,9 @@ Para una vista pública alcanza con tres llamadas, todas sin token:
 3. Según el campo `has_bracket` de la categoría:
    - `true`: `GET /api/v1/categories/{id}/bracket` — la llave.
    - `false`: `GET /api/v1/categories/{id}/registrants` — los inscritos, solo con nombre y club, ordenados por
-     nombre. (La llave responde `404` mientras no se haya sorteado.)
+     nombre. (La llave responde `404` mientras no se haya sorteado.) Antes del Pesaje (torneo en
+     `registration_open`) la lista no es pública y responde `403`: en vez de pedirla, mostrar algo como «Lista
+     disponible al cerrar las inscripciones».
 
 Las listas no se paginan: devuelven todos los elementos. Sin filtro, las de categorías e inscripciones mezclan
 todos los torneos, así que conviene pedirlas filtradas: `GET /categories?tournament_id=` y

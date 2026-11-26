@@ -6,8 +6,11 @@ from app.models import Category, MatchStatus, Tournament, TournamentStatus
 FINAL_MATCH_STATUSES = (MatchStatus.FINISHED, MatchStatus.BYE)
 
 
+# Un torneo en preparación solo lo ve el admin. La misma regla en Python y como condición SQL para las listas.
+VISIBLE_TO_PUBLIC = Tournament.stored_status != TournamentStatus.DRAFT
+
+
 def is_hidden_from_public(tournament: Tournament) -> bool:
-    """Un torneo en preparación solo lo ve el admin."""
     return tournament.stored_status == TournamentStatus.DRAFT
 
 
