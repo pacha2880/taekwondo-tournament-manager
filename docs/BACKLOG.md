@@ -59,7 +59,8 @@ del frontend, avisada a Kike en Notion).
       antes del Pesaje (`403` sin un `tournament_id` ya publicado). Un token inválido responde `401` también en las
       lecturas públicas. [Notion](https://app.notion.com/p/415fae3be03b81568bd7f3cfcc2df971)
 - [x] **Iniciar**: `POST /tournaments/{id}/start` solo desde `weigh_in` (antes, `409`).
-- [ ] `scripts/seed_demo_api.py` sigue el ciclo nuevo.
+- [x] `scripts/seed_demo_api.py` sigue el ciclo nuevo: un torneo en cada estado, con Festival sin CI, categorías de
+      un solo inscrito y llaves con pases directos.
 
 ### Bloque 2 — Pesaje
 

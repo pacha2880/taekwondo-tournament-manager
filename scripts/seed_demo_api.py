@@ -1,14 +1,21 @@
-"""Carga datos de prueba por la API:
+"""Carga datos de prueba por la API: un torneo en cada estado del ciclo, con casos borde a la vista.
 
-- «Copa de Prueba (en curso)»: 7 categorías con 47 inscritos, todas con llave generada y en distintos
-  momentos: dos terminadas, cuatro a medias (con combates terminados y alguno con 1 o 2 rounds cargados)
-  y una sin empezar.
-- «Copa de Prueba (borrador)»: inscripciones abiertas, una categoría con 5 inscritos.
+- «Copa de Prueba (en preparación)» (`draft`): fecha futura, fecha límite fijada sin abrir y estructura retocada (el
+  grupo «Principiantes» se llama «Iniciación» y Junior masculino suma la división 63.1–68 kg). Sin inscritos.
+- «Copa de Prueba (inscripciones abiertas)» (`registration_open`): fecha límite en 1 año y torneo después. 6 categorías
+  con 23 inscritos, una con un solo inscrito, dos de Festival (niños sin CI) y un atleta sin inscribir.
+- «Copa de Prueba (pesaje)» (`weigh_in`): 6 categorías con 19 inscritos, una con un solo inscrito y dos de Festival.
+- «Copa de Prueba (en curso)» (`in_progress`): 7 categorías con 47 inscritos, todas con llave generada y en distintos
+  momentos: dos terminadas, cuatro a medias (con combates terminados y alguno con 1 o 2 rounds cargados) y una sin
+  empezar.
+- «Copa de Prueba (finalizado)» (`finished`): 5 categorías, cuatro con la llave jugada hasta el final (de 3, 4, 5 y 8
+  inscritos: dos con pases directos) y una con un solo inscrito, sin llave.
+El resto de las categorías de cada torneo (la estructura de la Copa Diamante) queda vacía.
 
 Uso, desde la raíz del repo:
     .venv/bin/python scripts/seed_demo_api.py {local,dev,prod}
 local es tu servidor en el puerto 8000. El usuario y la clave del admin salen de `.env` (ver `.env.example`).
-Si los torneos ya existen, no hace nada. Nunca borra datos: para empezar de cero, `scripts/reset_data.py`.
+Si alguno de los torneos ya existe, no hace nada. Nunca borra datos: para empezar de cero, `scripts/reset_data.py`.
 """
 import json
 import random
@@ -29,10 +36,7 @@ API_URLS = {
 }
 TIMEOUT_SECONDS = 90  # el primer request del plan gratis de Render puede tardar 30-50 s
 
-IN_PROGRESS_TOURNAMENT = {"name": "Copa de Prueba (en curso)", "date": "2026-11-15", "location": "Cochabamba, Bolivia"}
-DRAFT_TOURNAMENT = {"name": "Copa de Prueba (borrador)", "date": "2027-01-30", "location": "La Paz, Bolivia"}
 CLUB_NAMES = ["Dojang Prueba Norte", "Dojang Prueba Sur", "Dojang Prueba Este"]
-
 MALE_NAMES = ["Mateo", "Santiago", "Diego", "Luis", "Carlos", "Andrés", "Bruno", "Marcelo", "Sebastián", "Joaquín", "Rodrigo", "Gabriel"]
 FEMALE_NAMES = ["Valentina", "Camila", "Sofía", "Lucía", "Daniela", "Fernanda", "Paola", "Andrea", "Mariana", "Isabella", "Carla", "Gabriela"]
 SURNAMES = ["Quispe", "Mamani", "Flores", "Condori", "Rojas", "Vargas", "Gutiérrez", "Choque", "Pérez", "Fernández", "Torrico", "Salazar", "Arce", "Cabrera", "Villarroel", "Rivera"]
@@ -44,30 +48,86 @@ ADVANCED = ["kup_1", "dan"]
 #   ("rounds", n)                   todos los combates de las rondas 1 a n
 #   ("some", ronda, k)              k combates listos de esa ronda, terminados
 #   ("half", ronda, k, rounds)      k combates listos de esa ronda con `rounds` rounds cargados y sin terminar
-# (género, división de edad y de peso que le toca (solo para mostrar), grados, años de nacimiento, rango de pesos,
-#  atletas, inscritos, qué se juega)
-# La categoría no se crea: es la de la estructura del torneo en la que encajan esos atletas, así que sus grados, años y
-# pesos tienen que caer todos en la misma (ver COPA_DIAMANTE_* en app/services/category_structure.py).
-CATEGORY_SPECS = [
-    ("male", "Cadete 41.1–45 kg", BEGINNERS, (2012, 2014), (41.1, 45), 7, 7, [("all",)]),
-    ("male", "Cadete 49.1–53 kg", BEGINNERS, (2012, 2014), (49.1, 53), 6, 6, [("all",)]),
-    ("female", "Cadete 37.1–41 kg", BEGINNERS, (2012, 2014), (37.1, 41), 5, 5, [("rounds", 1), ("half", 2, 1, 1)]),
-    ("male", "Junior 55.1–63 kg", BEGINNERS, (2009, 2011), (55.1, 63), 10, 10, [("rounds", 1), ("some", 2, 2), ("half", 2, 1, 2)]),
-    ("female", "Junior 49.1–55 kg", BEGINNERS, (2009, 2011), (49.1, 55), 6, 6, [("some", 1, 1), ("half", 1, 1, 1)]),
-    ("male", "Mayores 58.1–68 kg", ADVANCED, (1997, 2008), (58.1, 68), 8, 8, [("rounds", 1), ("some", 2, 1), ("half", 2, 1, 1)]),
-    ("female", "Mayores 49.1–57 kg", ADVANCED, (1997, 2008), (49.1, 57), 8, 5, []),
+# (género, división de edad y de peso que le toca (solo para mostrar), grados, edades (la edad es el año del torneo menos
+#  el de nacimiento), rango de pesos, atletas, inscritos, qué se juega)
+# La categoría no se crea: es la de la estructura del torneo en la que encajan esos atletas, así que sus grados, edades y
+# pesos tienen que caer todos en la misma (ver COPA_DIAMANTE_* en app/services/category_structure.py). Festival (hasta
+# 9 años) no tiene grupo de grado ni pesos; sus atletas van sin CI.
+# Una llave se sortea con 2 o más inscritos; con uno solo la categoría queda sin llave.
+IN_PROGRESS_SPECS = [
+    ("male", "Cadete 41.1–45 kg", BEGINNERS, (12, 14), (41.1, 45), 7, 7, [("all",)]),
+    ("male", "Cadete 49.1–53 kg", BEGINNERS, (12, 14), (49.1, 53), 6, 6, [("all",)]),
+    ("female", "Cadete 37.1–41 kg", BEGINNERS, (12, 14), (37.1, 41), 5, 5, [("rounds", 1), ("half", 2, 1, 1)]),
+    ("male", "Junior 55.1–63 kg", BEGINNERS, (15, 17), (55.1, 63), 10, 10, [("rounds", 1), ("some", 2, 2), ("half", 2, 1, 2)]),
+    ("female", "Junior 49.1–55 kg", BEGINNERS, (15, 17), (49.1, 55), 6, 6, [("some", 1, 1), ("half", 1, 1, 1)]),
+    ("male", "Mayores 58.1–68 kg", ADVANCED, (18, 29), (58.1, 68), 8, 8, [("rounds", 1), ("some", 2, 1), ("half", 2, 1, 1)]),
+    ("female", "Mayores 49.1–57 kg", ADVANCED, (18, 29), (49.1, 57), 8, 5, []),
 ]
-DRAFT_CATEGORY_SPEC = ("female", "Junior 49.1–55 kg", BEGINNERS, (2010, 2012), (49.1, 55), 5, 5, [])
+FINISHED_SPECS = [
+    ("male", "Cadete 41.1–45 kg", BEGINNERS, (12, 14), (41.1, 45), 3, 3, [("all",)]),
+    ("female", "Cadete 37.1–41 kg", BEGINNERS, (12, 14), (37.1, 41), 4, 4, [("all",)]),
+    ("female", "Junior 49.1–55 kg", BEGINNERS, (15, 17), (49.1, 55), 5, 5, [("all",)]),
+    ("male", "Mayores 58.1–68 kg", ADVANCED, (18, 29), (58.1, 68), 8, 8, [("all",)]),
+    ("female", "Mayores 49.1–57 kg", ADVANCED, (18, 29), (49.1, 57), 1, 1, []),
+]
+WEIGH_IN_SPECS = [
+    ("male", "Cadete 49.1–53 kg", BEGINNERS, (12, 14), (49.1, 53), 5, 5, []),
+    ("female", "Cadete 37.1–41 kg", BEGINNERS, (12, 14), (37.1, 41), 1, 1, []),
+    ("female", "Junior 49.1–55 kg", BEGINNERS, (15, 17), (49.1, 55), 4, 4, []),
+    ("male", "Mayores 58.1–68 kg", ADVANCED, (18, 29), (58.1, 68), 3, 3, []),
+    ("male", "Festival", BEGINNERS, (5, 9), (20, 35), 4, 4, []),
+    ("female", "Festival", BEGINNERS, (5, 9), (20, 35), 2, 2, []),
+]
+REGISTRATION_OPEN_SPECS = [
+    ("male", "Cadete 41.1–45 kg", BEGINNERS, (12, 14), (41.1, 45), 6, 6, []),
+    ("female", "Cadete 37.1–41 kg", BEGINNERS, (12, 14), (37.1, 41), 4, 4, []),
+    ("male", "Junior 55.1–63 kg", BEGINNERS, (15, 17), (55.1, 63), 6, 5, []),
+    ("female", "Mayores 49.1–57 kg", ADVANCED, (18, 29), (49.1, 57), 1, 1, []),
+    ("male", "Festival", BEGINNERS, (5, 9), (20, 35), 4, 4, []),
+    ("female", "Festival", BEGINNERS, (5, 9), (20, 35), 3, 3, []),
+]
+
+STAGES = ["draft", "registration_open", "weigh_in", "in_progress", "finished"]
+# `days_to_date`: cuántos días desde hoy es el torneo (negativo: ya se jugó). `deadline_days`: la fecha límite de
+# inscripción, en días desde hoy; en los torneos ya abiertos se la adelanta a ahora con close-registration.
+TOURNAMENTS = [
+    {
+        "name": "Copa de Prueba (en preparación)", "location": "La Paz, Bolivia", "stage": "draft",
+        "days_to_date": 120, "deadline_days": 90, "seed": 1, "specs": [],
+        "summary": "estructura retocada, fecha límite fijada, sin inscritos",
+    },
+    {
+        "name": "Copa de Prueba (inscripciones abiertas)", "location": "Santa Cruz, Bolivia", "stage": "registration_open",
+        "days_to_date": 386, "deadline_days": 365, "seed": 2, "specs": REGISTRATION_OPEN_SPECS,
+        "summary": "6 categorías, 23 inscritos (una con 1, dos de Festival sin CI) y 1 atleta sin inscribir",
+    },
+    {
+        "name": "Copa de Prueba (pesaje)", "location": "Sucre, Bolivia", "stage": "weigh_in",
+        "days_to_date": 14, "deadline_days": 365, "seed": 3, "specs": WEIGH_IN_SPECS,
+        "summary": "6 categorías, 19 inscritos (una con 1, dos de Festival sin CI), lista pública",
+    },
+    {
+        "name": "Copa de Prueba (en curso)", "location": "Cochabamba, Bolivia", "stage": "in_progress",
+        "days_to_date": -11, "deadline_days": 365, "seed": 2026, "specs": IN_PROGRESS_SPECS,
+        "summary": "7 categorías, 47 inscritos: 2 llaves terminadas, 4 a medias y 1 sin empezar",
+    },
+    {
+        "name": "Copa de Prueba (finalizado)", "location": "Tarija, Bolivia", "stage": "finished",
+        "days_to_date": -60, "deadline_days": 365, "seed": 4, "specs": FINISHED_SPECS,
+        "summary": "5 categorías, 21 inscritos: 4 llaves terminadas (3, 4, 5 y 8 inscritos) y 1 categoría con 1 inscrito",
+    },
+]
 
 
-def build_category(spec, rng: random.Random, used_cis: set[str]) -> dict:
+def build_category(spec, rng: random.Random, used_cis: set[str], tournament_year: int) -> dict:
     """Devuelve el nombre de la categoría, sus atletas (con `club` por nombre y `register`) y qué se juega."""
-    gender, label, grades, years, weights, count, registered, plan = spec
+    gender, label, grades, ages, weights, count, registered, plan = spec
     first_names = MALE_NAMES if gender == "male" else FEMALE_NAMES
+    birth_years = (tournament_year - ages[1], tournament_year - ages[0])
     athletes = []
     for i in range(count):
         ci = None
-        if not (label.startswith("Cadete") and rng.random() < 0.3):
+        if not (label == "Festival" or (label.startswith("Cadete") and rng.random() < 0.3)):
             while ci is None or ci in used_cis:
                 ci = str(rng.randint(4_000_000, 9_000_000))
                 if rng.random() < 0.1:
@@ -77,7 +137,7 @@ def build_category(spec, rng: random.Random, used_cis: set[str]) -> dict:
             {
                 "name": f"{rng.choice(first_names)} {rng.choice(SURNAMES)} {rng.choice(SURNAMES)}",
                 "ci": ci,
-                "birth_date": date(rng.randint(*years), rng.randint(1, 12), rng.randint(1, 28)).isoformat(),
+                "birth_date": date(rng.randint(*birth_years), rng.randint(1, 12), rng.randint(1, 28)).isoformat(),
                 "gender": gender,
                 "grade": rng.choice(grades),
                 "weight_kg": round(rng.uniform(*weights), 1),
@@ -189,6 +249,19 @@ def play(api, rng: random.Random, category_id: int, plan: list[tuple]) -> None:
                 leave_half_played(api, rng, match, step[3])
 
 
+def retouch_structure(api, tournament_id: int) -> None:
+    """Renombra el primer grupo de grado y agrega a Junior masculino la división 63.1–68 kg."""
+    path = f"/api/v1/tournaments/{tournament_id}/category-structure"
+    structure = api("GET", path)
+    groups = [{k: g[k] for k in ("id", "name", "from_grade")} for g in structure["grade_groups"]]
+    groups[0]["name"] = "Iniciación"
+    divisions = [{k: d[k] for k in ("id", "name", "from_age", "weight_limits")} for d in structure["age_divisions"][1:]]
+    junior = next(d for d in divisions if d["name"] == "Junior")
+    junior["weight_limits"]["male"] = [48, 55, 63, 68, 73]
+    result = api("PUT", path, {"grade_groups": groups, "age_divisions": divisions})
+    print(f"  Estructura retocada: {len(result['categories'])} categorías.")
+
+
 def env_setting(env: str, name: str) -> str:
     """Valor de `.env` para el ambiente: `DEV_ADMIN_PASSWORD`, `PROD_DATABASE_URL`… (local usa los nombres de la app,
     sin prefijo)."""
@@ -212,7 +285,7 @@ def seed(env: str) -> None:
         return call(base_url, method, path, token=token, body=body)
 
     existing = {t["name"] for t in api("GET", "/api/v1/tournaments")}
-    for tournament in (IN_PROGRESS_TOURNAMENT, DRAFT_TOURNAMENT):
+    for tournament in TOURNAMENTS:
         if tournament["name"] in existing:
             sys.exit(f"Ya existe «{tournament['name']}»: no se hizo nada.")
 
@@ -222,34 +295,46 @@ def seed(env: str) -> None:
             club_ids[name] = api("POST", "/api/v1/clubs", {"name": name})["id"]
 
     used_cis = {a["ci"] for a in api("GET", "/api/v1/athletes") if a["ci"]}
-    data_rng = random.Random(2026)
-    in_progress_entries = [build_category(spec, data_rng, used_cis) for spec in CATEGORY_SPECS]
-    draft_entry = build_category(DRAFT_CATEGORY_SPEC, data_rng, used_cis)
-
-    def open_registration(tournament_id: int) -> None:
-        deadline = (datetime.now(timezone.utc) + timedelta(days=365)).isoformat()
+    now = datetime.now(timezone.utc)
+    for tournament in TOURNAMENTS:
+        stage = STAGES.index(tournament["stage"])
+        tournament_date = now.date() + timedelta(days=tournament["days_to_date"])
+        print(f"\n«{tournament['name']}»")
+        tournament_id = api(
+            "POST",
+            "/api/v1/tournaments",
+            {"name": tournament["name"], "date": tournament_date.isoformat(), "location": tournament["location"]},
+        )["id"]
+        deadline = (now + timedelta(days=tournament["deadline_days"])).isoformat()
         api("PATCH", f"/api/v1/tournaments/{tournament_id}", {"registration_deadline": deadline})
+        if tournament["stage"] == "draft":
+            retouch_structure(api, tournament_id)
+            continue
+
         api("POST", f"/api/v1/tournaments/{tournament_id}/open-registration")
+        data_rng = random.Random(tournament["seed"])
+        entries = [build_category(spec, data_rng, used_cis, tournament_date.year) for spec in tournament["specs"]]
+        category_ids = [load_category(api, tournament_id, club_ids, entry) for entry in entries]
+        if stage == STAGES.index("registration_open"):
+            continue
 
-    print(f"\n«{IN_PROGRESS_TOURNAMENT['name']}»")
-    tournament_id = api("POST", "/api/v1/tournaments", IN_PROGRESS_TOURNAMENT)["id"]
-    open_registration(tournament_id)
-    category_ids = [load_category(api, tournament_id, club_ids, entry) for entry in in_progress_entries]
+        api("POST", f"/api/v1/tournaments/{tournament_id}/close-registration")
+        if stage == STAGES.index("weigh_in"):
+            continue
 
-    print("  Pasando el torneo a «en curso», sorteando las llaves y cargando resultados...")
-    api("POST", f"/api/v1/tournaments/{tournament_id}/close-registration")
-    api("POST", f"/api/v1/tournaments/{tournament_id}/start")
-    match_rng = random.Random(7)
-    for category_id, entry in zip(category_ids, in_progress_entries):
-        api("POST", f"/api/v1/categories/{category_id}/bracket")
-        play(api, match_rng, category_id, entry["plan"])
+        print("  Pasando el torneo a «en curso», sorteando las llaves y cargando resultados...")
+        api("POST", f"/api/v1/tournaments/{tournament_id}/start")
+        match_rng = random.Random(7)
+        for category_id, entry in zip(category_ids, entries):
+            if sum(a["register"] for a in entry["athletes"]) >= 2:
+                api("POST", f"/api/v1/categories/{category_id}/bracket")
+                play(api, match_rng, category_id, entry["plan"])
+        if stage == STAGES.index("finished"):
+            api("POST", f"/api/v1/tournaments/{tournament_id}/finish")
 
-    print(f"\n«{DRAFT_TOURNAMENT['name']}»")
-    draft_id = api("POST", "/api/v1/tournaments", DRAFT_TOURNAMENT)["id"]
-    open_registration(draft_id)
-    load_category(api, draft_id, club_ids, draft_entry)
-
-    print("\nListo. Torneo en curso: 2 llaves terminadas, 4 a medias y 1 sin empezar. Torneo con inscripciones abiertas: 1 categoría, 5 inscritos.")
+    print("\nListo:")
+    for tournament in TOURNAMENTS:
+        print(f"  {tournament['name']}: {tournament['summary']}.")
 
 
 if __name__ == "__main__":
