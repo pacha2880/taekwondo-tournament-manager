@@ -3,7 +3,7 @@
 - «Copa de Prueba (en curso)»: 7 categorías con 47 inscritos, todas con llave generada y en distintos
   momentos: dos terminadas, cuatro a medias (con combates terminados y alguno con 1 o 2 rounds cargados)
   y una sin empezar.
-- «Copa de Prueba (borrador)»: una categoría con 5 inscritos y sin llave.
+- «Copa de Prueba (borrador)»: inscripciones abiertas, una categoría con 5 inscritos.
 
 Uso, desde la raíz del repo:
     .venv/bin/python scripts/seed_demo_api.py {local,dev,prod}
@@ -16,7 +16,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from dotenv import dotenv_values
@@ -226,11 +226,18 @@ def seed(env: str) -> None:
     in_progress_entries = [build_category(spec, data_rng, used_cis) for spec in CATEGORY_SPECS]
     draft_entry = build_category(DRAFT_CATEGORY_SPEC, data_rng, used_cis)
 
+    def open_registration(tournament_id: int) -> None:
+        deadline = (datetime.now(timezone.utc) + timedelta(days=365)).isoformat()
+        api("PATCH", f"/api/v1/tournaments/{tournament_id}", {"registration_deadline": deadline})
+        api("POST", f"/api/v1/tournaments/{tournament_id}/open-registration")
+
     print(f"\n«{IN_PROGRESS_TOURNAMENT['name']}»")
     tournament_id = api("POST", "/api/v1/tournaments", IN_PROGRESS_TOURNAMENT)["id"]
+    open_registration(tournament_id)
     category_ids = [load_category(api, tournament_id, club_ids, entry) for entry in in_progress_entries]
 
     print("  Pasando el torneo a «en curso», sorteando las llaves y cargando resultados...")
+    api("POST", f"/api/v1/tournaments/{tournament_id}/close-registration")
     api("POST", f"/api/v1/tournaments/{tournament_id}/start")
     match_rng = random.Random(7)
     for category_id, entry in zip(category_ids, in_progress_entries):
@@ -239,9 +246,10 @@ def seed(env: str) -> None:
 
     print(f"\n«{DRAFT_TOURNAMENT['name']}»")
     draft_id = api("POST", "/api/v1/tournaments", DRAFT_TOURNAMENT)["id"]
+    open_registration(draft_id)
     load_category(api, draft_id, club_ids, draft_entry)
 
-    print("\nListo. Torneo en curso: 2 llaves terminadas, 4 a medias y 1 sin empezar. Torneo en borrador: 1 categoría, 5 inscritos.")
+    print("\nListo. Torneo en curso: 2 llaves terminadas, 4 a medias y 1 sin empezar. Torneo con inscripciones abiertas: 1 categoría, 5 inscritos.")
 
 
 if __name__ == "__main__":

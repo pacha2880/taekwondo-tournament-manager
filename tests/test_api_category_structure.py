@@ -119,58 +119,58 @@ def _put(client, tournament, body, **params):
     )
 
 
-def test_moving_a_grade_cut_keeps_every_category_id(client, tournament):
-    before = sorted(c["id"] for c in _categories(client, tournament))
-    body = _editable(_structure(client, tournament).json())
+def test_moving_a_grade_cut_keeps_every_category_id(client, draft_tournament):
+    before = sorted(c["id"] for c in _categories(client, draft_tournament))
+    body = _editable(_structure(client, draft_tournament).json())
     body["grade_groups"][1]["from_grade"] = "kup_4"
 
-    resp = _put(client, tournament, body)
+    resp = _put(client, draft_tournament, body)
 
     assert resp.status_code == 200
     assert [(g["from_grade"], g["to_grade"]) for g in resp.json()["grade_groups"]] == [
         ("kup_10", "kup_5"), ("kup_4", "kup_2"), ("kup_1", "dan")
     ]
-    assert sorted(c["id"] for c in _categories(client, tournament)) == before
+    assert sorted(c["id"] for c in _categories(client, draft_tournament)) == before
 
 
-def test_changing_a_weight_limit_keeps_the_category_and_updates_its_range(client, tournament):
-    body = _editable(_structure(client, tournament).json())
+def test_changing_a_weight_limit_keeps_the_category_and_updates_its_range(client, draft_tournament):
+    body = _editable(_structure(client, draft_tournament).json())
     junior = next(d for d in body["age_divisions"] if d["name"] == "Junior")
     junior["weight_limits"]["male"] = [50, 55, 63, 73]
 
-    _put(client, tournament, body)
+    _put(client, draft_tournament, body)
 
-    labels = [c["weight_label"] for c in _categories(client, tournament) if c["age_label"] == "Junior" and c["gender"] == "male"]
+    labels = [c["weight_label"] for c in _categories(client, draft_tournament) if c["age_label"] == "Junior" and c["gender"] == "male"]
     assert labels.count("Hasta 50 kg") == 3 and "Hasta 48 kg" not in labels
-    assert len(_categories(client, tournament)) == 212
+    assert len(_categories(client, draft_tournament)) == 212
 
 
-def test_removing_a_group_and_adding_an_age_recalculates_the_categories(client, tournament):
-    body = _editable(_structure(client, tournament).json())
+def test_removing_a_group_and_adding_an_age_recalculates_the_categories(client, draft_tournament):
+    body = _editable(_structure(client, draft_tournament).json())
     del body["grade_groups"][1]  # Novatos
     body["age_divisions"].append({"name": "Master", "from_age": 40, "weight_limits": {"male": [70], "female": []}})
 
-    resp = _put(client, tournament, body)
+    resp = _put(client, draft_tournament, body)
 
     assert resp.status_code == 200
     # Festival 2 + 2 grupos × (Infantil 24 + Cadete 20 + Junior 10 + Mayores 8 + Senior 8 + Master 2 + 1)
-    assert len(_categories(client, tournament)) == 2 + 2 * 73
+    assert len(_categories(client, draft_tournament)) == 2 + 2 * 73
     assert len(resp.json()["categories"]) == 2 + 2 * 73
     assert resp.json()["age_divisions"][-2]["to_age"] == 39
     assert resp.json()["age_divisions"][-1]["to_age"] is None
 
 
-def test_validate_only_returns_the_result_without_saving(client, tournament):
-    before = _structure(client, tournament).json()
+def test_validate_only_returns_the_result_without_saving(client, draft_tournament):
+    before = _structure(client, draft_tournament).json()
     body = _editable(before)
     del body["age_divisions"][-1]
 
-    resp = _put(client, tournament, body, validate_only="true")
+    resp = _put(client, draft_tournament, body, validate_only="true")
 
     assert resp.status_code == 200
     assert len(resp.json()["categories"]) == 212 - 3 * 2 * 4
-    assert _structure(client, tournament).json() == before
-    assert len(_categories(client, tournament)) == 212
+    assert _structure(client, draft_tournament).json() == before
+    assert len(_categories(client, draft_tournament)) == 212
 
 
 @pytest.mark.parametrize(
@@ -188,16 +188,16 @@ def test_validate_only_returns_the_result_without_saving(client, tournament):
         (lambda b: b["grade_groups"][0].update(id=999), "Estos ids de grupos de grado no son de este torneo: 999"),
     ],
 )
-def test_an_invalid_structure_is_rejected_without_changes(client, tournament, change, detail):
-    before = _structure(client, tournament).json()
+def test_an_invalid_structure_is_rejected_without_changes(client, draft_tournament, change, detail):
+    before = _structure(client, draft_tournament).json()
     body = _editable(before)
     change(body)
 
-    resp = _put(client, tournament, body)
+    resp = _put(client, draft_tournament, body)
 
     assert resp.status_code == 422
     assert resp.json()["detail"].startswith(detail)
-    assert _structure(client, tournament).json() == before
+    assert _structure(client, draft_tournament).json() == before
 
 
 @pytest.mark.parametrize(
@@ -211,28 +211,28 @@ def test_an_invalid_structure_is_rejected_without_changes(client, tournament, ch
         lambda b: b["age_divisions"][-1].update(from_age=121),
     ],
 )
-def test_out_of_range_values_are_rejected_before_reaching_the_database(client, tournament, change):
+def test_out_of_range_values_are_rejected_before_reaching_the_database(client, draft_tournament, change):
     # SQLite doesn't enforce String(60) or int4, Postgres does: without these limits it would be a 500, not a 422.
-    before = _structure(client, tournament).json()
+    before = _structure(client, draft_tournament).json()
     body = _editable(before)
     change(body)
 
-    resp = _put(client, tournament, body)
+    resp = _put(client, draft_tournament, body)
 
     assert resp.status_code == 422
-    assert _structure(client, tournament).json() == before
+    assert _structure(client, draft_tournament).json() == before
 
 
-def test_the_structure_only_changes_while_the_tournament_is_a_draft(client, tournament, set_tournament_status):
-    body = _editable(_structure(client, tournament).json())
-    set_tournament_status(client, tournament["id"], "in_progress")
+def test_the_structure_only_changes_while_the_tournament_is_a_draft(client, draft_tournament, set_tournament_status):
+    body = _editable(_structure(client, draft_tournament).json())
+    set_tournament_status(client, draft_tournament["id"], "in_progress")
 
-    resp = _put(client, tournament, body)
+    resp = _put(client, draft_tournament, body)
 
     assert resp.status_code == 409
 
 
-def test_changing_the_structure_requires_login(anon_client, client, tournament):
-    body = _editable(_structure(client, tournament).json())
+def test_changing_the_structure_requires_login(anon_client, client, draft_tournament):
+    body = _editable(_structure(client, draft_tournament).json())
 
-    assert _put(anon_client, tournament, body).status_code == 401
+    assert _put(anon_client, draft_tournament, body).status_code == 401

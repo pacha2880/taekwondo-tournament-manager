@@ -4,15 +4,20 @@ from datetime import date, datetime
 from sqlalchemy import Date, DateTime, Enum, Float, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app import clock
 from app.database import Base
 
 
 class TournamentStatus(str, enum.Enum):
-    """Estado del torneo: `draft` (inscripciones abiertas: se edita la estructura de categorías y se inscribe a los
-    atletas), `in_progress` (en curso: ya no se edita la estructura ni se inscribe) y `finished` (finalizado). El estado
-    solo avanza en ese orden; no se vuelve a uno anterior."""
+    """Estado del torneo. El ciclo avanza en un solo sentido, sin volver atrás: `draft` (en preparación: se edita la
+    estructura de categorías y la fecha límite de inscripción), `registration_open` (inscripciones abiertas hasta la
+    fecha límite), `weigh_in` (pesaje: las inscripciones ya cerraron; se llega al vencer la fecha límite o con
+    `close-registration`), `in_progress` (en curso: se generan las llaves y se cargan resultados) y `finished`
+    (finalizado)."""
 
     DRAFT = "draft"
+    REGISTRATION_OPEN = "registration_open"
+    WEIGH_IN = "weigh_in"
     IN_PROGRESS = "in_progress"
     FINISHED = "finished"
 
@@ -91,9 +96,11 @@ class Tournament(Base):
     name: Mapped[str] = mapped_column(String(150), nullable=False)
     date: Mapped[date] = mapped_column(Date, nullable=False)
     location: Mapped[str] = mapped_column(String(150), nullable=False)
-    status: Mapped[TournamentStatus] = mapped_column(
-        Enum(TournamentStatus), nullable=False, default=TournamentStatus.DRAFT
+    # `weigh_in` nunca se guarda: se calcula al leer (ver `current_status`). La fecha límite va en UTC, sin zona.
+    stored_status: Mapped[TournamentStatus] = mapped_column(
+        "status", Enum(TournamentStatus), nullable=False, default=TournamentStatus.DRAFT
     )
+    registration_deadline: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     categories: Mapped[list["Category"]] = relationship(
         back_populates="tournament", cascade="all, delete-orphan"
@@ -104,6 +111,12 @@ class Tournament(Base):
     age_divisions: Mapped[list["AgeDivision"]] = relationship(
         back_populates="tournament", cascade="all, delete-orphan", order_by="AgeDivision.position"
     )
+
+    @property
+    def status(self) -> TournamentStatus:
+        from app.api.lifecycle import current_status  # import local: lifecycle importa este módulo
+
+        return current_status(self.stored_status, self.registration_deadline, clock.utc_now())
 
 
 # Estructura de categorías de un torneo (ver docs/DECISIONS.md, 2026-11-16). Grupos de grado y divisiones de edad

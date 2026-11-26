@@ -12,6 +12,22 @@ funcionando sobre una base ya migrada. Única excepción: la migración que borr
 
 ## [Unreleased]
 
+### Changed (incompatible)
+- **Ciclo nuevo del torneo:** `draft` (en preparación) → `registration_open` → `weigh_in` (pesaje) → `in_progress` →
+  `finished`, un solo camino. `draft` ya no admite inscripciones: `POST` y `DELETE /api/v1/registrations` solo
+  funcionan en `registration_open` (`409` en otro estado). `POST /tournaments/{id}/start` solo funciona desde
+  `weigh_in`.
+- Editar un atleta que deja de encajar en su categoría: el retiro con `confirm_withdrawal` vale en
+  `registration_open`, y el `409` sin salida vale en `weigh_in` además de `in_progress`.
+
+### Added
+- `registration_deadline` en los torneos: se fija con `PATCH /api/v1/tournaments/{id}` (ISO 8601 con zona horaria,
+  futura; se devuelve en UTC). Se puede mover mientras no venció; `null` solo en `draft`.
+- `POST /api/v1/tournaments/{id}/open-registration`: de `draft` a `registration_open`, con una fecha límite futura.
+- `POST /api/v1/tournaments/{id}/close-registration`: el botón «Pasar a Pesaje»; cierra las inscripciones ya (la
+  fecha límite pasa a ser ahora).
+- `weigh_in` se calcula al leer: un torneo con inscripciones abiertas pasa solo a Pesaje cuando vence la fecha límite.
+
 ## [0.8.2] - 2026-11-26
 
 ### Removed

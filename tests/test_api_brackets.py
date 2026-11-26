@@ -69,7 +69,7 @@ def test_get_bracket_after_generation(client, club, category, register_n_athlete
     assert resp.json()["id"] == created["id"]
 
 
-@pytest.mark.parametrize("status", ["draft", "finished"])
+@pytest.mark.parametrize("status", ["registration_open", "weigh_in", "finished"])
 def test_bracket_is_only_generated_with_the_tournament_in_progress(
     client, category, tournament, set_tournament_status, status
 ):

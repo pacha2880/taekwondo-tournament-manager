@@ -41,20 +41,22 @@ del frontend, avisada a Kike en Notion).
       estructura y sus llaves responden `404`; con token se ve. Se arman las categorías (`PUT /category-structure`,
       solo en `draft`); todavía no se inscribe a nadie (`409`).
       [Notion](https://app.notion.com/p/415fae3be03b818fa550dabd0c34074a)
-- [ ] **Fecha límite de inscripción** (`registration_deadline`, guardada en UTC; el frontend la muestra en hora de
-      Bolivia): se fija con `PATCH /tournaments/{id}` y se puede mover (adelantar o atrasar) mientras no haya vencido;
+- [x] **Fecha límite de inscripción** (`registration_deadline`, guardada en UTC; el frontend la muestra en hora de
+      Bolivia): se fija con `PATCH /tournaments/{id}`, siempre futura, y se puede mover mientras no haya vencido;
       después, `409`.
-- [ ] **Abrir inscripciones**: acción nueva `POST /tournaments/{id}/open-registration`, solo desde `draft` y con una
+- [x] **Pasar a Pesaje**: acción nueva `POST /tournaments/{id}/close-registration`, solo desde `registration_open`;
+      la fecha límite pasa a ser ahora. Es la forma de cerrar antes (no se pone una fecha pasada con `PATCH`).
+- [x] **Abrir inscripciones**: acción nueva `POST /tournaments/{id}/open-registration`, solo desde `draft` y con una
       fecha límite futura (si no, `409`). El torneo pasa a ser público.
-- [ ] **Inscripciones abiertas (`registration_open`)**: se inscribe y se retira como hoy en `draft`
+- [x] **Inscripciones abiertas (`registration_open`)**: se inscribe y se retira como hoy en `draft`
       (`category_mismatch`, una categoría por torneo, `confirm_withdrawal`); fuera de este estado, `409`. Las reglas de
       `app/api/lifecycle.py` que hoy dicen `draft` pasan a `registration_open`.
-- [ ] **Pesaje (`weigh_in`)**: el torneo entra solo cuando vence la fecha límite. El estado se calcula al leer (función
+- [x] **Pesaje (`weigh_in`)**: el torneo entra solo cuando vence la fecha límite (o con «Pasar a Pesaje»). El estado se calcula al leer (función
       pura del torneo y la hora); leer no escribe en la base y no hace falta un cron. Inscripciones cerradas; editar un
       atleta inscrito responde como en En curso.
 - [ ] **Lista de inscritos oculta hasta el Pesaje**: sin token, `GET /categories/{id}/registrants` responde `403` antes
       del Pesaje; desde el Pesaje es pública. [Notion](https://app.notion.com/p/415fae3be03b81568bd7f3cfcc2df971)
-- [ ] **Iniciar**: `POST /tournaments/{id}/start` solo desde `weigh_in` (antes, `409`).
+- [x] **Iniciar**: `POST /tournaments/{id}/start` solo desde `weigh_in` (antes, `409`).
 - [ ] `scripts/seed_demo_api.py` sigue el ciclo nuevo.
 
 ### Bloque 2 — Pesaje

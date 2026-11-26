@@ -87,7 +87,7 @@ sirve para una vista previa. Lo que el usuario todavía no guardó puede quedar 
 `POST /api/v1/registrations` responde `422` (con `detail` en español) si el atleta no encaja en la categoría: género
 distinto; peso fuera de `min_weight`/`max_weight` (si los tiene); edad fuera de
 `min_age`–`max_age` (edad = año del torneo menos año de nacimiento) o grado fuera del grupo de grado de la categoría.
-Festival no tiene grupo ni pesos: solo revisa género y edad. Además: `409` si el torneo ya empezó o si
+Festival no tiene grupo ni pesos: solo revisa género y edad. Además: `409` si el torneo no está en `registration_open` o si
 el atleta ya está inscrito en esa categoría o en otra del mismo torneo.
 
 Para inscribir, listá los que encajan con `GET /api/v1/categories/{id}/eligible-athletes` (requiere token): devuelve
@@ -135,11 +135,11 @@ distinguir mayúsculas ni tildes (`perez` encuentra a `Pérez`). Sin `q`, o con 
 `"ci": null` (o `""`); para quitar la estatura, `"height_cm": null`. Si el cambio de **género, peso, grado o fecha de nacimiento** deja al atleta fuera de una categoría en la que
 está inscrito:
 
-- En un torneo **en borrador** responde `409` y no cambia nada; `detail` nombra las categorías afectadas.
-  Para aceptarlo, repetir la misma petición con `?confirm_withdrawal=true`: el atleta se guarda y se lo
+- En un torneo **con inscripciones abiertas** responde `409` y no cambia nada; `detail` nombra las categorías
+  afectadas. Para aceptarlo, repetir la misma petición con `?confirm_withdrawal=true`: el atleta se guarda y se lo
   retira de esas categorías.
-- En un torneo **en curso** responde `409` aunque se envíe `confirm_withdrawal=true` (la llave ya está
-  sorteada): ese cambio no se puede hacer.
+- En un torneo **en pesaje o en curso** responde `409` aunque se envíe `confirm_withdrawal=true` (las inscripciones
+  ya cerraron): ese cambio no se puede hacer.
 - En un torneo **finalizado** se permite y la inscripción queda como estaba.
 
 Los dos `409` solo se distinguen por el texto. Lo práctico es mostrar `detail` al usuario y ofrecer
@@ -147,14 +147,25 @@ Los dos `409` solo se distinguen por el texto. Lo práctico es mostrar `detail` 
 
 ## Ciclo de vida de un torneo
 
-El estado no se cambia con `PATCH` sino con dos acciones, y solo avanza (`409` si se repite una o se salta un
-paso):
+Un solo camino, que solo avanza: `draft` → `registration_open` → `weigh_in` → `in_progress` → `finished`. El estado
+no se cambia con `PATCH` sino con acciones (`409` si se repite una o se salta un paso), salvo el paso a `weigh_in`,
+que ocurre solo al vencer la fecha límite:
 
-- `POST /api/v1/tournaments/{id}/start`: de `draft` a `in_progress`. Mientras el torneo está en `draft` se
-  edita la estructura de categorías y se inscribe (o se retira, con `DELETE /registrations/{id}`) a los atletas; al
-  iniciarlo esas cosas se cierran (`POST /registrations`, `PUT /category-structure` y `DELETE /registrations/{id}`
-  responden `409`). Con el torneo en curso se generan las
-  llaves y se cargan los resultados; en `draft` o `finished` ambas cosas responden `409`.
+- **`draft` (en preparación):** el torneo nace así. Se edita la estructura de categorías
+  (`PUT /category-structure`, solo en este estado) y se fija la fecha límite de inscripción con
+  `PATCH /tournaments/{id}` y `registration_deadline`. Todavía no se inscribe a nadie.
+- `POST /api/v1/tournaments/{id}/open-registration`: de `draft` a `registration_open`. Exige una fecha límite futura
+  (`409` si falta o ya pasó). Con las inscripciones abiertas se inscribe y se retira a los atletas
+  (`POST` y `DELETE /registrations`); en cualquier otro estado eso responde `409`.
+- **Fecha límite (`registration_deadline`):** se envía en ISO 8601 **con zona horaria** (sin zona, `422`), por
+  ejemplo `2027-03-01T23:59:00-04:00`, y se devuelve siempre en UTC (`2027-03-02T03:59:00Z`): mostrarla en hora de
+  Bolivia. Tiene que ser futura (`422`). Se puede mover en `draft` y en `registration_open`; una vez vencida
+  (`weigh_in` en adelante), `409`. `null` la borra, solo en `draft`.
+- **`weigh_in` (pesaje):** el torneo entra solo cuando vence la fecha límite; no hace falta ninguna acción. Para
+  cerrar antes, `POST /api/v1/tournaments/{id}/close-registration` (el botón «Pasar a Pesaje»): la fecha límite
+  pasa a ser ahora. Solo desde `registration_open`.
+- `POST /api/v1/tournaments/{id}/start`: de `weigh_in` a `in_progress` (desde cualquier otro estado, `409`). Con el
+  torneo en curso se generan las llaves y se cargan los resultados; en otro estado ambas cosas responden `409`.
 - `POST /api/v1/tournaments/{id}/finish`: de `in_progress` a `finished`, los resultados quedan como
   definitivos. Exige que no queden combates por jugar: si falta alguno responde `409` y `detail` nombra las
   categorías pendientes.
@@ -191,7 +202,7 @@ Viajan en inglés; para mostrarlos al usuario, esta es la traducción sugerida:
 
 | Campo | Valor | Se muestra como |
 |---|---|---|
-| `status` de un torneo | `draft` / `in_progress` / `finished` | Inscripciones abiertas / En curso / Finalizado |
+| `status` de un torneo | `draft` / `registration_open` / `weigh_in` / `in_progress` / `finished` | En preparación / Inscripciones abiertas / Pesaje / En curso / Finalizado |
 | `status` de un combate | `pending` / `bye` / `finished` | Pendiente / Pase directo / Finalizado |
 | `gender` | `male` / `female` | Masculino / Femenino |
 | `grade` de un atleta | `kup_10` … `kup_1` / `dan` | 10mo Kup … 1er Kup / Dan |
@@ -213,7 +224,12 @@ JSON="Content-Type: application/json"
 # 2) Club y torneo (nace con sus categorías ya creadas)
 curl -s -X POST $BASE/api/v1/clubs -H "$AUTH" -H "$JSON" -d '{"name": "Dojang Central"}'
 curl -s -X POST $BASE/api/v1/tournaments -H "$AUTH" -H "$JSON" \
-  -d '{"name": "Copa Cochabamba", "date": "2026-11-15", "location": "Cochabamba, Bolivia"}'
+  -d '{"name": "Copa Cochabamba", "date": "2027-03-15", "location": "Cochabamba, Bolivia"}'
+
+# 2b) Fecha límite de inscripción (con zona horaria) y abrir las inscripciones
+curl -s -X PATCH $BASE/api/v1/tournaments/1 -H "$AUTH" -H "$JSON" \
+  -d '{"registration_deadline": "2027-03-01T23:59:00-04:00"}'
+curl -s -X POST $BASE/api/v1/tournaments/1/open-registration -H "$AUTH"
 
 # 3) Atletas, la categoría en la que encajan e inscripciones (repetir por cada atleta; la llave necesita al menos 2)
 curl -s -X POST $BASE/api/v1/athletes -H "$AUTH" -H "$JSON" \
@@ -223,7 +239,8 @@ CATEGORY=$(curl -s "$BASE/api/v1/athletes/1/eligible-categories?tournament_id=1"
   | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['id'])")
 curl -s -X POST $BASE/api/v1/registrations -H "$AUTH" -H "$JSON" -d "{\"athlete_id\": 1, \"category_id\": $CATEGORY}"
 
-# 4) Iniciar el torneo, generar la llave y consultarla (la consulta es pública)
+# 4) Pasar a Pesaje (o esperar a la fecha límite), iniciar el torneo, generar la llave y consultarla (pública)
+curl -s -X POST $BASE/api/v1/tournaments/1/close-registration -H "$AUTH"
 curl -s -X POST $BASE/api/v1/tournaments/1/start -H "$AUTH"
 curl -s -X POST $BASE/api/v1/categories/$CATEGORY/bracket -H "$AUTH"
 curl -s $BASE/api/v1/categories/$CATEGORY/bracket

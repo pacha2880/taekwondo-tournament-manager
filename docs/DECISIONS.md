@@ -674,8 +674,9 @@ para lo que venga. Consecuencia: sobre una base migrada ya no se puede volver a 
 Spec en `docs/BACKLOG.md` (0.9.0). Lo no obvio:
 
 **Siempre se pasa por el Pesaje.** `start` solo funciona desde Pesaje. Con un atajo desde Inscripciones abiertas habría
-dos caminos y el pesaje (con sus descalificaciones) se podría saltar sin querer. Para cerrar antes, el admin adelanta
-la fecha límite.
+dos caminos y el pesaje (con sus descalificaciones) se podría saltar sin querer. Para cerrar antes, el admin usa «Pasar a Pesaje»
+(`close-registration`), que pone la fecha límite en ahora. Es una acción explícita como `start` y `finish`, deja en
+la base cuándo se cerró de verdad, y así el `PATCH` de la fecha límite acepta solo fechas futuras.
 
 **La fecha límite es obligatoria para abrir y se mueve solo hasta que vence.** Moverla después reabriría
 inscripciones con la lista ya publicada y pesajes cargados; el estado solo avanza, como desde la 0.6.0.

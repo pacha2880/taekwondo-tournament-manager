@@ -6,7 +6,7 @@ import math
 import re
 from typing import Annotated
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AfterValidator, AwareDatetime, BaseModel, ConfigDict, Field, field_validator
 
 from app.models import Discipline, Gender, Grade, MatchStatus, TournamentStatus
 
@@ -169,13 +169,31 @@ class TournamentUpdate(BaseModel):
     name: str | None = Field(default=None, max_length=150, description="Nuevo nombre. Si no se envía, no cambia.")
     date: datetime.date | None = Field(default=None, description="Nueva fecha (`YYYY-MM-DD`). Si no se envía, no cambia.")
     location: str | None = Field(default=None, max_length=150, description="Nuevo lugar. Si no se envía, no cambia.")
+    registration_deadline: AwareDatetime | None = Field(
+        default=None,
+        description="Nueva fecha límite de inscripción, en ISO 8601 con zona horaria obligatoria (ej. "
+        "`2027-11-26T18:00:00-04:00`); se guarda en UTC. Si no se envía, no cambia; `null` la borra. Ver las reglas "
+        "en la operación.",
+    )
 
 
 class TournamentRead(TournamentBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int = Field(description="Identificador del torneo.")
-    status: TournamentStatus = Field(description="Estado actual del torneo.")
+    status: TournamentStatus = Field(
+        description="Estado actual del torneo. `weigh_in` se calcula al vencer la fecha límite de inscripción."
+    )
+    registration_deadline: AwareDatetime | None = Field(
+        description="Fecha límite de inscripción, siempre en UTC (ej. `2027-11-26T22:00:00Z`): el frontend la "
+        "muestra en hora de Bolivia. Es nula mientras no se fije."
+    )
+
+    # Se guarda sin zona (UTC): se devuelve con zona para que el cliente no tenga que adivinarla.
+    @field_validator("registration_deadline", mode="before")
+    @classmethod
+    def _mark_as_utc(cls, value):
+        return value.replace(tzinfo=datetime.timezone.utc) if value is not None and value.tzinfo is None else value
 
 
 class CategoryBase(BaseModel):

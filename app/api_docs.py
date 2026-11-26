@@ -53,7 +53,7 @@ Las rutas, los nombres de los campos y los valores de los enums están en inglé
 
 TAGS_METADATA = [
     {"name": TAG_AUTH, "description": "Inicio de sesión para obtener el token que piden los endpoints protegidos."},
-    {"name": TAG_TOURNAMENTS, "description": "Torneos y su estado (`draft`, `in_progress`, `finished`)."},
+    {"name": TAG_TOURNAMENTS, "description": "Torneos y su estado (`draft`, `registration_open`, `weigh_in`, `in_progress`, `finished`)."},
     {
         "name": TAG_CATEGORIES,
         "description": "Categorías de un torneo, definidas por edad, género, cinturón y peso.",

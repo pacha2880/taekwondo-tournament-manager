@@ -34,7 +34,7 @@ def _bracket_read(db: Session, bracket: Bracket) -> BracketRead:
     status_code=201,
     dependencies=ADMIN_ONLY,
     summary="Generar la llave de una categoría",
-    description="Sortea al azar a los inscritos en una llave de eliminación simple. Si el número de inscritos no es potencia de 2, se reparten pases directos (`bye`) en la primera ronda. Solo se genera con el torneo en curso (409 si todavía está en `draft` o ya terminó). Hacen falta al menos 2 inscritos y solo se puede generar una llave por categoría. Requiere token.",
+    description="Sortea al azar a los inscritos en una llave de eliminación simple. Si el número de inscritos no es potencia de 2, se reparten pases directos (`bye`) en la primera ronda. Solo se genera con el torneo en curso (409 si todavía no empezó o ya terminó). Hacen falta al menos 2 inscritos y solo se puede generar una llave por categoría. Requiere token.",
     responses=errors({400: "La categoría tiene menos de 2 inscritos.", 404: "La categoría no existe.", 409: "El torneo no está en curso, o la categoría ya tiene una llave."}, auth=True),
 )
 def create_bracket(category_id: Int4, db: Session = Depends(get_db)):
