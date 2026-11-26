@@ -19,9 +19,8 @@ están en `.claude/rules/` y se cargan solas al tocar esos archivos.
 
 - Producción: https://taekwondo-tournament-manager.onrender.com (Render + Neon, Ohio), despliega desde
   `main`. El servicio `dev` de Render despliega la rama `dev` contra una rama `dev` de Neon.
-- Quedan datos de demo en la base de **producción** (club "Club Demo Cochabamba", torneo
-  "Copa Cochabamba DEMO"); la API no tiene endpoints de borrar — limpieza solo por SQL desde el
-  panel de Neon.
+- Producción quedó vacía el 2026-11-26; `dev` tiene los datos de prueba de `scripts/seed_demo_api.py`. Para borrar
+  todo (y recargar): `scripts/reset_data.py {local,dev,prod} [--seed]`, con las URLs y el admin en `.env`.
 - Un amigo del usuario construye un frontend separado (otra tecnología) contra esta API: la API es un
   producto, con su propia autenticación, CORS y documentación. Un cambio de contrato va al CHANGELOG y a
   `docs/API.md`.

@@ -1,16 +1,15 @@
-"""Carga datos de prueba por la API (pide usuario y contraseña):
+"""Carga datos de prueba por la API:
 
 - «Copa de Prueba (en curso)»: 7 categorías con 47 inscritos, todas con llave generada y en distintos
   momentos: dos terminadas, cuatro a medias (con combates terminados y alguno con 1 o 2 rounds cargados)
   y una sin empezar.
 - «Copa de Prueba (borrador)»: una categoría con 5 inscritos y sin llave.
 
-Uso, desde la raíz del repo (no necesita instalar nada):
-    python3 scripts/seed_demo_api.py
-Pregunta dónde cargar: local (tu servidor en el puerto 8000), dev o producción.
-Es idempotente: si los torneos ya existen, no hace nada. Nunca borra datos.
+Uso, desde la raíz del repo:
+    .venv/bin/python scripts/seed_demo_api.py {local,dev,prod}
+local es tu servidor en el puerto 8000. El usuario y la clave del admin salen de `.env` (ver `.env.example`).
+Si los torneos ya existen, no hace nada. Nunca borra datos: para empezar de cero, `scripts/reset_data.py`.
 """
-import getpass
 import json
 import random
 import sys
@@ -18,13 +17,16 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import date
+from pathlib import Path
 
-ENVIRONMENTS = {
-    "1": ("Local", "http://localhost:8000"),
-    "2": ("Dev", "https://taekwondo-tournament-manager-dev.onrender.com"),
-    "3": ("Producción", "https://taekwondo-tournament-manager.onrender.com"),
+from dotenv import dotenv_values
+
+ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
+API_URLS = {
+    "local": "http://localhost:8000",
+    "dev": "https://taekwondo-tournament-manager-dev.onrender.com",
+    "prod": "https://taekwondo-tournament-manager.onrender.com",
 }
-PRODUCTION_CHOICE = "3"
 TIMEOUT_SECONDS = 90  # el primer request del plan gratis de Render puede tardar 30-50 s
 
 IN_PROGRESS_TOURNAMENT = {"name": "Copa de Prueba (en curso)", "date": "2026-11-15", "location": "Cochabamba, Bolivia"}
@@ -187,23 +189,21 @@ def play(api, rng: random.Random, category_id: int, plan: list[tuple]) -> None:
                 leave_half_played(api, rng, match, step[3])
 
 
-def choose_environment() -> str:
-    print("¿Dónde querés cargar los datos?")
-    for key, (name, url) in ENVIRONMENTS.items():
-        print(f"  {key}) {name:<11} {url}")
-    choice = input("Opción: ").strip()
-    if choice not in ENVIRONMENTS:
-        sys.exit("Opción inválida.")
-    if choice == PRODUCTION_CHOICE and input("Vas a cargar datos de prueba en PRODUCCIÓN. Escribí PRODUCCION para continuar: ") != "PRODUCCION":
-        sys.exit("Cancelado.")
-    return ENVIRONMENTS[choice][1]
+def env_setting(env: str, name: str) -> str:
+    """Valor de `.env` para el ambiente: `DEV_ADMIN_PASSWORD`, `PROD_DATABASE_URL`… (local usa los nombres de la app,
+    sin prefijo)."""
+    key = name if env == "local" else f"{env.upper()}_{name}"
+    value = dotenv_values(ENV_FILE).get(key)
+    if not value:
+        sys.exit(f"Falta {key} en {ENV_FILE} (ver .env.example).")
+    return value
 
 
-def main() -> None:
-    base_url = choose_environment()
+def seed(env: str) -> None:
+    base_url = API_URLS[env]
     print(f"\nServicio: {base_url}")
-    username = input("Usuario: ")
-    password = getpass.getpass("Contraseña: ")
+    username = env_setting(env, "ADMIN_USERNAME")
+    password = env_setting(env, "ADMIN_PASSWORD")
 
     print("Iniciando sesión (si el servicio estaba dormido, tarda hasta 1 minuto)...")
     token = call(base_url, "POST", "/api/v1/auth/login", form={"username": username, "password": password})["access_token"]
@@ -245,4 +245,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) != 2 or sys.argv[1] not in API_URLS:
+        sys.exit(f"Uso: {sys.argv[0]} {{{','.join(API_URLS)}}}")
+    seed(sys.argv[1])
