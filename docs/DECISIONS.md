@@ -41,6 +41,7 @@ actualiza el estado acá.
 | 2026-11-23 | [`category_mismatch` revisa edad y grado](#2026-11-23--category_mismatch-revisa-edad-y-grado) | Reemplazada en parte por 2026-11-26: ya no hay categorías históricas ni atletas sin grado |
 | 2026-11-25 | [Las categorías se distinguen por su grupo; `belt_group` sale de la API (0.8.1)](#2026-11-25--las-categorías-se-distinguen-por-su-grupo-belt_group-sale-de-la-api-081) | Reemplazada en parte por 2026-11-26: la columna `belt_group` ya se borró y no hay categorías históricas |
 | 2026-11-26 | [Bases vaciadas y fuera el soporte de datos viejos](#2026-11-26--bases-vaciadas-y-fuera-el-soporte-de-datos-viejos) | Vigente |
+| 2026-11-26 | [Ciclo del torneo de la 0.9.0: un solo camino, fecha límite y peso oficial en la inscripción](#2026-11-26--ciclo-del-torneo-de-la-090-un-solo-camino-fecha-límite-y-peso-oficial-en-la-inscripción) | Vigente |
 
 ## 2026-09-11 — Render + Neon en vez de Railway/Fly.io/Render-Postgres
 
@@ -667,3 +668,39 @@ ramas (el `404` de `category-structure` por torneo sin estructura, revisar solo 
 
 **Es la única excepción a «dentro de `0.x` las migraciones solo agregan»** (migración `e5c7a3f90b18`). La regla sigue
 para lo que venga. Consecuencia: sobre una base migrada ya no se puede volver a un tag ≤ 0.8.1.
+
+## 2026-11-26 — Ciclo del torneo de la 0.9.0: un solo camino, fecha límite y peso oficial en la inscripción
+
+Spec en `docs/BACKLOG.md` (0.9.0). Lo no obvio:
+
+**Siempre se pasa por el Pesaje.** `start` solo funciona desde Pesaje. Con un atajo desde Inscripciones abiertas habría
+dos caminos y el pesaje (con sus descalificaciones) se podría saltar sin querer. Para cerrar antes, el admin adelanta
+la fecha límite.
+
+**La fecha límite es obligatoria para abrir y se mueve solo hasta que vence.** Moverla después reabriría
+inscripciones con la lista ya publicada y pesajes cargados; el estado solo avanza, como desde la 0.6.0.
+
+**Pesaje calculado, no guardado.** El torneo entra en Pesaje cuando vence la fecha: el estado se calcula al leer, con
+una función pura del torneo y la hora. Sin cron ni escrituras al leer.
+
+**El peso oficial vive en la inscripción.** Cada inscripción guarda sus pesajes y si quedó descalificada. El
+`weight_kg` del atleta sigue siendo el peso declarado: pisarlo borraría el historial de cada torneo y chocaría con la
+regla de retiro al editar un atleta (2026-10-24).
+
+**Oculto sin token, todo con token, en los mismos endpoints.** Sin token no se ven los torneos en preparación ni la
+lista de inscritos antes del Pesaje; con token se ve todo. El token protege la API, no decide qué muestra la vista
+pública: esa vista nunca los muestra, haya sesión o no (regla del frontend). No contradice 2026-11-02 («el mismo
+endpoint con dos formas es fácil de romper»): la forma de la respuesta es la misma, solo cambia qué filas se ven.
+
+**Pesaje sin tolerancia.** No se aplican los 100 g del Art. 9 de WT. Si el primer pesaje no entra, el admin elige
+segundo pesaje o descalificación; si el segundo no entra, queda descalificado.
+
+**Los descalificados van en la llave y no ganan nada.** El sorteo los empareja primero con habilitados, para que el
+descalificado pierda contra alguien que sigue. Entre dos descalificados no avanza nadie (se descartó que avance uno
+al azar: un descalificado aparecería en rondas siguientes). Si todos quedan descalificados, no hay ganador ni puntos.
+
+**Festival sin llaves; exhibición armada a mano (0.10.0).** Festival es solo una lista de varones y otra de damas:
+los combates se organizan en persona y no se registran (Abel, 2026-11-26). Todos llevan oro y cada niño suma 7 al
+ranking, como un oro. Las llaves de
+exhibición se arman a mano con atletas elegidos por el organizador, varias por torneo. A exhibición solo van los que
+se quedaron sin pelea; no suma al ranking, porque ya sumaron su punto de «sin pelea».
