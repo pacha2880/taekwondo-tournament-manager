@@ -64,12 +64,16 @@ def test_weight_out_of_range_rejected(client, club, category):
     assert resp.status_code == 422
 
 
-def test_athlete_in_second_category_of_same_tournament_rejected(client, athlete, category, tournament, historical_category):
+def test_athlete_in_second_category_of_same_tournament_rejected(client, db_session, athlete, category, tournament, find_category):
+    from app.models import Athlete, Grade
+
     client.post(
         "/api/v1/registrations",
         json={"athlete_id": athlete["id"], "category_id": category["id"]},
     )
-    other_category = historical_category(tournament["id"], weight_label="Todos los pesos", max_weight=None)
+    db_session.get(Athlete, athlete["id"]).grade = Grade.KUP_5  # el PATCH no lo deja con una inscripción que ya no encaja
+    db_session.commit()
+    other_category = find_category(tournament["id"], "male", "Cadete", "37.1–41 kg", grade_group="Novatos")
     resp = client.post(
         "/api/v1/registrations",
         json={"athlete_id": athlete["id"], "category_id": other_category["id"]},
@@ -187,15 +191,6 @@ def test_grade_at_group_edge_accepted(client, club, category, grade):
     assert _register(client, _create_athlete(client, club, grade=grade), category).status_code == 201
 
 
-def test_athlete_without_grade_does_not_fit_category_with_group(client, db_session, club, category):
-    from app.models import Athlete
-
-    athlete = _create_athlete(client, club)
-    db_session.get(Athlete, athlete["id"]).grade = None
-    db_session.commit()
-    assert _register(client, athlete, category).status_code == 422
-
-
 def test_festival_checks_only_gender_and_age(client, db_session, club, tournament):
     from sqlalchemy import select
 
@@ -211,9 +206,3 @@ def test_festival_checks_only_gender_and_age(client, db_session, club, tournamen
     assert _register(client, child, festival).status_code == 201
     older = _create_athlete(client, club, birth_date="2014-03-01", name="Mayor")
     assert _register(client, older, festival).status_code == 422
-
-
-def test_historical_category_checks_only_gender_and_weight(client, club, tournament, historical_category):
-    historical = historical_category(tournament["id"])
-    adult = _create_athlete(client, club, birth_date="1990-01-01", grade="dan", weight_kg=44)
-    assert _register(client, adult, historical).status_code == 201

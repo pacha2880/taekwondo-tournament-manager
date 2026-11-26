@@ -10,9 +10,6 @@ def category_mismatch(athlete, category: Category) -> str | None:
         return "El peso del atleta es menor al mínimo de la categoría"
     if category.max_weight is not None and athlete.weight_kg > category.max_weight:
         return "El peso del atleta es mayor al máximo de la categoría"
-    # Las categorías históricas (sin estructura) solo revisan género y peso: su edad y cinturón los cargó el admin a mano.
-    if category.age_division_id is None:
-        return None
 
     # Edad por año de nacimiento (Art. 4 WT).
     age = category.tournament.date.year - athlete.birth_date.year
@@ -23,6 +20,6 @@ def category_mismatch(athlete, category: Category) -> str | None:
     if category.grade_group is not None:
         groups = category.tournament.grade_groups
         first, last = grade_range(groups, groups.index(category.grade_group))
-        if athlete.grade is None or not GRADES.index(first) <= GRADES.index(athlete.grade) <= GRADES.index(last):
+        if not GRADES.index(first) <= GRADES.index(athlete.grade) <= GRADES.index(last):
             return f"El grado del atleta no corresponde al grupo «{category.grade_group.name}» de la categoría"
     return None

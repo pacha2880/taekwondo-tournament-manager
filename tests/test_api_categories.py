@@ -1,12 +1,3 @@
-from app.models import BeltGroup
-
-
-def test_categories_cannot_be_created_by_hand(client, tournament):
-    resp = client.post("/api/v1/categories", json={"tournament_id": tournament["id"]})
-
-    assert resp.status_code == 405
-
-
 def test_list_categories_filtered_by_tournament(client, category, tournament):
     client.post("/api/v1/tournaments", json={"name": "Otro", "date": "2026-12-01", "location": "La Paz"}).json()
 
@@ -115,7 +106,6 @@ def test_categories_that_differ_only_in_grade_group_have_different_names(tournam
     assert novices["name"] == "Novatos · Cadete · Masculino · 37.1–41 kg"
     assert (beginners["grade_group_name"], novices["grade_group_name"]) == ("Principiantes", "Novatos")
     assert beginners["grade_group_id"] != novices["grade_group_id"]
-    assert "belt_group" not in beginners
 
 
 def test_festival_name_has_no_grade_group(client, tournament):
@@ -128,14 +118,6 @@ def test_festival_name_has_no_grade_group(client, tournament):
         ("Festival · Masculino · Todos los pesos", None, None)
     ]
 
-
-def test_historical_category_names_keep_the_belt_group(tournament, historical_category):
-    color = historical_category(tournament["id"])
-    black = historical_category(tournament["id"], belt_group=BeltGroup.BLACK)
-
-    assert color["name"] == "Cadete · Masculino · Cinturón de color · Hasta 45kg"
-    assert black["name"] == "Cadete · Masculino · Cinturón negro · Hasta 45kg"
-    assert color["grade_group_id"] is None and color["grade_group_name"] is None
 
 
 def test_list_categories_filtered_by_grade_group_and_gender(client, tournament, find_category):

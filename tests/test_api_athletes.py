@@ -393,15 +393,6 @@ def test_grade_only_accepts_the_fixed_values(client, club):
     assert resp.status_code == 422
 
 
-def test_belt_rank_is_no_longer_part_of_the_api(client, club):
-    created = client.post("/api/v1/athletes", json=_athlete_payload(club, belt_rank="verde"))
-    updated = client.patch(f"/api/v1/athletes/{created.json()['id']}", json={"belt_rank": "azul"})
-
-    assert created.status_code == 201
-    assert updated.status_code == 200
-    assert "belt_rank" not in created.json()
-    assert "belt_rank" not in updated.json()
-
 
 def test_grade_can_be_edited(client, athlete):
     resp = client.patch(f"/api/v1/athletes/{athlete['id']}", json={"grade": "dan"})
@@ -409,14 +400,6 @@ def test_grade_can_be_edited(client, athlete):
     assert resp.status_code == 200
     assert resp.json()["grade"] == "dan"
 
-
-def test_the_legacy_belt_rank_column_follows_the_grade(client, athlete, db_session):
-    # La columna belt_rank sigue en la base hasta la 1.0.0 para poder volver a la 0.6.0 (que la lee).
-    from app.models import Athlete
-
-    client.patch(f"/api/v1/athletes/{athlete['id']}", json={"grade": "kup_1"})
-
-    assert db_session.get(Athlete, athlete["id"]).belt_rank == "kup_1"
 
 
 def test_height_is_optional_and_stored(client, club):
@@ -474,15 +457,6 @@ def test_eligible_categories_only_from_the_requested_tournament(client, athlete,
     assert category["id"] not in [c["id"] for c in resp.json()]
     assert all(c["tournament_id"] == other["id"] for c in resp.json())
 
-
-def test_eligible_categories_includes_a_fitting_historical_one_sorted_by_id(
-    client, athlete, tournament, category, historical_category
-):
-    historical = historical_category(tournament["id"])
-
-    resp = _eligible_categories(client, athlete, tournament)
-
-    assert [c["id"] for c in resp.json()] == [category["id"], historical["id"]]
 
 
 def test_eligible_categories_athlete_not_found(client, tournament):

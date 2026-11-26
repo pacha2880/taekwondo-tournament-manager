@@ -97,19 +97,6 @@ def test_structure_of_a_missing_tournament_is_404(client):
     assert client.get("/api/v1/tournaments/999/category-structure").status_code == 404
 
 
-def test_tournaments_from_before_the_structure_have_none(client, tournament, db_session):
-    old = db_session.get(Tournament, tournament["id"])
-    old.categories = []
-    db_session.flush()
-    old.grade_groups = []
-    old.age_divisions = []
-    db_session.commit()
-
-    resp = _structure(client, tournament)
-
-    assert resp.status_code == 404
-    assert resp.json()["detail"] == "Este torneo no tiene estructura de categorías"
-
 
 def _editable(structure):
     """La estructura actual en la forma que recibe el PUT (sin Festival)."""

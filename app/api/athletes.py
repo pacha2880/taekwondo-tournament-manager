@@ -133,11 +133,10 @@ def get_athlete(athlete_id: Int4, db: Session = Depends(get_db)):
     dependencies=ADMIN_ONLY,
     summary="Listar las categorías en las que encaja un atleta",
     description="Devuelve, ordenadas por id, las categorías del torneo `tournament_id` que cumplen la regla de "
-    "`POST /registrations` para este atleta (género, peso, y en las categorías con estructura, edad y grupo de "
-    "grado). Es la consulta inversa de `GET /categories/{id}/eligible-athletes`; la usará la inscripción pública. "
-    "Con la estructura de la Copa Diamante un atleta normalmente encaja en exactamente una categoría; las "
-    "categorías históricas (sin estructura) pueden dar más de una. No mira si el atleta ya está inscrito ni el "
-    "estado del torneo. Requiere token.",
+    "`POST /registrations` para este atleta (género, peso, edad y grupo de grado). Es la consulta inversa de "
+    "`GET /categories/{id}/eligible-athletes`; la usará la inscripción pública. Con la estructura de la Copa Diamante "
+    "un atleta normalmente encaja en exactamente una categoría. No mira si el atleta ya está inscrito ni el estado del "
+    "torneo. Requiere token.",
     responses=errors({404: "El atleta o el torneo no existe."}, auth=True),
 )
 def list_eligible_categories(

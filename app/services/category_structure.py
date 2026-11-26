@@ -11,7 +11,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.schemas import CategoryStructureUpdate
-from app.models import AgeDivision, BeltGroup, Category, Gender, Grade, GradeGroup, Tournament, WeightLimit
+from app.models import AgeDivision, Category, Gender, Grade, GradeGroup, Tournament, WeightLimit
 
 GRADES = list(Grade)
 
@@ -127,9 +127,6 @@ def _desired_categories(tournament: Tournament) -> dict[tuple, dict]:
         # Festival es una lista general por género: sin grupos de grado ni pesos.
         division_groups = [None] if is_festival(division) else groups
         for group in division_groups:
-            # Columna vieja: ya no está en la API; se llena para poder volver a la 0.8.0 y se borra en la 1.0.0.
-            # El último grupo es el único que incluye Dan.
-            belt_group = BeltGroup.BLACK if group is not None and group is groups[-1] else BeltGroup.COLOR
             for gender in Gender:
                 limits = weight_limits(division, gender)
                 for position in range(len(limits) + 1):
@@ -138,7 +135,6 @@ def _desired_categories(tournament: Tournament) -> dict[tuple, dict]:
                         "age_label": division.name,
                         "min_age": min_age,
                         "max_age": max_age,
-                        "belt_group": belt_group,
                         "weight_label": weight_label(limits, position),
                         "min_weight": min_weight,
                         "max_weight": max_weight,
@@ -210,8 +206,6 @@ def apply_structure(db: Session, tournament: Tournament, payload: CategoryStruct
     # Primero se van las categorías de los grupos y divisiones que se quitan, para que ninguna quede apuntando a una
     # fila borrada.
     for category in list(tournament.categories):
-        if category.age_division_id is None:
-            continue
         if category.age_division_id not in kept_divisions or (
             category.grade_group_id is not None and category.grade_group_id not in kept_groups
         ):
@@ -253,18 +247,15 @@ def preview_categories(tournament: Tournament) -> list[dict]:
             "weight_label": c.weight_label,
         }
         for c in tournament.categories
-        if c.age_division_id is not None
     ]
 
 
 def sync_categories(db: Session, tournament: Tournament) -> None:
     """Deja las categorías del torneo iguales a su estructura: conserva (con su id) las que siguen
-    correspondiendo, crea las que faltan y borra las que sobran. No toca las categorías históricas."""
+    correspondiendo, crea las que faltan y borra las que sobran."""
     db.flush()  # para que grupos y divisiones nuevos tengan id
     desired = _desired_categories(tournament)
     for category in list(tournament.categories):
-        if category.age_division_id is None:
-            continue
         key = (category.grade_group_id, category.gender, category.age_division_id, category.weight_position)
         values = desired.pop(key, None)
         if values is None:
