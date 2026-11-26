@@ -247,4 +247,6 @@ def seed(env: str) -> None:
 if __name__ == "__main__":
     if len(sys.argv) != 2 or sys.argv[1] not in API_URLS:
         sys.exit(f"Uso: {sys.argv[0]} {{{','.join(API_URLS)}}}")
+    if sys.argv[1] == "prod" and input("Vas a cargar datos de prueba en PRODUCCIÓN. Escribí prod para continuar: ") != "prod":
+        sys.exit("Cancelado.")
     seed(sys.argv[1])
