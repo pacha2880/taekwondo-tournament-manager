@@ -5,9 +5,9 @@ from app.models import Athlete, Category, Club, Registration, WeighInStatus
 
 
 def list_registrants(db: Session, category_id: int):
-    """Inscritos de una categoría con solo datos públicos (nombre y club), ordenados por nombre.
+    """Inscritos de una categoría con solo datos públicos (nombre, club y estado del pesaje), ordenados por nombre.
 
-    Suma el estado del pesaje, nunca los kilos. Nunca agregar acá CI, fecha de nacimiento ni peso: el resultado se
+    Nunca agregar acá CI, fecha de nacimiento ni kilos (tampoco los del pesaje): el resultado se
     muestra sin token y hay menores.
     """
     return db.execute(
