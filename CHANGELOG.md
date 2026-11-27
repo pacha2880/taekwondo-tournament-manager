@@ -27,7 +27,8 @@ funcionando sobre una base ya migrada. Única excepción: la migración que borr
 
 ### Added
 - `registration_deadline` en los torneos: se fija con `PATCH /api/v1/tournaments/{id}` (ISO 8601 con zona horaria,
-  futura; se devuelve en UTC). Se puede mover mientras no venció; `null` solo en `draft`.
+  futura y antes del día del torneo contado en UTC; se devuelve en UTC). Se puede mover mientras no venció; `null`
+  solo en `draft`. Mientras no venció, tampoco se puede mover la fecha del torneo a ese día o antes (`422`).
 - `POST /api/v1/tournaments/{id}/open-registration`: de `draft` a `registration_open`, con una fecha límite futura.
 - `POST /api/v1/tournaments/{id}/close-registration`: el botón «Pasar a Pesaje»; cierra las inscripciones ya (la
   fecha límite pasa a ser ahora).

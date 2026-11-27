@@ -163,7 +163,9 @@ que ocurre solo al vencer la fecha límite:
   (`POST` y `DELETE /registrations`); en cualquier otro estado eso responde `409`.
 - **Fecha límite (`registration_deadline`):** se envía en ISO 8601 **con zona horaria** (sin zona, `422`), por
   ejemplo `2027-03-01T23:59:00-04:00`, y se devuelve siempre en UTC (`2027-03-02T03:59:00Z`): mostrarla en hora de
-  Bolivia. Tiene que ser futura (`422`). Se puede mover en `draft` y en `registration_open`; una vez vencida
+  Bolivia. Tiene que ser futura y caer antes del día del torneo, contando el día en UTC (`422`): en hora de Bolivia,
+  a más tardar a las 19:59 de la víspera. Mientras se puede mover, la fecha del torneo tampoco puede pasar a ese día
+  o antes (`422`); después sí (un torneo postergado). Se puede mover en `draft` y en `registration_open`; una vez vencida
   (`weigh_in` en adelante), `409`. `null` la borra, solo en `draft`.
 - **`weigh_in` (pesaje):** el torneo entra solo cuando vence la fecha límite; no hace falta ninguna acción. Para
   cerrar antes, `POST /api/v1/tournaments/{id}/close-registration` (el botón «Pasar a Pesaje»): la fecha límite

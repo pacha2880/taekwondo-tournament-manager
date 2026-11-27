@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
+from app import clock as app_clock
 from app.models import current_status
 from app.models import Tournament, TournamentStatus
 
@@ -13,7 +14,7 @@ def _parse_utc(text):
 
 
 def _future_deadline(days=30):
-    return (datetime.now(timezone.utc) + timedelta(days=days)).isoformat()
+    return (app_clock.utc_now() + timedelta(days=days)).isoformat()
 
 
 def test_create_tournament_defaults_to_draft(client, draft_tournament):
@@ -136,7 +137,7 @@ def test_current_status_turns_into_weigh_in_only_once_the_deadline_passes(stored
 
 def test_the_deadline_is_returned_in_utc_with_offset(client, draft_tournament):
     url = f"/api/v1/tournaments/{draft_tournament['id']}"
-    deadline = datetime.now(timezone.utc).replace(microsecond=0) + timedelta(days=30)
+    deadline = app_clock.utc_now().replace(microsecond=0) + timedelta(days=30)
     bolivia = timezone(timedelta(hours=-4))
 
     resp = client.patch(url, json={"registration_deadline": deadline.astimezone(bolivia).isoformat()})
@@ -158,7 +159,7 @@ def test_the_deadline_can_be_set_and_cleared_in_draft(client, draft_tournament):
 
 
 def test_the_deadline_must_be_in_the_future(client, draft_tournament):
-    past = (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()
+    past = (app_clock.utc_now() - timedelta(minutes=1)).isoformat()
 
     resp = client.patch(f"/api/v1/tournaments/{draft_tournament['id']}", json={"registration_deadline": past})
 
@@ -167,11 +168,51 @@ def test_the_deadline_must_be_in_the_future(client, draft_tournament):
 
 
 def test_the_deadline_needs_a_time_zone(client, draft_tournament):
-    naive = (datetime.now() + timedelta(days=30)).replace(tzinfo=None).isoformat()
+    naive = (app_clock.utc_now() + timedelta(days=30)).replace(tzinfo=None).isoformat()
 
     resp = client.patch(f"/api/v1/tournaments/{draft_tournament['id']}", json={"registration_deadline": naive})
 
     assert resp.status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("deadline", "status_code"),
+    [("2026-11-14T23:59:00+00:00", 200), ("2026-11-15T00:00:00+00:00", 422), ("2026-11-14T21:00:00-04:00", 422)],
+)
+def test_the_deadline_must_fall_before_the_tournament_day_in_utc(client, draft_tournament, deadline, status_code):
+    resp = client.patch(f"/api/v1/tournaments/{draft_tournament['id']}", json={"registration_deadline": deadline})
+
+    assert resp.status_code == status_code
+    if status_code == 422:
+        assert resp.json()["detail"] == "La fecha límite de inscripción debe ser anterior al día del torneo (en UTC)"
+
+
+def test_the_tournament_date_cannot_move_onto_the_deadline_while_registration_is_open(client, tournament):
+    url = f"/api/v1/tournaments/{tournament['id']}"
+
+    resp = client.patch(url, json={"date": "2026-11-01"})
+
+    assert resp.status_code == 422
+    assert client.get(url).json()["date"] == "2026-11-15"
+
+
+def test_date_and_deadline_are_checked_together_in_the_same_patch(client, tournament):
+    resp = client.patch(
+        f"/api/v1/tournaments/{tournament['id']}",
+        json={"date": "2027-01-10", "registration_deadline": "2027-01-09T12:00:00+00:00"},
+    )
+
+    assert resp.status_code == 200
+
+
+def test_a_postponed_tournament_can_change_its_date_after_registration_closed(
+    client, tournament, set_tournament_status
+):
+    set_tournament_status(client, tournament["id"], "weigh_in")
+
+    resp = client.patch(f"/api/v1/tournaments/{tournament['id']}", json={"date": "2025-10-01"})
+
+    assert resp.status_code == 200
 
 
 def test_the_deadline_can_move_but_not_be_cleared_while_registration_is_open(client, tournament):
@@ -239,7 +280,7 @@ def test_close_registration_moves_to_weigh_in_and_the_deadline_to_now(client, to
     assert resp.status_code == 200
     assert resp.json()["status"] == "weigh_in"
     deadline = _parse_utc(resp.json()["registration_deadline"])
-    assert abs(datetime.now(timezone.utc) - deadline) < timedelta(seconds=5)
+    assert abs(app_clock.utc_now() - deadline) < timedelta(seconds=5)
 
 
 def test_close_registration_is_rejected_from_draft(client, draft_tournament):

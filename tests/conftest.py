@@ -80,8 +80,8 @@ def club(client):
 class FakeClock:
     """Hora real más un desfase, para poder adelantarla sin dejar de avanzar."""
 
-    def __init__(self):
-        self.offset = timedelta()
+    def __init__(self, start):
+        self.offset = start - datetime.now(timezone.utc)
 
     def utc_now(self):
         return datetime.now(timezone.utc) + self.offset
@@ -93,9 +93,14 @@ class FakeClock:
         self.offset = moment - datetime.now(timezone.utc)
 
 
-@pytest.fixture()
+# Los tests corren con la hora de la app fija en esta fecha: así la fecha límite de 1 año del fixture `tournament`
+# cae antes de su fecha (2026-11-15) sin importar cuándo se corra la suite.
+TEST_NOW = datetime(2025, 11, 1, 12, 0, tzinfo=timezone.utc)
+
+
+@pytest.fixture(autouse=True)
 def clock(monkeypatch):
-    fake = FakeClock()
+    fake = FakeClock(TEST_NOW)
     monkeypatch.setattr(app_clock, "utc_now", fake.utc_now)
     return fake
 

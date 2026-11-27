@@ -42,8 +42,8 @@ del frontend, avisada a Kike en Notion).
       solo en `draft`); todavía no se inscribe a nadie (`409`).
       [Notion](https://app.notion.com/p/415fae3be03b818fa550dabd0c34074a)
 - [x] **Fecha límite de inscripción** (`registration_deadline`, guardada en UTC; el frontend la muestra en hora de
-      Bolivia): se fija con `PATCH /tournaments/{id}`, siempre futura, y se puede mover mientras no haya vencido;
-      después, `409`.
+      Bolivia): se fija con `PATCH /tournaments/{id}`, siempre futura y antes del día del torneo (en UTC), y se puede
+      mover mientras no haya vencido; después, `409`.
 - [x] **Pasar a Pesaje**: acción nueva `POST /tournaments/{id}/close-registration`, solo desde `registration_open`;
       la fecha límite pasa a ser ahora. Es la forma de cerrar antes (no se pone una fecha pasada con `PATCH`).
 - [x] **Abrir inscripciones**: acción nueva `POST /tournaments/{id}/open-registration`, solo desde `draft` y con una

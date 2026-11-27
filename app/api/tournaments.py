@@ -94,8 +94,9 @@ def get_tournament(tournament_id: Int4, is_admin: bool = Depends(is_admin_reques
     description="Modifica solo los campos que se envían (nombre, fecha, lugar o fecha límite de inscripción). El "
     "estado no se cambia acá: ver `open-registration`, `close-registration`, `start` y `finish`. La fecha límite "
     "(`registration_deadline`) solo se puede cambiar en `draft` o `registration_open` (409 en otro estado, incluido "
-    "`weigh_in`); debe ser futura (422) y llevar zona horaria; `null` la borra, pero solo en `draft` (422 con las "
-    "inscripciones abiertas). Requiere token.",
+    "`weigh_in`); debe ser futura (422), llevar zona horaria y caer antes del día del torneo, contando el día en UTC "
+    "(422; con el torneo en `draft` o `registration_open` tampoco se puede mover la fecha del torneo a ese día o "
+    "antes); `null` la borra, pero solo en `draft` (422 con las inscripciones abiertas). Requiere token.",
     responses=errors(
         {404: "El torneo no existe.", 409: "La fecha límite solo se cambia en `draft` o `registration_open`."},
         auth=True,
@@ -106,6 +107,8 @@ def update_tournament(tournament_id: Int4, payload: TournamentUpdate, db: Sessio
     changes = payload.model_dump(exclude_unset=True)
     if "registration_deadline" in changes:
         changes["registration_deadline"] = _checked_deadline(tournament, changes["registration_deadline"])
+    if changes.keys() & {"date", "registration_deadline"}:
+        _require_deadline_before_tournament_day(tournament, changes)
     for field, value in changes.items():
         setattr(tournament, field, value)
     db.commit()
@@ -129,6 +132,18 @@ def _checked_deadline(tournament: Tournament, deadline: datetime | None) -> date
     if deadline <= clock.utc_now():
         raise HTTPException(status_code=422, detail="La fecha límite de inscripción debe ser futura")
     return deadline.astimezone(timezone.utc).replace(tzinfo=None)
+
+
+def _require_deadline_before_tournament_day(tournament: Tournament, changes: dict) -> None:
+    # Once registration closed the deadline is history: a postponed tournament can still change its date.
+    if tournament.status not in (TournamentStatus.DRAFT, TournamentStatus.REGISTRATION_OPEN):
+        return
+    deadline = changes.get("registration_deadline", tournament.registration_deadline)
+    day = changes.get("date", tournament.date)
+    if deadline is not None and day is not None and deadline.date() >= day:
+        raise HTTPException(
+            status_code=422, detail="La fecha límite de inscripción debe ser anterior al día del torneo (en UTC)"
+        )
 
 
 @router.post(

@@ -89,7 +89,7 @@ REGISTRATION_OPEN_SPECS = [
 
 STAGES = ["draft", "registration_open", "weigh_in", "in_progress", "finished"]
 # `days_to_date`: cuántos días desde hoy es el torneo (negativo: ya se jugó). `deadline_days`: la fecha límite de
-# inscripción, en días desde hoy; en los torneos ya abiertos se la adelanta a ahora con close-registration.
+# inscripción, en días desde hoy; desde el Pesaje se la adelanta a ahora con close-registration.
 TOURNAMENTS = [
     {
         "name": "Copa de Prueba (en preparación)", "location": "La Paz, Bolivia", "stage": "draft",
@@ -103,17 +103,17 @@ TOURNAMENTS = [
     },
     {
         "name": "Copa de Prueba (pesaje)", "location": "Sucre, Bolivia", "stage": "weigh_in",
-        "days_to_date": 14, "deadline_days": 365, "seed": 3, "specs": WEIGH_IN_SPECS,
+        "days_to_date": 14, "deadline_days": 7, "seed": 3, "specs": WEIGH_IN_SPECS,
         "summary": "6 categorías, 19 inscritos (una con 1, dos de Festival sin CI), lista pública",
     },
     {
         "name": "Copa de Prueba (en curso)", "location": "Cochabamba, Bolivia", "stage": "in_progress",
-        "days_to_date": -11, "deadline_days": 365, "seed": 2026, "specs": IN_PROGRESS_SPECS,
+        "days_to_date": -11, "deadline_days": 7, "seed": 2026, "specs": IN_PROGRESS_SPECS,
         "summary": "7 categorías, 47 inscritos: 2 llaves terminadas, 4 a medias y 1 sin empezar",
     },
     {
         "name": "Copa de Prueba (finalizado)", "location": "Tarija, Bolivia", "stage": "finished",
-        "days_to_date": -60, "deadline_days": 365, "seed": 4, "specs": FINISHED_SPECS,
+        "days_to_date": -60, "deadline_days": 7, "seed": 4, "specs": FINISHED_SPECS,
         "summary": "5 categorías, 21 inscritos: 4 llaves terminadas (3, 4, 5 y 8 inscritos) y 1 categoría con 1 inscrito",
     },
 ]
@@ -299,26 +299,31 @@ def seed(env: str) -> None:
     for tournament in TOURNAMENTS:
         stage = STAGES.index(tournament["stage"])
         tournament_date = now.date() + timedelta(days=tournament["days_to_date"])
+        deadline = now + timedelta(days=tournament["deadline_days"])
+        # La fecha límite cae antes del día del torneo: uno ya jugado se crea con una fecha provisoria posterior y
+        # recibe la real en el Pesaje, cuando la fecha límite ya no cuenta.
+        provisional_date = max(tournament_date, deadline.date() + timedelta(days=1))
         print(f"\n«{tournament['name']}»")
         tournament_id = api(
             "POST",
             "/api/v1/tournaments",
-            {"name": tournament["name"], "date": tournament_date.isoformat(), "location": tournament["location"]},
+            {"name": tournament["name"], "date": provisional_date.isoformat(), "location": tournament["location"]},
         )["id"]
-        deadline = (now + timedelta(days=tournament["deadline_days"])).isoformat()
-        api("PATCH", f"/api/v1/tournaments/{tournament_id}", {"registration_deadline": deadline})
+        api("PATCH", f"/api/v1/tournaments/{tournament_id}", {"registration_deadline": deadline.isoformat()})
         if tournament["stage"] == "draft":
             retouch_structure(api, tournament_id)
             continue
 
         api("POST", f"/api/v1/tournaments/{tournament_id}/open-registration")
         data_rng = random.Random(tournament["seed"])
-        entries = [build_category(spec, data_rng, used_cis, tournament_date.year) for spec in tournament["specs"]]
+        entries = [build_category(spec, data_rng, used_cis, provisional_date.year) for spec in tournament["specs"]]
         category_ids = [load_category(api, tournament_id, club_ids, entry) for entry in entries]
         if stage == STAGES.index("registration_open"):
             continue
 
         api("POST", f"/api/v1/tournaments/{tournament_id}/close-registration")
+        if provisional_date != tournament_date:
+            api("PATCH", f"/api/v1/tournaments/{tournament_id}", {"date": tournament_date.isoformat()})
         if stage == STAGES.index("weigh_in"):
             continue
 
