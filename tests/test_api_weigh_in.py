@@ -147,8 +147,16 @@ def test_delete_weigh_in_on_pending_is_idempotent(client, weigh_in_registration)
     assert resp.json()["weigh_in_status"] == "pending"
 
 
-def test_two_decimals_rejected(client, weigh_in_registration):
-    assert _weigh(client, weigh_in_registration, 40.55).status_code == 422
+@pytest.mark.parametrize(
+    ("weight", "status"), [(37.1, "cleared"), (41.0, "cleared"), (37.0, "failed_first"), (41.1, "failed_first")]
+)
+def test_the_category_limits_are_inclusive_and_without_tolerance(client, weigh_in_registration, weight, status):
+    assert _weigh(client, weigh_in_registration, weight).json()["weigh_in_status"] == status
+
+
+@pytest.mark.parametrize("weight", [40.55, 0, -1])
+def test_invalid_weights_rejected(client, weigh_in_registration, weight):
+    assert _weigh(client, weigh_in_registration, weight).status_code == 422
 
 
 def test_unknown_registration_404(client, tournament, set_tournament_status):
