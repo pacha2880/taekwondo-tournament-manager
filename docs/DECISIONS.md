@@ -701,6 +701,23 @@ endpoint con dos formas es fácil de romper»): la forma de la respuesta es la m
 **Pesaje sin tolerancia.** No se aplican los 100 g del Art. 9 de WT. Si el primer pesaje no entra, el admin elige
 segundo pesaje o descalificación; si el segundo no entra, queda descalificado.
 
+**`start` cierra el pesaje.** Los `pending` pasan a `no_show` (no se presentaron) y los que quedaron sin decidir
+(`failed_first`, `second_allowed`) a `disqualified`: pesaron fuera de la categoría y no pasaron un segundo pesaje. `start`
+devuelve a los `no_show` para que el frontend los muestre.
+
+**El pesaje se puede reiniciar mientras el torneo está en Pesaje.** `DELETE /registrations/{id}/weigh-in` vuelve la
+inscripción a `pending` y borra los pesos, para corregir un tipeo (decisión del usuario). Tras `start` ya no.
+
+**El estado del pesaje es público desde el Pesaje; los kilos nunca.** `GET /categories/{id}/registrants` suma
+`weigh_in_status`, pero los pesos solo salen con token (hay menores).
+
+**Editar el peso declarado sigue dando 409 si deja de encajar.** En Pesaje o En curso el atleta no puede cambiar su
+`weight_kg` a uno que no encaje en su categoría, aunque el peso oficial ya sea el del pesaje. Se dejó como estaba por
+YAGNI.
+
+**La migración `a7c2e41d9b35` deja en `pending` las inscripciones de torneos en curso o finalizados.** No se convierten
+a `cleared`: no hay datos reales (producción vacía desde 2026-11-26, `dev` se recarga con el seed).
+
 **Los descalificados van en la llave y no ganan nada.** El sorteo los empareja primero con habilitados, para que el
 descalificado pierda contra alguien que sigue. Entre dos descalificados no avanza nadie (se descartó que avance uno
 al azar: un descalificado aparecería en rondas siguientes). Si todos quedan descalificados, no hay ganador ni puntos.

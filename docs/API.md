@@ -16,7 +16,7 @@ de ejemplo.
 ## Acceso
 
 Lecturas **públicas**: torneos, categorías, clubes, llaves, combates y la lista de inscritos de cada
-categoría (solo nombre y club), salvo los torneos en preparación y los inscritos antes del Pesaje (ver «Qué se ve sin
+categoría (nombre, club y estado del pesaje, nunca los kilos), salvo los torneos en preparación y los inscritos antes del Pesaje (ver «Qué se ve sin
 token» en «Ciclo de vida de un torneo»). Todo `POST`, `PUT`, `PATCH` y `DELETE` y las
 lecturas de **atletas e inscripciones** piden `Authorization: Bearer <token>` (esas respuestas
 incluyen fecha de nacimiento y peso, y hay menores). El token se obtiene en
@@ -169,9 +169,12 @@ que ocurre solo al vencer la fecha límite:
   (`weigh_in` en adelante), `409`. `null` la borra, solo en `draft`.
 - **`weigh_in` (pesaje):** el torneo entra solo cuando vence la fecha límite; no hace falta ninguna acción. Para
   cerrar antes, `POST /api/v1/tournaments/{id}/close-registration` (el botón «Pasar a Pesaje»): la fecha límite
-  pasa a ser ahora. Solo desde `registration_open`.
-- `POST /api/v1/tournaments/{id}/start`: de `weigh_in` a `in_progress` (desde cualquier otro estado, `409`). Con el
-  torneo en curso se generan las llaves y se cargan los resultados; en otro estado ambas cosas responden `409`.
+  pasa a ser ahora. Solo desde `registration_open`. En este estado se pesa (ver «Pesaje»).
+- `POST /api/v1/tournaments/{id}/start`: de `weigh_in` a `in_progress` (desde cualquier otro estado, `409`). Cierra el
+  pesaje: los `pending` pasan a `no_show` y los que quedaron sin decidir (`failed_first`, `second_allowed`) a
+  `disqualified`. La respuesta es el torneo más `not_weighed_in`, la lista de los que quedaron en `no_show` con este
+  inicio (inscripción, atleta, nombre, club y categoría), para mostrarla. Con el torneo en curso se generan las llaves y
+  se cargan los resultados; en otro estado ambas cosas responden `409`.
 - `POST /api/v1/tournaments/{id}/finish`: de `in_progress` a `finished`, los resultados quedan como
   definitivos. Exige que no queden combates por jugar: si falta alguno responde `409` y `detail` nombra las
   categorías pendientes.
@@ -189,6 +192,23 @@ que ocurre solo al vencer la fecha límite:
 La vista pública del frontend no muestra los torneos en preparación ni los inscritos antes del Pesaje aunque haya
 sesión de admin. Mientras una categoría no tiene llave, lo que se muestra al público es la lista de inscritos: con
 `has_bracket` y `/registrants` (ver «Recorrer los datos»).
+
+### Pesaje
+
+El peso oficial vive en la inscripción (`weigh_in_status`, `first_weight_kg`, `second_weight_kg`); el `weight_kg` del
+atleta queda como el peso declarado. Todo esto exige token y torneo en `weigh_in` (`409` en otro estado). Los límites de
+la categoría son inclusivos y no hay tolerancia. Que el atleta no entre no es un error: responde `200` y el estado lo dice.
+
+1. `POST /api/v1/registrations/{id}/weigh-in` con `{"weight_kg": 48.3}` (un decimal): si entra, `cleared`; si no,
+   `failed_first`.
+2. Con `failed_first` el admin elige (las confirmaciones son del frontend): `POST .../second-weigh-in` (pasa a
+   `second_allowed`) o `POST .../disqualify` (pasa a `disqualified`).
+3. Con `second_allowed`, otro `POST .../weigh-in`: si entra, `cleared`; si no, `disqualified`.
+4. `DELETE .../weigh-in` corrige un error de carga: vuelve la inscripción a `pending` y borra los dos pesos.
+
+Las inscripciones de Festival nacen en `not_required` (no se pesa) y estas acciones responden `409`. Un estado que no
+admite la acción también da `409`, con `detail` explicando el estado. El estado del pesaje es público desde el Pesaje
+(`GET /categories/{id}/registrants`); los kilos solo con token.
 
 ## Errores
 
@@ -219,6 +239,7 @@ Viajan en inglés; para mostrarlos al usuario, esta es la traducción sugerida:
 | Campo | Valor | Se muestra como |
 |---|---|---|
 | `status` de un torneo | `draft` / `registration_open` / `weigh_in` / `in_progress` / `finished` | En preparación / Inscripciones abiertas / Pesaje / En curso / Finalizado |
+| `weigh_in_status` de una inscripción | `pending` / `failed_first` / `second_allowed` / `cleared` / `disqualified` / `no_show` / `not_required` | Sin pesar / No entró en el primer pesaje / Segundo pesaje habilitado / Habilitado / Descalificado / No se presentó / No se pesa (Festival) |
 | `status` de un combate | `pending` / `bye` / `finished` | Pendiente / Pase directo / Finalizado |
 | `gender` | `male` / `female` | Masculino / Femenino |
 | `grade` de un atleta | `kup_10` … `kup_1` / `dan` | 10mo Kup … 1er Kup / Dan |
@@ -255,8 +276,10 @@ CATEGORY=$(curl -s "$BASE/api/v1/athletes/1/eligible-categories?tournament_id=1"
   | python3 -c "import json,sys; print(json.load(sys.stdin)[0]['id'])")
 curl -s -X POST $BASE/api/v1/registrations -H "$AUTH" -H "$JSON" -d "{\"athlete_id\": 1, \"category_id\": $CATEGORY}"
 
-# 4) Pasar a Pesaje (o esperar a la fecha límite), iniciar el torneo, generar la llave y consultarla (pública)
+# 4) Pasar a Pesaje (o esperar a la fecha límite), pesar a cada inscrito (la inscripción 1 es la del paso 3), iniciar
+#    el torneo, generar la llave y consultarla (pública)
 curl -s -X POST $BASE/api/v1/tournaments/1/close-registration -H "$AUTH"
+curl -s -X POST $BASE/api/v1/registrations/1/weigh-in -H "$AUTH" -H "$JSON" -d '{"weight_kg": 38.5}'
 curl -s -X POST $BASE/api/v1/tournaments/1/start -H "$AUTH"
 curl -s -X POST $BASE/api/v1/categories/$CATEGORY/bracket -H "$AUTH"
 curl -s $BASE/api/v1/categories/$CATEGORY/bracket

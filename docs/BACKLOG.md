@@ -64,15 +64,17 @@ del frontend, avisada a Kike en Notion).
 
 ### Bloque 2 — Pesaje
 
-- [ ] **Pesaje oficial en la inscripción**, no en el atleta (`weight_kg` queda como el peso declarado). Solo en
+- [x] **Pesaje oficial en la inscripción**, no en el atleta (`weight_kg` queda como el peso declarado). Solo en
       `weigh_in`. Sin tolerancia. [Notion](https://app.notion.com/p/415fae3be03b8125a671c9bf214adff8)
+      Hecho: estados `pending`, `failed_first`, `second_allowed`, `cleared`, `disqualified`, `no_show` y
+      `not_required`; `DELETE .../weigh-in` corrige un error de carga; el estado es público, los kilos no.
   - Primer pesaje: si entra en su categoría, queda habilitado. Si no, el admin elige: habilitar un segundo pesaje o
     descalificarlo directo (DSQ, Art. 16 de WT).
   - Segundo pesaje: si no entra, queda descalificado directo.
   - No se lo pasa a otra categoría. Las confirmaciones («¿habilitar segundo pesaje?», «¿seguro?») son del frontend.
-- [ ] **No presentado**: al iniciar el torneo, quien no quedó habilitado queda descalificado, y `start` devuelve la
+- [x] **No presentado**: al iniciar el torneo, quien no quedó habilitado queda descalificado, y `start` devuelve la
       lista de los que no se pesaron para mostrarla.
-- [ ] Festival no tiene divisiones de peso: no necesita pesaje.
+- [x] Festival no tiene divisiones de peso: no necesita pesaje (`not_required`).
 
 ### Bloque 3 — Llaves al iniciar
 
