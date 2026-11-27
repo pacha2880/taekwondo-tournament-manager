@@ -301,7 +301,8 @@ def seed(env: str) -> None:
         tournament_date = now.date() + timedelta(days=tournament["days_to_date"])
         deadline = now + timedelta(days=tournament["deadline_days"])
         # La fecha límite cae antes del día del torneo: uno ya jugado se crea con una fecha provisoria posterior y
-        # recibe la real en el Pesaje, cuando la fecha límite ya no cuenta.
+        # recibe la real en el Pesaje, cuando la fecha límite ya no cuenta. Las edades salen del año provisorio, que es
+        # el que valida la inscripción: si la fecha real cae en otro año, quedan corridas un año (solo es la demo).
         provisional_date = max(tournament_date, deadline.date() + timedelta(days=1))
         print(f"\n«{tournament['name']}»")
         tournament_id = api(

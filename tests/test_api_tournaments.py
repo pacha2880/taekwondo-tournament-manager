@@ -196,6 +196,13 @@ def test_the_tournament_date_cannot_move_onto_the_deadline_while_registration_is
     assert client.get(url).json()["date"] == "2026-11-15"
 
 
+def test_patch_rejects_emptying_a_required_field(client, draft_tournament):
+    resp = client.patch(f"/api/v1/tournaments/{draft_tournament['id']}", json={"date": None, "name": None})
+
+    assert resp.status_code == 422
+    assert resp.json()["detail"] == "Estos campos no pueden quedar vacíos: name, date"
+
+
 def test_date_and_deadline_are_checked_together_in_the_same_patch(client, tournament):
     resp = client.patch(
         f"/api/v1/tournaments/{tournament['id']}",

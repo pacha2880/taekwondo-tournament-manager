@@ -34,6 +34,9 @@ funcionando sobre una base ya migrada. Única excepción: la migración que borr
   fecha límite pasa a ser ahora).
 - `weigh_in` se calcula al leer: un torneo con inscripciones abiertas pasa solo a Pesaje cuando vence la fecha límite.
 
+### Fixed
+- `PATCH /api/v1/tournaments/{id}` con `null` en `name`, `date` o `location` respondía `500`; ahora `422`.
+
 ### Migración
 - `f1a9d3b72c60` solo agrega `tournaments.registration_deadline` y los estados nuevos; no convierte datos. Un torneo
   `draft` que ya existía queda en preparación y sin fecha límite. Tras desplegar, `dev` se recarga con

@@ -105,6 +105,9 @@ def get_tournament(tournament_id: Int4, is_admin: bool = Depends(is_admin_reques
 def update_tournament(tournament_id: Int4, payload: TournamentUpdate, db: Session = Depends(get_db)):
     tournament = get_tournament_or_404(db, tournament_id)
     changes = payload.model_dump(exclude_unset=True)
+    emptied = [field for field in ("name", "date", "location") if field in changes and changes[field] is None]
+    if emptied:
+        raise HTTPException(status_code=422, detail=f"Estos campos no pueden quedar vacíos: {', '.join(emptied)}")
     if "registration_deadline" in changes:
         changes["registration_deadline"] = _checked_deadline(tournament, changes["registration_deadline"])
     if changes.keys() & {"date", "registration_deadline"}:
@@ -140,7 +143,7 @@ def _require_deadline_before_tournament_day(tournament: Tournament, changes: dic
         return
     deadline = changes.get("registration_deadline", tournament.registration_deadline)
     day = changes.get("date", tournament.date)
-    if deadline is not None and day is not None and deadline.date() >= day:
+    if deadline is not None and deadline.date() >= day:
         raise HTTPException(
             status_code=422, detail="La fecha límite de inscripción debe ser anterior al día del torneo (en UTC)"
         )
