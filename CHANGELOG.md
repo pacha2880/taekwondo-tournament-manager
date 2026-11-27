@@ -12,6 +12,11 @@ funcionando sobre una base ya migrada. Única excepción: la migración que borr
 
 ## [Unreleased]
 
+## [0.9.0-alpha.1] - 2026-11-27
+
+Primera parte de la 0.9.0 (bloque 1 del BACKLOG): estados, fecha límite y visibilidad. El Pesaje (bloque 2) y las
+llaves al iniciar (bloque 3) llegan en las siguientes.
+
 ### Changed (incompatible)
 - **Ciclo nuevo del torneo:** `draft` (en preparación) → `registration_open` → `weigh_in` (pesaje) → `in_progress` →
   `finished`, un solo camino. `draft` ya no admite inscripciones: `POST` y `DELETE /api/v1/registrations` solo
@@ -309,7 +314,8 @@ https://taekwondo-tournament-manager.onrender.com.
 - `pool_pre_ping=True` en la conexión a la base de datos: Neon suspende el cómputo por
   inactividad y la primera conexión tras un rato inactivo pudo fallar con un error 500.
 
-[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.8.2...HEAD
+[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.9.0-alpha.1...HEAD
+[0.9.0-alpha.1]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.8.2...v0.9.0-alpha.1
 [0.8.2]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.7.0...v0.8.0
