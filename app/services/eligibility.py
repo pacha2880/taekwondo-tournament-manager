@@ -2,14 +2,21 @@ from app.models import Category
 from app.services.category_structure import GRADES, grade_range
 
 
+def weight_mismatch(weight_kg: float, category: Category) -> str | None:
+    if category.min_weight is not None and weight_kg < category.min_weight:
+        return "El peso del atleta es menor al mínimo de la categoría"
+    if category.max_weight is not None and weight_kg > category.max_weight:
+        return "El peso del atleta es mayor al máximo de la categoría"
+    return None
+
+
 def category_mismatch(athlete, category: Category) -> str | None:
     """`athlete` es cualquier objeto con gender, weight_kg, grade y birth_date (un Athlete o los valores propuestos)."""
     if athlete.gender != category.gender:
         return "El género del atleta no coincide con el de la categoría"
-    if category.min_weight is not None and athlete.weight_kg < category.min_weight:
-        return "El peso del atleta es menor al mínimo de la categoría"
-    if category.max_weight is not None and athlete.weight_kg > category.max_weight:
-        return "El peso del atleta es mayor al máximo de la categoría"
+    mismatch = weight_mismatch(athlete.weight_kg, category)
+    if mismatch:
+        return mismatch
 
     # Edad por año de nacimiento (Art. 4 WT).
     age = category.tournament.date.year - athlete.birth_date.year

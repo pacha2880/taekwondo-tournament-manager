@@ -8,7 +8,7 @@ from typing import Annotated
 
 from pydantic import AfterValidator, AwareDatetime, BaseModel, ConfigDict, Field, field_validator
 
-from app.models import Discipline, Gender, Grade, MatchStatus, TournamentStatus
+from app.models import Discipline, Gender, Grade, MatchStatus, TournamentStatus, WeighInStatus
 
 
 # Postgres `Integer` (int4). SQLite doesn't enforce it, so a bigger number passed the tests and was a 500 in Postgres.
@@ -452,3 +452,12 @@ class RegistrationRead(RegistrationBase):
     id: int = Field(description="Identificador de la inscripción.")
     athlete: AthleteRead = Field(description="Datos del atleta inscrito.")
     category: CategoryRead = Field(description="Datos de la categoría.")
+    weigh_in_status: WeighInStatus = Field(description="Estado del pesaje de la inscripción.")
+    first_weight_kg: float | None = Field(description="Peso del primer pesaje en kg. `null` si todavía no se pesó.")
+    second_weight_kg: float | None = Field(description="Peso del segundo pesaje en kg. `null` si no hubo segundo pesaje.")
+
+
+class WeighInCreate(BaseModel):
+    weight_kg: WeightKg = Field(
+        gt=0, description="Peso medido en la balanza, en kilogramos, con un decimal como máximo.", examples=[48.3]
+    )

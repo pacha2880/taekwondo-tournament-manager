@@ -12,6 +12,16 @@ funcionando sobre una base ya migrada. Única excepción: la migración que borr
 
 ## [Unreleased]
 
+### Added
+- **Pesaje oficial en la inscripción** (solo con el torneo en `weigh_in`, sin tolerancia): las inscripciones suman
+  `weigh_in_status`, `first_weight_kg` y `second_weight_kg`; el `weight_kg` del atleta queda como peso declarado.
+  `POST /api/v1/registrations/{id}/weigh-in` carga el primer o el segundo peso; si el primero no entra, el admin
+  elige `POST .../second-weigh-in` o `POST .../disqualify`; `DELETE .../weigh-in` borra el pesaje para corregir un
+  error. Festival no se pesa (`not_required`).
+
+### Migración
+- `a7c2e41d9b35` agrega el estado y los pesos del pesaje a las inscripciones (las de Festival quedan `not_required`).
+
 ## [0.9.0-alpha.1] - 2026-11-27
 
 Primera parte de la 0.9.0 (bloque 1 del BACKLOG): estados, fecha límite y visibilidad. El Pesaje (bloque 2) y las

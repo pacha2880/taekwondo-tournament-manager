@@ -63,6 +63,21 @@ class MatchStatus(str, enum.Enum):
     FINISHED = "finished"
 
 
+class WeighInStatus(str, enum.Enum):
+    """Estado del pesaje de una inscripción: `pending` (sin pesar), `failed_first` (no entró en el peso de su categoría
+    en el primer pesaje; espera la decisión del admin), `second_allowed` (segundo pesaje habilitado), `cleared`
+    (habilitado para competir), `disqualified` (descalificado por peso), `no_show` (no se presentó al pesaje) y
+    `not_required` (Festival: no se pesa)."""
+
+    PENDING = "pending"
+    FAILED_FIRST = "failed_first"
+    SECOND_ALLOWED = "second_allowed"
+    CLEARED = "cleared"
+    DISQUALIFIED = "disqualified"
+    NO_SHOW = "no_show"
+    NOT_REQUIRED = "not_required"
+
+
 def current_status(
     stored_status: TournamentStatus, registration_deadline: datetime | None, now: datetime
 ) -> TournamentStatus:
@@ -226,6 +241,11 @@ class Registration(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     athlete_id: Mapped[int] = mapped_column(ForeignKey("athletes.id"), nullable=False)
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"), nullable=False)
+    weigh_in_status: Mapped[WeighInStatus] = mapped_column(
+        Enum(WeighInStatus), nullable=False, default=WeighInStatus.PENDING, server_default=WeighInStatus.PENDING.name
+    )
+    first_weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
+    second_weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     athlete: Mapped["Athlete"] = relationship(back_populates="registrations")
     category: Mapped["Category"] = relationship(back_populates="registrations")
