@@ -78,19 +78,23 @@ def club(client):
 
 
 class FakeClock:
-    """Hora real más un desfase, para poder adelantarla sin dejar de avanzar."""
+    """Hora quieta: solo cambia con `advance` o `set`.
+
+    No sigue la hora real porque el reloj de WSL a veces retrocede al resincronizarse, y entonces un torneo recién
+    pasado a Pesaje (fecha límite = ahora) volvía a parecer abierto.
+    """
 
     def __init__(self, start):
-        self.offset = start - datetime.now(timezone.utc)
+        self.now = start
 
     def utc_now(self):
-        return datetime.now(timezone.utc) + self.offset
+        return self.now
 
     def advance(self, **delta):
-        self.offset += timedelta(**delta)
+        self.now += timedelta(**delta)
 
     def set(self, moment):
-        self.offset = moment - datetime.now(timezone.utc)
+        self.now = moment
 
 
 # Los tests corren con la hora de la app fija en esta fecha: así la fecha límite de 1 año del fixture `tournament`
