@@ -38,7 +38,7 @@ Para una vista pública alcanza con tres llamadas sin token:
    con las partes.
 3. Según el campo `has_bracket` de la categoría:
    - `true`: `GET /api/v1/categories/{id}/bracket` — la llave.
-   - `false`: `GET /api/v1/categories/{id}/registrants` — los inscritos, solo con nombre y club, ordenados por
+   - `false`: `GET /api/v1/categories/{id}/registrants` — los inscritos, con nombre, club y estado del pesaje (`weigh_in_status`), ordenados por
      nombre. (La llave responde `404` mientras no se haya sorteado.) Antes del Pesaje (torneo en
      `registration_open`) la lista no es pública y responde `403`: en vez de pedirla, mostrar algo como «Lista
      disponible al cerrar las inscripciones».

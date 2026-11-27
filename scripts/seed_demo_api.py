@@ -209,7 +209,9 @@ def weigh_in_registrations(api, tournament_id: int, cases: list[str] = ()) -> No
         if case == "cleared":
             api("POST", f"{path}/weigh-in", declared)
             continue
-        api("POST", f"{path}/weigh-in", {"weight_kg": round(registration["category"]["max_weight"] + OVERWEIGHT_KG, 1)})
+        max_weight = registration["category"]["max_weight"]
+        assert max_weight is not None, "Para forzar un pesaje fallido hace falta una categoría con peso máximo"
+        api("POST", f"{path}/weigh-in", {"weight_kg": round(max_weight + OVERWEIGHT_KG, 1)})
         if case == "disqualified":
             api("POST", f"{path}/disqualify")
         elif case in ("second_allowed", "second_cleared"):
