@@ -28,7 +28,9 @@ def test_registrants_are_public_sorted_by_name_and_only_with_name_and_club(
 
     assert resp.status_code == 200
     assert [r["name"] for r in resp.json()] == ["Atleta 0", "Atleta 1", "Juan Perez"]
-    assert resp.json()[-1] == {"athlete_id": athlete["id"], "name": "Juan Perez", "club": "Dojang Central"}
+    assert resp.json()[-1] == {
+        "athlete_id": athlete["id"], "name": "Juan Perez", "club": "Dojang Central", "weigh_in_status": "pending"
+    }
 
 
 def test_registrants_of_a_missing_category_is_404(anon_client):

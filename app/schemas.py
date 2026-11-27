@@ -196,6 +196,26 @@ class TournamentRead(TournamentBase):
         return value.replace(tzinfo=datetime.timezone.utc) if value is not None and value.tzinfo is None else value
 
 
+class NotWeighedInRead(BaseModel):
+    """Inscripción que no se presentó al pesaje: solo datos públicos, sin CI, fecha de nacimiento ni peso."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    registration_id: int = Field(description="Id de la inscripción.")
+    athlete_id: int = Field(description="Id del atleta.")
+    name: str = Field(description="Nombre del atleta.", examples=["Mateo Quispe Mamani"])
+    club: str = Field(description="Nombre del club del atleta.", examples=["Dojang Central"])
+    category_id: int = Field(description="Id de la categoría en la que estaba inscrito.")
+    category_name: str = Field(description="Nombre completo de la categoría.", examples=["Principiantes · Cadete · Masculino · 37.1–41 kg"])
+
+
+class TournamentStartRead(TournamentRead):
+    not_weighed_in: list[NotWeighedInRead] = Field(
+        description="Inscripciones que no se presentaron al pesaje (`pending`) y quedaron en `no_show` con este "
+        "inicio, ordenadas por categoría y nombre. Vacía si todos se pesaron."
+    )
+
+
 class CategoryBase(BaseModel):
     tournament_id: Int4Id = Field(description="Id del torneo al que pertenece la categoría. El torneo debe existir.")
     discipline: Discipline = Field(
@@ -365,13 +385,14 @@ class CategoryStructureResult(CategoryStructureRead):
 
 
 class RegistrantRead(BaseModel):
-    """Inscrito de una categoría, solo con datos públicos: sin CI, fecha de nacimiento ni peso."""
+    """Inscrito de una categoría, solo con datos públicos: sin CI, fecha de nacimiento ni peso (solo el estado del pesaje)."""
 
     model_config = ConfigDict(from_attributes=True)
 
     athlete_id: int = Field(description="Id del atleta.")
     name: str = Field(description="Nombre del atleta.", examples=["Mateo Quispe Mamani"])
     club: str = Field(description="Nombre del club del atleta.", examples=["Dojang Central"])
+    weigh_in_status: WeighInStatus = Field(description="Estado del pesaje de la inscripción. Nunca los kilos.")
 
 
 class RoundScoreCreate(BaseModel):

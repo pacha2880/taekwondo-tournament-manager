@@ -4,7 +4,7 @@ import re
 
 from tests.test_api_auth import OPTIONAL_TOKEN_ENDPOINTS, PUBLIC_ENDPOINTS
 
-SENSITIVE_FIELDS = {"birth_date", "weight_kg", "ci", "height_cm"}
+SENSITIVE_FIELDS = {"birth_date", "weight_kg", "first_weight_kg", "second_weight_kg", "ci", "height_cm"}
 
 
 def _keys(value):
@@ -40,3 +40,16 @@ def test_public_endpoints_never_return_sensitive_athlete_fields(
         assert resp.status_code == 200, (path, resp.status_code)
         exposed = SENSITIVE_FIELDS & set(_keys(resp.json()))
         assert not exposed, f"{path} devuelve datos personales: {sorted(exposed)}"
+
+
+def test_public_registrants_show_the_weigh_in_status_but_never_the_weights(
+    client, anon_client, club, category, register_n_athletes, set_tournament_status
+):
+    (registration,) = register_n_athletes(client, club, category, 1)
+    set_tournament_status(client, category["tournament_id"], "weigh_in")
+    client.post(f"/api/v1/registrations/{registration['id']}/weigh-in", json={"weight_kg": 40})
+
+    (registrant,) = anon_client.get(f"/api/v1/categories/{category['id']}/registrants").json()
+
+    assert registrant["weigh_in_status"] == "cleared"
+    assert not {"first_weight_kg", "second_weight_kg", "weight_kg"} & registrant.keys()

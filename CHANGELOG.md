@@ -18,6 +18,10 @@ funcionando sobre una base ya migrada. Única excepción: la migración que borr
   `POST /api/v1/registrations/{id}/weigh-in` carga el primer o el segundo peso; si el primero no entra, el admin
   elige `POST .../second-weigh-in` o `POST .../disqualify`; `DELETE .../weigh-in` borra el pesaje para corregir un
   error. Festival no se pesa (`not_required`).
+- `POST /api/v1/tournaments/{id}/start` cierra el pesaje: las inscripciones en `pending` pasan a `no_show` y las que
+  quedaron en `failed_first` o `second_allowed`, a `disqualified`. La respuesta suma `not_weighed_in` (los que
+  quedaron en `no_show` con este inicio).
+- `GET /api/v1/categories/{id}/registrants` suma `weigh_in_status` (nunca los kilos).
 
 ### Migración
 - `a7c2e41d9b35` agrega el estado y los pesos del pesaje a las inscripciones (las de Festival quedan `not_required`).
