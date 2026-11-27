@@ -18,10 +18,11 @@ def test_list_categories_without_filter_returns_all(client, category):
 
 
 def test_registrants_are_public_sorted_by_name_and_only_with_name_and_club(
-    anon_client, client, club, athlete, category, register_n_athletes
+    anon_client, client, club, athlete, category, register_n_athletes, set_tournament_status
 ):
     register_n_athletes(client, club, category, 2)
     client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
+    set_tournament_status(client, category["tournament_id"], "weigh_in")
 
     resp = anon_client.get(f"/api/v1/categories/{category['id']}/registrants")
 

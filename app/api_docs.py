@@ -23,7 +23,9 @@ inscripciones, llaves de eliminación simple con pases directos (*byes*) y resul
 
 ## Autenticación
 
-Las lecturas de **torneos, categorías, clubes, llaves y combates son públicas**. Todo lo que escribe
+Las lecturas de **torneos, categorías, clubes, llaves y combates son públicas**, salvo dos cosas que sin token no
+se ven: los torneos en preparación (`draft`, responden 404) y la lista de inscritos antes del Pesaje (403). Con token
+esas mismas lecturas devuelven todo; un token inválido o vencido responde 401 también ahí. Todo lo que escribe
 (`POST`, `PUT`, `PATCH` y `DELETE`) y las lecturas de **atletas e inscripciones** (llevan fecha de nacimiento y peso, y
 hay menores) requieren un token:
 
@@ -53,7 +55,7 @@ Las rutas, los nombres de los campos y los valores de los enums están en inglé
 
 TAGS_METADATA = [
     {"name": TAG_AUTH, "description": "Inicio de sesión para obtener el token que piden los endpoints protegidos."},
-    {"name": TAG_TOURNAMENTS, "description": "Torneos y su estado (`draft`, `in_progress`, `finished`)."},
+    {"name": TAG_TOURNAMENTS, "description": "Torneos y su estado (`draft`, `registration_open`, `weigh_in`, `in_progress`, `finished`)."},
     {
         "name": TAG_CATEGORIES,
         "description": "Categorías de un torneo, definidas por edad, género, cinturón y peso.",

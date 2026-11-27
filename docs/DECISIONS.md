@@ -674,11 +674,17 @@ para lo que venga. Consecuencia: sobre una base migrada ya no se puede volver a 
 Spec en `docs/BACKLOG.md` (0.9.0). Lo no obvio:
 
 **Siempre se pasa por el Pesaje.** `start` solo funciona desde Pesaje. Con un atajo desde Inscripciones abiertas habría
-dos caminos y el pesaje (con sus descalificaciones) se podría saltar sin querer. Para cerrar antes, el admin adelanta
-la fecha límite.
+dos caminos y el pesaje (con sus descalificaciones) se podría saltar sin querer. Para cerrar antes, el admin usa «Pasar a Pesaje»
+(`close-registration`), que pone la fecha límite en ahora. Es una acción explícita como `start` y `finish`, deja en
+la base cuándo se cerró de verdad, y así el `PATCH` de la fecha límite acepta solo fechas futuras.
 
 **La fecha límite es obligatoria para abrir y se mueve solo hasta que vence.** Moverla después reabriría
 inscripciones con la lista ya publicada y pesajes cargados; el estado solo avanza, como desde la 0.6.0.
+
+**La fecha límite cae antes del día del torneo, contado en UTC.** El torneo tiene solo fecha, sin hora ni zona, y la
+fecha límite se guarda en UTC; comparar en UTC evita guardar la zona del torneo (en Bolivia el tope es las 19:59 de la
+víspera, sin problema porque el pesaje va antes del torneo). La regla vale solo mientras la fecha límite se puede
+mover: después es historia, y un torneo postergado tiene que poder cambiar su fecha.
 
 **Pesaje calculado, no guardado.** El torneo entra en Pesaje cuando vence la fecha: el estado se calcula al leer, con
 una función pura del torneo y la hora. Sin cron ni escrituras al leer.

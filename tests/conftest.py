@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
@@ -6,6 +7,7 @@ from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app import clock as app_clock
 from app.auth import create_access_token
 from app.database import Base, get_db
 from app.main import app
@@ -75,13 +77,48 @@ def club(client):
     return resp.json()
 
 
+class FakeClock:
+    """Hora real más un desfase, para poder adelantarla sin dejar de avanzar."""
+
+    def __init__(self, start):
+        self.offset = start - datetime.now(timezone.utc)
+
+    def utc_now(self):
+        return datetime.now(timezone.utc) + self.offset
+
+    def advance(self, **delta):
+        self.offset += timedelta(**delta)
+
+    def set(self, moment):
+        self.offset = moment - datetime.now(timezone.utc)
+
+
+# Los tests corren con la hora de la app fija en esta fecha: así la fecha límite de 1 año del fixture `tournament`
+# cae antes de su fecha (2026-11-15) sin importar cuándo se corra la suite.
+TEST_NOW = datetime(2025, 11, 1, 12, 0, tzinfo=timezone.utc)
+
+
+@pytest.fixture(autouse=True)
+def clock(monkeypatch):
+    fake = FakeClock(TEST_NOW)
+    monkeypatch.setattr(app_clock, "utc_now", fake.utc_now)
+    return fake
+
+
 @pytest.fixture()
-def tournament(client):
+def draft_tournament(client):
     resp = client.post(
         "/api/v1/tournaments",
         json={"name": "Copa Nacional", "date": "2026-11-15", "location": "San Salvador"},
     )
     return resp.json()
+
+
+@pytest.fixture()
+def tournament(client, draft_tournament, set_tournament_status):
+    """Torneo con las inscripciones abiertas (fecha límite a 1 año): el caso de casi todos los tests."""
+    set_tournament_status(client, draft_tournament["id"], "registration_open")
+    return client.get(f"/api/v1/tournaments/{draft_tournament['id']}").json()
 
 
 @pytest.fixture()
@@ -131,9 +168,15 @@ def athlete(client, club):
 @pytest.fixture()
 def set_tournament_status():
     def _set(client, tournament_id, status):
-        actions = {"draft": [], "in_progress": ["start"], "finished": ["start", "finish"]}[status]
-        for action in actions:
-            resp = client.post(f"/api/v1/tournaments/{tournament_id}/{action}")
+        url = f"/api/v1/tournaments/{tournament_id}"
+        stages = ["draft", "registration_open", "weigh_in", "in_progress", "finished"]
+        actions = ["open-registration", "close-registration", "start", "finish"]
+        pending = actions[stages.index(client.get(url).json()["status"]) : stages.index(status)]
+        if "open-registration" in pending:
+            deadline = (app_clock.utc_now() + timedelta(days=365)).isoformat()
+            assert client.patch(url, json={"registration_deadline": deadline}).status_code == 200
+        for action in pending:
+            resp = client.post(f"{url}/{action}")
             assert resp.status_code == 200, resp.json()
 
     return _set
@@ -141,11 +184,13 @@ def set_tournament_status():
 
 @pytest.fixture()
 def generate_bracket():
-    """Sortea la llave de la categoría, iniciando antes el torneo si todavía está en borrador."""
+    """Sortea la llave de la categoría, llevando antes el torneo a `in_progress` si todavía no está."""
 
     def _generate(client, category):
         tournament_url = f"/api/v1/tournaments/{category['tournament_id']}"
-        if client.get(tournament_url).json()["status"] == "draft":
+        if client.get(tournament_url).json()["status"] == "registration_open":
+            assert client.post(f"{tournament_url}/close-registration").status_code == 200
+        if client.get(tournament_url).json()["status"] == "weigh_in":
             assert client.post(f"{tournament_url}/start").status_code == 200
         return client.post(f"/api/v1/categories/{category['id']}/bracket")
 

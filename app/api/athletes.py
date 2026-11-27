@@ -47,17 +47,17 @@ def _withdraw_registrations_that_no_longer_fit(db: Session, athlete: Athlete, ch
 
     for registration in athlete.registrations:
         tournament = registration.category.tournament
-        if tournament.status == TournamentStatus.IN_PROGRESS and category_mismatch(proposed, registration.category):
+        if tournament.status in (TournamentStatus.WEIGH_IN, TournamentStatus.IN_PROGRESS) and category_mismatch(proposed, registration.category):
             raise HTTPException(
                 status_code=409,
                 detail="No se puede hacer este cambio: el atleta dejaría de encajar en su categoría "
-                f"del torneo en curso «{tournament.name}»",
+                f"del torneo «{tournament.name}»",
             )
 
     no_longer_fit = [
         registration
         for registration in athlete.registrations
-        if registration.category.tournament.status == TournamentStatus.DRAFT
+        if registration.category.tournament.status == TournamentStatus.REGISTRATION_OPEN
         and category_mismatch(proposed, registration.category)
     ]
     if not no_longer_fit:
@@ -163,8 +163,8 @@ def list_eligible_categories(
     description=(
         "Modifica solo los campos que se envían (un `null` en un campo que no sea `ci` ni `height_cm` se ignora). `ci` con "
         "`null` o texto vacío lo borra; `height_cm` con `null` también. Si el cambio de **género, peso, grado o fecha de nacimiento** afecta inscripciones: en un torneo "
-        "en curso se rechaza (409) si el atleta deja de cumplir las reglas de su categoría; en un torneo en "
-        "`draft` (inscripciones abiertas), si el atleta deja de cumplir las reglas de la "
+        "en `weigh_in` o `in_progress` se rechaza (409) si el atleta deja de cumplir las reglas de su categoría; en un torneo en "
+        "`registration_open`, si el atleta deja de cumplir las reglas de la "
         "categoría hay que confirmar con `confirm_withdrawal=true`, y entonces se lo retira de ella (sin la "
         "confirmación responde 409 con las categorías afectadas y no cambia nada); en un torneo finalizado se "
         "permite y la inscripción no se toca. Requiere token."
@@ -172,7 +172,7 @@ def list_eligible_categories(
     responses=errors(
         {
             404: "El atleta o el club no existe.",
-            409: "Ya existe otro atleta con ese CI, el atleta dejaría de encajar en un torneo en curso, o falta "
+            409: "Ya existe otro atleta con ese CI, el atleta dejaría de encajar en un torneo en pesaje o en curso, o falta "
             "confirmar el retiro de categorías.",
         },
         auth=True,
@@ -183,7 +183,7 @@ def update_athlete(
     payload: AthleteUpdate,
     confirm_withdrawal: bool = Query(
         default=False,
-        description="Confirma que el atleta sea retirado de las categorías de torneos en `draft` (inscripciones abiertas) donde ya no encaja.",
+        description="Confirma que el atleta sea retirado de las categorías de torneos en `registration_open` donde ya no encaja.",
     ),
     db: Session = Depends(get_db),
 ):

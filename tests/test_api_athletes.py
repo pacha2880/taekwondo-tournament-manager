@@ -218,22 +218,23 @@ def test_confirmed_update_withdraws_the_athlete_from_the_categories_where_it_no_
 
 
 @pytest.mark.parametrize("change", [{"weight_kg": 50}, {"gender": "female"}])
-def test_update_that_no_longer_fits_is_rejected_while_the_tournament_is_in_progress(
-    client, athlete, category, tournament, set_tournament_status, change
+@pytest.mark.parametrize("status", ["weigh_in", "in_progress"])
+def test_update_that_no_longer_fits_is_rejected_once_registration_closed(
+    client, athlete, category, tournament, set_tournament_status, change, status
 ):
     client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
-    set_tournament_status(client, tournament["id"], "in_progress")
+    set_tournament_status(client, tournament["id"], status)
     url = f"/api/v1/athletes/{athlete['id']}"
 
     resp = client.patch(url, params={"confirm_withdrawal": True}, json=change)
 
     assert resp.status_code == 409
-    assert "torneo en curso «Copa Nacional»" in resp.json()["detail"]
+    assert "torneo «Copa Nacional»" in resp.json()["detail"]
     assert client.get(url).json() == athlete
     assert len(_registrations(client, category)) == 1
 
 
-def test_grade_change_out_of_the_category_needs_confirmation_in_draft(client, athlete, category):
+def test_grade_change_out_of_the_category_needs_confirmation_in_registration_open(client, athlete, category):
     client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
     url = f"/api/v1/athletes/{athlete['id']}"
 
@@ -255,7 +256,7 @@ def test_birth_date_change_out_of_the_category_is_rejected_while_the_tournament_
     resp = client.patch(f"/api/v1/athletes/{athlete['id']}", json={"birth_date": "2010-01-01"})
 
     assert resp.status_code == 409
-    assert "torneo en curso «Copa Nacional»" in resp.json()["detail"]
+    assert "torneo «Copa Nacional»" in resp.json()["detail"]
     assert len(_registrations(client, category)) == 1
 
 
@@ -309,7 +310,7 @@ def test_update_is_allowed_after_the_tournament_finished_and_keeps_the_registrat
     assert len(_registrations(client, category)) == 1
 
 
-def test_only_draft_tournaments_withdraw_the_athlete(
+def test_only_tournaments_with_open_registration_withdraw_the_athlete(
     client, athlete, category, tournament, set_tournament_status, find_category
 ):
     client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
@@ -317,6 +318,7 @@ def test_only_draft_tournaments_withdraw_the_athlete(
     next_tournament = client.post(
         "/api/v1/tournaments", json={"name": "Copa Siguiente", "date": "2027-03-01", "location": "La Paz"}
     ).json()
+    set_tournament_status(client, next_tournament["id"], "registration_open")
     next_category = find_category(next_tournament["id"], "male", "Junior", "Hasta 48 kg")
     client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": next_category["id"]})
 

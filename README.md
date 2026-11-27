@@ -126,7 +126,9 @@ pytest -v
 
 ## Autenticación de la API
 
-Las lecturas de torneos, categorías, clubes, llaves y combates son **públicas**. Todo lo que
+Las lecturas de torneos, categorías, clubes, llaves y combates son **públicas**, salvo los torneos en
+preparación (`draft`, 404) y la lista de inscritos antes del Pesaje (403), que sin token no se ven; con token se ve
+todo. Todo lo que
 escribe (`POST`, `PUT`, `PATCH` y `DELETE`) y las lecturas de **atletas e inscripciones** (llevan fecha de
 nacimiento y peso, y hay menores) exigen un token. Se obtiene con el mismo usuario y clave del
 admin (variables `ADMIN_USERNAME`/`ADMIN_PASSWORD`, ver [`.env.example`](.env.example); por
@@ -137,8 +139,8 @@ curl -X POST http://localhost:8000/api/v1/auth/login -d "username=admin&password
 ```
 
 Responde `{"access_token": "...", "token_type": "bearer", "expires_in": 28800}`. Después se
-manda en cada petición protegida como `Authorization: Bearer <access_token>`. Sin token (o con
-uno inválido o vencido) la API responde `401`. En Swagger (`/docs`) el botón **Authorize**
+manda en cada petición protegida como `Authorization: Bearer <access_token>`. Sin token en un
+endpoint protegido, o con uno inválido o vencido en cualquiera, la API responde `401`. En Swagger (`/docs`) el botón **Authorize**
 hace el login por vos. Si el token se filtra, el "botón de pánico" es cambiar `SECRET_KEY`:
 invalida todos los tokens.
 

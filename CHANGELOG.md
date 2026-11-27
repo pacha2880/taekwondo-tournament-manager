@@ -12,6 +12,36 @@ funcionando sobre una base ya migrada. Única excepción: la migración que borr
 
 ## [Unreleased]
 
+### Changed (incompatible)
+- **Ciclo nuevo del torneo:** `draft` (en preparación) → `registration_open` → `weigh_in` (pesaje) → `in_progress` →
+  `finished`, un solo camino. `draft` ya no admite inscripciones: `POST` y `DELETE /api/v1/registrations` solo
+  funcionan en `registration_open` (`409` en otro estado). `POST /tournaments/{id}/start` solo funciona desde
+  `weigh_in`.
+- **Visibilidad sin token:** las lecturas públicas aceptan token opcional. Sin token, los torneos en `draft` no
+  aparecen (`GET /tournaments`, `GET /categories`) y su torneo, estructura, categorías, inscritos y llaves responden
+  `404`; `GET /categories/{id}/registrants` responde `403` hasta el Pesaje, y el filtro `has_registrants` de
+  `GET /categories` también (`403` salvo con un `tournament_id` ya en `weigh_in` o después). Un token inválido o
+  vencido responde `401` también en estas lecturas.
+- Editar un atleta que deja de encajar en su categoría: el retiro con `confirm_withdrawal` vale en
+  `registration_open`, y el `409` sin salida vale en `weigh_in` además de `in_progress`.
+
+### Added
+- `registration_deadline` en los torneos: se fija con `PATCH /api/v1/tournaments/{id}` (ISO 8601 con zona horaria,
+  futura y antes del día del torneo contado en UTC; se devuelve en UTC). Se puede mover mientras no venció; `null`
+  solo en `draft`. Mientras no venció, tampoco se puede mover la fecha del torneo a ese día o antes (`422`).
+- `POST /api/v1/tournaments/{id}/open-registration`: de `draft` a `registration_open`, con una fecha límite futura.
+- `POST /api/v1/tournaments/{id}/close-registration`: el botón «Pasar a Pesaje»; cierra las inscripciones ya (la
+  fecha límite pasa a ser ahora).
+- `weigh_in` se calcula al leer: un torneo con inscripciones abiertas pasa solo a Pesaje cuando vence la fecha límite.
+
+### Fixed
+- `PATCH /api/v1/tournaments/{id}` con `null` en `name`, `date` o `location` respondía `500`; ahora `422`.
+
+### Migración
+- `f1a9d3b72c60` solo agrega `tournaments.registration_deadline` y los estados nuevos; no convierte datos. Un torneo
+  `draft` que ya existía queda en preparación y sin fecha límite. Tras desplegar, `dev` se recarga con
+  `scripts/reset_data.py dev --seed` (producción está vacía).
+
 ## [0.8.2] - 2026-11-26
 
 ### Removed

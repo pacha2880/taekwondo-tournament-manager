@@ -81,16 +81,17 @@ def test_athlete_in_second_category_of_same_tournament_rejected(client, db_sessi
     assert resp.status_code == 409
 
 
-@pytest.mark.parametrize("status", ["in_progress", "finished"])
-def test_registrations_are_closed_once_the_tournament_started(
-    client, athlete, category, tournament, status, set_tournament_status
+@pytest.mark.parametrize("status", ["draft", "weigh_in", "in_progress", "finished"])
+def test_registrations_are_only_open_in_registration_open(
+    client, athlete, find_category, draft_tournament, status, set_tournament_status
 ):
-    set_tournament_status(client, tournament["id"], status)
+    category = find_category(draft_tournament["id"], "male", "Cadete", "37.1–41 kg")
+    set_tournament_status(client, draft_tournament["id"], status)
 
     resp = client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": category["id"]})
 
     assert resp.status_code == 409
-    assert resp.json()["detail"] == "Las inscripciones están cerradas: el torneo ya empezó"
+    assert resp.json()["detail"] == "Las inscripciones no están abiertas"
 
 
 def test_delete_registration_frees_the_athlete(client, athlete, category):
@@ -108,8 +109,8 @@ def test_delete_missing_registration_404(client):
     assert client.delete("/api/v1/registrations/999").status_code == 404
 
 
-@pytest.mark.parametrize("status", ["in_progress", "finished"])
-def test_registrations_cannot_be_deleted_once_the_tournament_started(
+@pytest.mark.parametrize("status", ["weigh_in", "in_progress", "finished"])
+def test_registrations_cannot_be_deleted_once_registration_closed(
     client, athlete, category, tournament, status, set_tournament_status
 ):
     registration = client.post(
@@ -120,7 +121,7 @@ def test_registrations_cannot_be_deleted_once_the_tournament_started(
     resp = client.delete(f"/api/v1/registrations/{registration['id']}")
 
     assert resp.status_code == 409
-    assert resp.json()["detail"] == "Las inscripciones están cerradas: el torneo ya empezó"
+    assert resp.json()["detail"] == "Las inscripciones no están abiertas"
 
 
 def test_list_registrations_without_filters_returns_all(client, athlete, category):

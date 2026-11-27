@@ -29,8 +29,10 @@ están en `.claude/rules/` y se cargan solas al tocar esos archivos.
 
 - Nombres de atletas de una llave o combate: `resolve_athlete_names` (`app/services/brackets.py`).
 - Regla de encaje de un atleta en una categoría (género, peso, edad, grado): `category_mismatch` (`app/services/eligibility.py`).
-- Reglas de estado del torneo: `app/api/lifecycle.py`. El estado cambia solo con `POST .../start` y
-  `.../finish`, nunca con `PATCH`.
+- Reglas de estado del torneo: `app/api/lifecycle.py`. El estado cambia solo con las acciones `POST .../open-registration`,
+  `.../close-registration`, `.../start` y `.../finish`, nunca con `PATCH`. `weigh_in` no se guarda: lo calcula
+  `current_status` (`app/models.py`) al vencer la fecha límite; leer `tournament.status` ya lo aplica, escribir va a
+  `stored_status`. En los tests, la hora se controla con el fixture `clock`.
 - Formato de CI: solo `CI_REGEX` de `app/schemas.py`.
 
 ## Idioma

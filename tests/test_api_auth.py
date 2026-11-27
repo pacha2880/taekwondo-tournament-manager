@@ -11,6 +11,10 @@ PUBLIC_ENDPOINTS = {
     ("POST", "/api/v1/auth/login"),
     ("GET", "/api/v1/clubs"),
     ("GET", "/api/v1/clubs/{club_id}"),
+    ("GET", "/api/v1/matches/{match_id}"),
+}
+# Públicos, pero con token de admin devuelven más (torneos en `draft`, inscritos antes del Pesaje).
+OPTIONAL_TOKEN_ENDPOINTS = {
     ("GET", "/api/v1/tournaments"),
     ("GET", "/api/v1/tournaments/{tournament_id}"),
     ("GET", "/api/v1/tournaments/{tournament_id}/category-structure"),
@@ -18,7 +22,6 @@ PUBLIC_ENDPOINTS = {
     ("GET", "/api/v1/categories/{category_id}"),
     ("GET", "/api/v1/categories/{category_id}/bracket"),
     ("GET", "/api/v1/categories/{category_id}/registrants"),
-    ("GET", "/api/v1/matches/{match_id}"),
 }
 
 
@@ -34,20 +37,43 @@ def _bearer(token):
 
 
 def _api_operations_by_protection():
-    protected, unprotected = set(), set()
+    """(protegidos, opcionales, públicos): opcional es el que acepta token pero también `{}` (sin token)."""
+    protected, optional, unprotected = set(), set(), set()
     for path, operations in app.openapi()["paths"].items():
         if not path.startswith("/api/v1"):
             continue
         for method, operation in operations.items():
-            (protected if operation.get("security") else unprotected).add((method.upper(), path))
-    return protected, unprotected
+            security = operation.get("security")
+            group = unprotected if not security else optional if {} in security else protected
+            group.add((method.upper(), path))
+    return protected, optional, unprotected
 
 
-def test_every_api_endpoint_requires_login_unless_explicitly_public():
-    protected, unprotected = _api_operations_by_protection()
+def test_every_api_endpoint_requires_login_unless_explicitly_public_or_optional():
+    protected, optional, unprotected = _api_operations_by_protection()
 
     assert ("POST", "/api/v1/clubs") in protected, "el inventario no está viendo las rutas de la API"
     assert unprotected == PUBLIC_ENDPOINTS
+    assert optional == OPTIONAL_TOKEN_ENDPOINTS
+
+
+@pytest.mark.parametrize("method,path", sorted(OPTIONAL_TOKEN_ENDPOINTS))
+def test_invalid_token_on_an_optional_token_endpoint_is_401(anon_client, method, path):
+    path = path.format(tournament_id=1, category_id=1)
+
+    resp = anon_client.get(path, headers=_bearer("esto-no-es-un-jwt"))
+
+    assert resp.status_code == 401
+    assert resp.json()["detail"] == "Token inválido"
+
+
+def test_expired_token_on_an_optional_token_endpoint_is_401(anon_client):
+    past = datetime.now(timezone.utc) - timedelta(hours=1)
+
+    resp = anon_client.get("/api/v1/tournaments", headers=_bearer(_token(exp=past)))
+
+    assert resp.status_code == 401
+    assert "venció" in resp.json()["detail"]
 
 
 def test_login_returns_a_bearer_token(anon_client):

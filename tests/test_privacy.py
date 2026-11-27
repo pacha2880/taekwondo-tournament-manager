@@ -2,7 +2,7 @@
 
 import re
 
-from tests.test_api_auth import PUBLIC_ENDPOINTS
+from tests.test_api_auth import OPTIONAL_TOKEN_ENDPOINTS, PUBLIC_ENDPOINTS
 
 SENSITIVE_FIELDS = {"birth_date", "weight_kg", "ci", "height_cm"}
 
@@ -29,7 +29,7 @@ def test_public_endpoints_never_return_sensitive_athlete_fields(
         "match_id": bracket["matches"][0]["id"],
     }
 
-    for method, path in sorted(PUBLIC_ENDPOINTS):
+    for method, path in sorted(PUBLIC_ENDPOINTS | OPTIONAL_TOKEN_ENDPOINTS):
         if method != "GET":
             continue
         params = re.findall(r"\{(\w+)\}", path)
