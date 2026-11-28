@@ -56,7 +56,9 @@ def list_categories(
             raise HTTPException(status_code=403, detail=REGISTRANTS_NOT_PUBLIC_YET)
     query = (
         select(Category)
-        .options(selectinload(Category.bracket), selectinload(Category.grade_group))
+        .options(
+            selectinload(Category.bracket), selectinload(Category.grade_group), selectinload(Category.age_division)
+        )
         .order_by(Category.id)
     )
     if not is_admin:

@@ -9,7 +9,6 @@ from app.auth import ADMIN_ONLY
 from app.database import get_db
 from app.models import Category, Registration, TournamentStatus, WeighInStatus
 from app.schemas import Int4, RegistrationCreate, RegistrationRead, WeighInCreate
-from app.services.category_structure import is_festival
 from app.services.eligibility import category_mismatch, weight_mismatch
 
 router = APIRouter(prefix="/api/v1/registrations", tags=[TAG_REGISTRATIONS])
@@ -57,7 +56,7 @@ def create_registration(payload: RegistrationCreate, db: Session = Depends(get_d
         )
 
     registration = Registration(**payload.model_dump())
-    if is_festival(category.age_division):
+    if category.is_festival:
         registration.weigh_in_status = WeighInStatus.NOT_REQUIRED
     db.add(registration)
     db.commit()

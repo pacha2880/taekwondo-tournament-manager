@@ -128,7 +128,6 @@ def test_issued_token_can_be_used_on_a_protected_endpoint(anon_client):
         ("post", "/api/v1/registrations/1/second-weigh-in"),
         ("post", "/api/v1/registrations/1/disqualify"),
         ("delete", "/api/v1/registrations/1/weigh-in"),
-        ("post", "/api/v1/categories/1/bracket"),
         ("post", "/api/v1/matches/1/rounds"),
         ("get", "/api/v1/athletes"),
         ("get", "/api/v1/athletes/1"),

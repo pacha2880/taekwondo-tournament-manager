@@ -32,9 +32,9 @@ def require_tournament_status(
 
 
 def _has_matches_to_play(category: Category) -> bool:
-    if category.bracket is None:
-        return len(category.registrations) >= 2
-    return any(match.status not in FINAL_MATCH_STATUSES for match in category.bracket.matches)
+    return category.bracket is not None and any(
+        match.status not in FINAL_MATCH_STATUSES for match in category.bracket.matches
+    )
 
 
 def require_all_matches_played(tournament: Tournament) -> None:

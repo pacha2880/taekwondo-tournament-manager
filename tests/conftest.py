@@ -201,7 +201,7 @@ def set_tournament_status():
 
 @pytest.fixture()
 def generate_bracket():
-    """Sortea la llave de la categoría, llevando antes el torneo a `in_progress` si todavía no está."""
+    """Lleva el torneo a `in_progress` (ahí se sortean las llaves) y devuelve el GET de la llave de la categoría."""
 
     def _generate(client, category):
         tournament_url = f"/api/v1/tournaments/{category['tournament_id']}"
@@ -210,7 +210,7 @@ def generate_bracket():
         if client.get(tournament_url).json()["status"] == "weigh_in":
             weigh_pending_registrations(client, category["tournament_id"])
             assert client.post(f"{tournament_url}/start").status_code == 200
-        return client.post(f"/api/v1/categories/{category['id']}/bracket")
+        return client.get(f"/api/v1/categories/{category['id']}/bracket")
 
     return _generate
 

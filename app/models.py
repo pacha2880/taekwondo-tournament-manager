@@ -179,6 +179,10 @@ class AgeDivision(Base):
         back_populates="age_division", cascade="all, delete-orphan", order_by="WeightLimit.position"
     )
 
+    @property
+    def is_festival(self) -> bool:
+        return self.position == 0
+
 
 class WeightLimit(Base):
     """Límite superior de una división de peso: hasta X kg. La última división de cada edad y género es
@@ -229,6 +233,10 @@ class Category(Base):
     @property
     def has_bracket(self) -> bool:
         return self.bracket is not None
+
+    @property
+    def is_festival(self) -> bool:
+        return self.age_division.is_festival
 
     @property
     def grade_group_name(self) -> str | None:

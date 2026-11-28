@@ -12,7 +12,12 @@ funcionando sobre una base ya migrada. Única excepción: la migración que borr
 
 ## [Unreleased]
 
+### Changed (incompatible)
+- `POST /api/v1/tournaments/{id}/start` sortea todas las llaves (salvo Festival, que no tiene llave) y
+  `POST /api/v1/categories/{id}/bracket` ya no existe (`405`): la llave se lee con `GET`.
+
 ### Added
+- `is_festival` en las categorías (solo lectura). Festival no impide finalizar el torneo.
 - **Pesaje oficial en la inscripción** (solo con el torneo en `weigh_in`, sin tolerancia): las inscripciones suman
   `weigh_in_status`, `first_weight_kg` y `second_weight_kg`; el `weight_kg` del atleta queda como peso declarado.
   `POST /api/v1/registrations/{id}/weigh-in` carga el primer o el segundo peso; si el primero no entra, el admin

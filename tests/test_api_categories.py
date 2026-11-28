@@ -37,6 +37,14 @@ def test_registrants_of_a_missing_category_is_404(anon_client):
     assert anon_client.get("/api/v1/categories/999/registrants").status_code == 404
 
 
+def test_is_festival_is_true_only_in_the_festival_categories(client, tournament, category):
+    listed = client.get("/api/v1/categories", params={"tournament_id": tournament["id"]}).json()
+
+    assert {c["is_festival"] for c in listed if c["age_label"] == "Festival"} == {True}
+    assert {c["is_festival"] for c in listed if c["age_label"] != "Festival"} == {False}
+    assert client.get(f"/api/v1/categories/{category['id']}").json()["is_festival"] is False
+
+
 def test_has_bracket_tells_whether_the_bracket_was_generated(client, club, category, register_n_athletes, generate_bracket):
     register_n_athletes(client, club, category, 2)
     url = f"/api/v1/categories/{category['id']}"

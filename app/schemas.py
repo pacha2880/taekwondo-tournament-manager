@@ -268,6 +268,10 @@ class CategoryRead(CategoryBase):
         description="Si la categoría ya tiene la llave generada. Mientras es `false`, lo que se muestra al público es "
         "la lista de inscritos (`GET /categories/{id}/registrants`)."
     )
+    is_festival: bool = Field(
+        description="Si es de Festival: no se pesa ni tiene llave, y lo que se muestra es la lista de inscritos "
+        "(`GET /categories/{id}/registrants`)."
+    )
 
 
 class GradeGroupRead(BaseModel):

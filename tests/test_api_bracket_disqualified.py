@@ -16,7 +16,7 @@ def bracket_with(client, club, category, tournament, register_n_athletes, set_to
             db_session.get(Registration, registrations[index]["id"]).weigh_in_status = status
         db_session.commit()
         resp = generate_bracket(client, category)
-        assert resp.status_code == 201
+        assert resp.status_code == 200
         return [r["athlete_id"] for r in registrations], resp.json()["matches"]
 
     return _build

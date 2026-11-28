@@ -17,10 +17,6 @@ from app.models import FINAL_MATCH_STATUSES, Athlete, Bracket, Category, Match, 
 DISQUALIFIED_STATUSES = (WeighInStatus.DISQUALIFIED, WeighInStatus.NO_SHOW)
 
 
-class BracketAlreadyExists(Exception):
-    pass
-
-
 class NotEnoughAthletes(Exception):
     pass
 
@@ -230,9 +226,6 @@ def fill_athlete_details(db: Session, category_id: int, match_reads: list) -> No
 
 def generate_bracket(db: Session, category: Category, rng: random.Random | None = None) -> Bracket:
     """Sortea la llave y resuelve la primera ronda y su cascada. Hace flush, no commit: lo hace quien llama."""
-    if db.scalar(select(Bracket).where(Bracket.category_id == category.id)):
-        raise BracketAlreadyExists(f"La categoría {category.id} ya tiene una llave generada")
-
     participants = [
         Participant(athlete_id, club_id, status in DISQUALIFIED_STATUSES)
         for athlete_id, club_id, status in db.execute(
