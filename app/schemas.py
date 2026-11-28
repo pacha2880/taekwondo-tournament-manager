@@ -396,7 +396,10 @@ class RegistrantRead(BaseModel):
     athlete_id: int = Field(description="Id del atleta.")
     name: str = Field(description="Nombre del atleta.", examples=["Mateo Quispe Mamani"])
     club: str = Field(description="Nombre del club del atleta.", examples=["Dojang Central"])
-    weigh_in_status: WeighInStatus = Field(description="Estado del pesaje de la inscripción. Nunca los kilos.")
+    weigh_in_status: WeighInStatus = Field(
+        description="Estado del pesaje de la inscripción, nunca los kilos. Mientras se decide un pesaje que no entró "
+        "(`failed_first`, `second_allowed`) se muestra `pending`: en público solo se ve el resultado."
+    )
 
 
 class RoundScoreCreate(BaseModel):

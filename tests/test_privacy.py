@@ -2,6 +2,8 @@
 
 import re
 
+import pytest
+
 from tests.test_api_auth import OPTIONAL_TOKEN_ENDPOINTS, PUBLIC_ENDPOINTS
 
 SENSITIVE_FIELDS = {"birth_date", "weight_kg", "first_weight_kg", "second_weight_kg", "ci", "height_cm"}
@@ -53,3 +55,20 @@ def test_public_registrants_show_the_weigh_in_status_but_never_the_weights(
 
     assert registrant["weigh_in_status"] == "cleared"
     assert not {"first_weight_kg", "second_weight_kg", "weight_kg"} & registrant.keys()
+
+
+@pytest.mark.parametrize(
+    ("decision", "public_status"), [(None, "pending"), ("second-weigh-in", "pending"), ("disqualify", "disqualified")]
+)
+def test_public_registrants_hide_a_failed_first_weigh_in_until_there_is_a_result(
+    client, anon_client, club, category, register_n_athletes, set_tournament_status, decision, public_status
+):
+    (registration,) = register_n_athletes(client, club, category, 1)
+    set_tournament_status(client, category["tournament_id"], "weigh_in")
+    client.post(f"/api/v1/registrations/{registration['id']}/weigh-in", json={"weight_kg": 45})
+    if decision:
+        client.post(f"/api/v1/registrations/{registration['id']}/{decision}")
+
+    (registrant,) = anon_client.get(f"/api/v1/categories/{category['id']}/registrants").json()
+
+    assert registrant["weigh_in_status"] == public_status

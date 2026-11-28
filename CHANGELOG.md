@@ -30,7 +30,8 @@ funcionando sobre una base ya migrada. Única excepción: la migración que borr
 - `POST /api/v1/tournaments/{id}/start` cierra el pesaje: las inscripciones en `pending` pasan a `no_show` y las que
   quedaron en `failed_first` o `second_allowed`, a `disqualified`. La respuesta suma `not_weighed_in` (los que
   quedaron en `no_show` con este inicio).
-- `GET /api/v1/categories/{id}/registrants` suma `weigh_in_status` (nunca los kilos).
+- `GET /api/v1/categories/{id}/registrants` suma `weigh_in_status` (nunca los kilos); `failed_first` y
+  `second_allowed` se ven como `pending` hasta que haya resultado.
 - **Descalificados en la llave:** los combates suman los estados `walkover` (ganado sin pelear: un lado está
   descalificado, o su rival viene de un combate sin ganador; el ganador avanza) y `no_contest` (sin combate: los dos
   lados descalificados; no hay ganador y nadie avanza). Los combates suman `athlete_red_disqualified` y

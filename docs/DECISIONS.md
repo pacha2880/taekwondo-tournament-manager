@@ -709,7 +709,9 @@ devuelve a los `no_show` para que el frontend los muestre.
 inscripción a `pending` y borra los pesos, para corregir un tipeo (decisión del usuario). Tras `start` ya no.
 
 **El estado del pesaje es público desde el Pesaje; los kilos nunca.** `GET /categories/{id}/registrants` suma
-`weigh_in_status`, pero los pesos solo salen con token (hay menores).
+`weigh_in_status`, pero los pesos solo salen con token (hay menores). En público tampoco se ve que alguien no entró en
+el primer pesaje: `failed_first` y `second_allowed` se muestran como `pending` hasta que haya resultado (habilitado o
+descalificado). Que un descalificado se vea es inevitable: la llave lo muestra perdiendo sin pelear.
 
 **Editar el peso declarado sigue dando 409 si deja de encajar.** En Pesaje o En curso el atleta no puede cambiar su
 `weight_kg` a uno que no encaje en su categoría, aunque el peso oficial ya sea el del pesaje. Se dejó como estaba por

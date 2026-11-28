@@ -3,20 +3,28 @@ from sqlalchemy.orm import Session
 
 from app.models import Athlete, Category, Club, Registration, WeighInStatus
 
+# Hay menores: en público no se ve que alguien no entró en el primer pesaje mientras todavía puede entrar en el
+# segundo. Se ve solo el resultado (habilitado o descalificado).
+UNDECIDED_WEIGH_IN = (WeighInStatus.FAILED_FIRST, WeighInStatus.SECOND_ALLOWED)
 
-def list_registrants(db: Session, category_id: int):
+
+def list_registrants(db: Session, category_id: int) -> list[dict]:
     """Inscritos de una categoría con solo datos públicos (nombre, club y estado del pesaje), ordenados por nombre.
 
     Nunca agregar acá CI, fecha de nacimiento ni kilos (tampoco los del pesaje): el resultado se
     muestra sin token y hay menores.
     """
-    return db.execute(
+    rows = db.execute(
         select(Athlete.id.label("athlete_id"), Athlete.name.label("name"), Club.name.label("club"), Registration.weigh_in_status)
         .join(Registration, Registration.athlete_id == Athlete.id)
         .join(Club, Athlete.club_id == Club.id)
         .where(Registration.category_id == category_id)
         .order_by(Athlete.name, Athlete.id)
     ).all()
+    return [
+        {**row._asdict(), "weigh_in_status": WeighInStatus.PENDING if row.weigh_in_status in UNDECIDED_WEIGH_IN else row.weigh_in_status}
+        for row in rows
+    ]
 
 
 def close_weigh_in(db: Session, tournament_id: int) -> list[dict]:

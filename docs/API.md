@@ -224,7 +224,8 @@ la categoría son inclusivos y no hay tolerancia. Que el atleta no entre no es u
 
 Las inscripciones de Festival nacen en `not_required` (no se pesa) y estas acciones responden `409`. Un estado que no
 admite la acción también da `409`, con `detail` explicando el estado. El estado del pesaje es público desde el Pesaje
-(`GET /categories/{id}/registrants`); los kilos solo con token.
+(`GET /categories/{id}/registrants`), pero ahí `failed_first` y `second_allowed` se ven como `pending` hasta que haya
+resultado (hay menores: en público no se muestra que alguien no entró en el primer pesaje); los kilos solo con token.
 
 ## Errores
 
