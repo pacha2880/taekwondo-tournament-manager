@@ -123,3 +123,12 @@ def test_fights_against_a_disqualified_athlete_are_not_counted_as_clashes():
     participants = _people("A", "A", "A", disqualified={3})  # 3 atletas: 1 bye, dos van juntos (uno es DSQ)
     for seed in range(20):
         assert _same_club_fights(_draw(participants, seed), participants) == 0
+
+
+def test_same_club_pairing_varies_between_seeds_without_adding_clashes():
+    participants = _people("A", "A", "B", "B", "C", "C", "D", "D")
+    draws = {tuple(_matches(_draw(participants, seed))) for seed in range(30)}
+    assert len(draws) > 10
+    assert all(_same_club_fights(list(sum(d, ())), participants) == 0 for d in draws)
+    a_rivals = {frozenset(m) for d in draws for m in d if 1 in m}
+    assert len({club for rival in a_rivals for club in rival if rival and club > 2}) > 2

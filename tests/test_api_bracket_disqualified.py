@@ -129,3 +129,22 @@ def test_finish_counts_walkover_and_no_contest_as_played(client, bracket_with, t
     bracket_with(3, [1, 2])  # bye + walkover + no_contest + final por walkover
 
     assert client.post(f"/api/v1/tournaments/{tournament['id']}/finish").status_code == 200
+
+
+def test_a_bye_and_a_cascade_walkover_answer_409_not_400(client, bracket_with, score_rounds):
+    # 5 inscritos con 4 descalificados: bye al habilitado y walkover en cascada con un lado vacío.
+    athlete_ids, matches = bracket_with(5, [1, 2, 3, 4])
+
+    [bye] = _by_status(matches, "bye")
+    cascade = next(m for m in _by_status(matches, "walkover") if m["round_number"] > 1)
+    assert None in (cascade["athlete_red_id"], cascade["athlete_blue_id"])
+    for match in (bye, cascade):
+        assert score_rounds(client, match["id"], (10, 5))[0].status_code == 409
+
+
+def test_one_enabled_athlete_wins_the_final_even_when_disqualified_ones_get_byes(bracket_with):
+    athlete_ids, matches = bracket_with(5, [1, 2, 3, 4])
+
+    assert sorted(m["status"] for m in matches if m["round_number"] == 1) == ["bye", "no_contest", "no_contest", "no_contest"]
+    [final] = [m for m in matches if m["next_match_id"] is None]
+    assert (final["status"], final["winner_id"]) == ("walkover", athlete_ids[0])

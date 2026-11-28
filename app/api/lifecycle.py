@@ -1,9 +1,7 @@
 from fastapi import HTTPException
 
 from app import clock
-from app.models import Category, MatchStatus, Tournament, TournamentStatus
-
-FINAL_MATCH_STATUSES = (MatchStatus.FINISHED, MatchStatus.BYE, MatchStatus.WALKOVER, MatchStatus.NO_CONTEST)
+from app.models import FINAL_MATCH_STATUSES, Category, Tournament, TournamentStatus
 
 
 # Un torneo en preparación solo lo ve el admin. La misma regla en Python y como condición SQL para las listas.

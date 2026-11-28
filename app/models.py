@@ -67,6 +67,10 @@ class MatchStatus(str, enum.Enum):
     NO_CONTEST = "no_contest"
 
 
+# Combates que ya no cambian: los que no se pelean y los jugados.
+FINAL_MATCH_STATUSES = (MatchStatus.BYE, MatchStatus.FINISHED, MatchStatus.WALKOVER, MatchStatus.NO_CONTEST)
+
+
 class WeighInStatus(str, enum.Enum):
     """Estado del pesaje de una inscripción: `pending` (sin pesar), `failed_first` (no entró en el peso de su categoría
     en el primer pesaje; espera la decisión del admin), `second_allowed` (segundo pesaje habilitado), `cleared`

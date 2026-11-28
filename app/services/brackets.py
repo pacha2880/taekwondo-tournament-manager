@@ -12,10 +12,9 @@ from typing import NamedTuple
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Athlete, Bracket, Category, Match, MatchStatus, Registration, WeighInStatus
+from app.models import FINAL_MATCH_STATUSES, Athlete, Bracket, Category, Match, MatchStatus, Registration, WeighInStatus
 
 DISQUALIFIED_STATUSES = (WeighInStatus.DISQUALIFIED, WeighInStatus.NO_SHOW)
-RESOLVED_MATCH_STATUSES = (MatchStatus.BYE, MatchStatus.FINISHED, MatchStatus.WALKOVER, MatchStatus.NO_CONTEST)
 
 
 class BracketAlreadyExists(Exception):
@@ -89,7 +88,19 @@ def _pair_avoiding_same_club(pool: list[Participant], rng: random.Random) -> lis
     club_tiebreak = {club: rng.random() for club in club_size}
     pool.sort(key=lambda p: (-club_size[p.club_id], club_tiebreak[p.club_id]))
     half = len(pool) // 2
-    return list(zip(pool[:half], pool[half:]))
+    pairs = [[a, b] for a, b in zip(pool[:half], pool[half:])]
+    # Mezcla sin subir los choques: intercambia atletas entre parejas y deshace el cambio si empeora.
+    clashes = lambda pair: pair[0].club_id == pair[1].club_id  # noqa: E731
+    for _ in range(len(pairs) * 4):
+        if len(pairs) < 2:
+            break
+        first, second = rng.sample(pairs, 2)
+        side_a, side_b = rng.randrange(2), rng.randrange(2)
+        before = clashes(first) + clashes(second)
+        first[side_a], second[side_b] = second[side_b], first[side_a]
+        if clashes(first) + clashes(second) > before:
+            first[side_a], second[side_b] = second[side_b], first[side_a]
+    return [(a, b) for a, b in pairs]
 
 
 def draw_first_round_slots(participants: list[Participant], rng: random.Random | None = None) -> list[int | None]:
@@ -184,7 +195,7 @@ def resolve_pending_walkovers(db: Session, bracket_id: int) -> None:
         origins = sources.get(match.id, [])
         if match.status != MatchStatus.PENDING or not origins:
             continue
-        if any(origin.status not in RESOLVED_MATCH_STATUSES for origin in origins):
+        if any(origin.status not in FINAL_MATCH_STATUSES for origin in origins):
             continue
         winners = [origin.winner_id for origin in origins if origin.winner_id is not None]
         if len(winners) == 2:
