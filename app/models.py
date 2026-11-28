@@ -12,7 +12,7 @@ class TournamentStatus(str, enum.Enum):
     """Estado del torneo. El ciclo avanza en un solo sentido, sin volver atrás: `draft` (en preparación: se edita la
     estructura de categorías y la fecha límite de inscripción), `registration_open` (inscripciones abiertas hasta la
     fecha límite), `weigh_in` (pesaje: las inscripciones ya cerraron; se llega al vencer la fecha límite o con
-    `close-registration`), `in_progress` (en curso: se generan las llaves y se cargan resultados) y `finished`
+    `close-registration`), `in_progress` (en curso: las llaves ya están sorteadas y se cargan resultados) y `finished`
     (finalizado)."""
 
     DRAFT = "draft"
