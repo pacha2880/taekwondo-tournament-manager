@@ -78,19 +78,23 @@ del frontend, avisada a Kike en Notion).
 
 ### Bloque 3 — Llaves al iniciar
 
-- [ ] **Todas las llaves juntas al iniciar**: `POST /start` sortea las llaves de todas las categorías con 2 o más
-      inscritos, salvo Festival. Desaparece `POST /categories/{id}/bracket` (`405`).
+- [x] **Todas las llaves juntas al iniciar**: `POST /start` sortea las llaves de todas las categorías con 2 o más
+      inscritos, salvo Festival. Desaparece `POST /categories/{id}/bracket` (`405`). Hecho: las llaves no se re-sortean.
       [Notion](https://app.notion.com/p/415fae3be03b81e59b41cdd9c6196e7f)
-- [ ] **Sorteo separando clubes en la primera ronda**: dos atletas del mismo club no se enfrentan en la primera ronda,
-      salvo que no se pueda evitar. Desde la segunda ronda no importa.
-- [ ] **Descalificados en la llave**: van en la llave, marcados, y pierden sin pelear.
+- [x] **Sorteo separando clubes en la primera ronda**: dos atletas del mismo club no se enfrentan en la primera ronda,
+      salvo que no se pueda evitar. Desde la segunda ronda no importa. Hecho: método greedy por prioridades (ver
+      DECISIONS, 2026-11-26).
+- [x] **Descalificados en la llave**: van en la llave, marcados, y pierden sin pelear.
   - El sorteo empareja primero a cada descalificado con un habilitado; solo si sobran, se enfrentan entre ellos.
   - Entre dos descalificados no avanza nadie, y su rival de la ronda siguiente gana sin pelear.
   - El combate ganado sin pelear tiene un estado propio, distinto de uno jugado.
   - Si todos los inscritos de una categoría quedan descalificados, no hay ganador: se muestra con todos marcados.
-- [ ] **Festival sin llave**: solo una lista de varones y otra de damas, con nombre y club. Los combates se organizan
+  - Hecho: estados `walkover` y `no_contest`, flags `athlete_red_disqualified` y `athlete_blue_disqualified`; un
+    descalificado con bye queda `no_contest` con un solo lado.
+- [x] **Festival sin llave**: solo una lista de varones y otra de damas, con nombre y club. Los combates se organizan
       en persona y no se registran (pedido de Abel, 2026-11-26). Todos llevan medalla de oro. No impide finalizar el
-      torneo. [Notion](https://app.notion.com/p/415fae3be03b81909a7ee26f2cd969c4)
+      torneo. Hecho: `is_festival` en la categoría; la lista es `/registrants`.
+      [Notion](https://app.notion.com/p/415fae3be03b81909a7ee26f2cd969c4)
 
 ## 0.10.0 — Llaves de exhibición, campeones y ranking
 
