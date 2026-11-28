@@ -433,6 +433,16 @@ class MatchRead(BaseModel):
         description="Id del atleta del lado azul. Es nulo si todavía no se definió o si es un pase directo."
     )
     athlete_blue_name: str | None = Field(default=None, description="Nombre del atleta del lado azul.")
+    athlete_red_disqualified: bool = Field(
+        default=False,
+        description="`true` si el atleta del lado rojo está descalificado (por peso o por no presentarse al pesaje). "
+        "Es `false` si el lado está vacío.",
+    )
+    athlete_blue_disqualified: bool = Field(
+        default=False,
+        description="`true` si el atleta del lado azul está descalificado (por peso o por no presentarse al pesaje). "
+        "Es `false` si el lado está vacío.",
+    )
     winner_id: int | None = Field(
         description="Id del ganador del combate. Es nulo mientras no termine; en un pase directo, es el atleta que pasa."
     )
@@ -440,7 +450,11 @@ class MatchRead(BaseModel):
     next_match_id: int | None = Field(
         description="Id del combate de la siguiente ronda al que avanza el ganador. Es nulo en la final."
     )
-    status: MatchStatus = Field(description="Estado del combate.")
+    status: MatchStatus = Field(
+        description="Estado del combate: `pending` (por jugar o esperando a sus atletas), `bye` (pase directo), "
+        "`finished` (jugado), `walkover` (ganado sin pelear: el rival está descalificado o no tiene atleta; el ganador "
+        "avanza) o `no_contest` (sin combate: nadie para pelear, no hay ganador y nadie avanza)."
+    )
     round_scores: list[RoundScoreRead] = Field(description="Resultado de cada round cargado, en orden.")
 
 

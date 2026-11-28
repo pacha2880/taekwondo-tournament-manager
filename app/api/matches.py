@@ -7,10 +7,11 @@ from app.database import get_db
 from app.api.lifecycle import require_tournament_status
 from app.models import Match, TournamentStatus
 from app.schemas import Int4, MatchRead, RoundScoreCreate, RoundScoreRead
-from app.services.brackets import resolve_athlete_names
+from app.services.brackets import fill_athlete_details
 from app.services.scoring import (
     MatchAlreadyFinished,
     MatchNotReady,
+    MatchWithoutFight,
     RoundOutOfOrder,
     TiedRound,
     record_round,
@@ -31,10 +32,7 @@ def get_match(match_id: Int4, db: Session = Depends(get_db)):
     if not match:
         raise HTTPException(status_code=404, detail="Combate no encontrado")
     match_read = MatchRead.model_validate(match)
-    names = resolve_athlete_names(db, [match])
-    match_read.athlete_red_name = names.get(match_read.athlete_red_id)
-    match_read.athlete_blue_name = names.get(match_read.athlete_blue_id)
-    match_read.winner_name = names.get(match_read.winner_id)
+    fill_athlete_details(db, match.bracket.category_id, [match_read])
     return match_read
 
 
@@ -46,7 +44,7 @@ def get_match(match_id: Int4, db: Session = Depends(get_db)):
     summary="Cargar el resultado de un round",
     description="Solo se pueden cargar resultados con el torneo en curso (409). Se envía el número del round y los puntos de cada lado. El número tiene que ser el siguiente al último guardado (1, 2, 3…); si no lo es, responde 409 y no guarda nada: así un reenvío (por ejemplo, porque la respuesta anterior se perdió) no queda guardado como el round siguiente. "
     "Gana el round el lado con más puntos; un round no puede terminar en empate (422). Cuando un atleta llega a `rounds_to_win` rounds ganados, el combate pasa a `finished` y su ganador avanza a la siguiente ronda. Requiere token.",
-    responses=errors({400: "El combate todavía no tiene a sus dos atletas definidos.", 404: "El combate no existe.", 409: "El torneo no está en curso, el combate ya terminó, o el número de round no es el siguiente."}, auth=True),
+    responses=errors({400: "El combate todavía no tiene a sus dos atletas definidos.", 404: "El combate no existe.", 409: "El torneo no está en curso, el combate ya terminó o no se pelea (pase directo, ganado sin pelear o sin combate), o el número de round no es el siguiente."}, auth=True),
 )
 def create_round_score(match_id: Int4, payload: RoundScoreCreate, db: Session = Depends(get_db)):
     match = db.get(Match, match_id)
@@ -59,7 +57,7 @@ def create_round_score(match_id: Int4, payload: RoundScoreCreate, db: Session = 
         return record_round(db, match, payload.round_number, payload.red_points, payload.blue_points)
     except MatchNotReady as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except (MatchAlreadyFinished, RoundOutOfOrder) as exc:
+    except (MatchAlreadyFinished, MatchWithoutFight, RoundOutOfOrder) as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except TiedRound as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

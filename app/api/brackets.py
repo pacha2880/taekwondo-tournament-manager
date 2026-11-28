@@ -12,8 +12,8 @@ from app.schemas import BracketRead, Int4
 from app.services.brackets import (
     BracketAlreadyExists,
     NotEnoughAthletes,
+    fill_athlete_details,
     generate_bracket,
-    resolve_athlete_names,
 )
 
 router = APIRouter(prefix="/api/v1/categories", tags=[TAG_BRACKETS])
@@ -21,11 +21,7 @@ router = APIRouter(prefix="/api/v1/categories", tags=[TAG_BRACKETS])
 
 def _bracket_read(db: Session, bracket: Bracket) -> BracketRead:
     bracket_read = BracketRead.model_validate(bracket)
-    names = resolve_athlete_names(db, bracket.matches)
-    for match_read in bracket_read.matches:
-        match_read.athlete_red_name = names.get(match_read.athlete_red_id)
-        match_read.athlete_blue_name = names.get(match_read.athlete_blue_id)
-        match_read.winner_name = names.get(match_read.winner_id)
+    fill_athlete_details(db, bracket.category_id, bracket_read.matches)
     return bracket_read
 
 
@@ -35,7 +31,7 @@ def _bracket_read(db: Session, bracket: Bracket) -> BracketRead:
     status_code=201,
     dependencies=ADMIN_ONLY,
     summary="Generar la llave de una categoría",
-    description="Sortea al azar a los inscritos en una llave de eliminación simple. Si el número de inscritos no es potencia de 2, se reparten pases directos (`bye`) en la primera ronda. Solo se genera con el torneo en curso (409 si todavía no empezó o ya terminó). Hacen falta al menos 2 inscritos y solo se puede generar una llave por categoría. Requiere token.",
+    description="Sortea a los inscritos en una llave de eliminación simple: en la primera ronda separa a los del mismo club cuando se puede, y empareja a cada descalificado (por peso o por no presentarse) con un habilitado, que gana sin pelear (`walkover`); dos descalificados juntos quedan sin combate (`no_contest`). Si el número de inscritos no es potencia de 2, se reparten pases directos (`bye`), primero a habilitados. Solo se genera con el torneo en curso (409 si todavía no empezó o ya terminó). Hacen falta al menos 2 inscritos y solo se puede generar una llave por categoría. Requiere token.",
     responses=errors({400: "La categoría tiene menos de 2 inscritos.", 404: "La categoría no existe.", 409: "El torneo no está en curso, o la categoría ya tiene una llave."}, auth=True),
 )
 def create_bracket(category_id: Int4, db: Session = Depends(get_db)):
@@ -47,6 +43,7 @@ def create_bracket(category_id: Int4, db: Session = Depends(get_db)):
     )
     try:
         bracket = generate_bracket(db, category)
+        db.commit()
     except BracketAlreadyExists as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except NotEnoughAthletes as exc:

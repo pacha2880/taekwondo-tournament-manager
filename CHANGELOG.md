@@ -22,9 +22,17 @@ funcionando sobre una base ya migrada. Única excepción: la migración que borr
   quedaron en `failed_first` o `second_allowed`, a `disqualified`. La respuesta suma `not_weighed_in` (los que
   quedaron en `no_show` con este inicio).
 - `GET /api/v1/categories/{id}/registrants` suma `weigh_in_status` (nunca los kilos).
+- **Descalificados en la llave:** los combates suman los estados `walkover` (ganado sin pelear: un lado está
+  descalificado, o su rival viene de un combate sin ganador; el ganador avanza) y `no_contest` (sin combate: los dos
+  lados descalificados; no hay ganador y nadie avanza). Los combates suman `athlete_red_disqualified` y
+  `athlete_blue_disqualified`. `POST .../rounds` responde `409` en un combate `bye`, `walkover` o `no_contest`.
+- **Sorteo nuevo de la primera ronda:** separa a los del mismo club cuando se puede, da los pases directos a
+  habilitados (primero a los de los clubes con más atletas) y empareja a cada descalificado con un habilitado; solo
+  los que sobran se enfrentan entre sí. Si todos están descalificados, la categoría queda sin ganador.
 
 ### Migración
 - `a7c2e41d9b35` agrega el estado y los pesos del pesaje a las inscripciones (las de Festival quedan `not_required`).
+- `b8d4f2a65c17` agrega `walkover` y `no_contest` al enum de estados del combate (en Postgres, `ALTER TYPE`).
 
 ## [0.9.0-alpha.1] - 2026-11-27
 

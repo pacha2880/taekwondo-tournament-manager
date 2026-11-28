@@ -169,9 +169,20 @@ def athlete(client, club):
     return resp.json()
 
 
+def weigh_pending_registrations(client, tournament_id):
+    """Pesa con su peso declarado a las inscripciones sin pesar: `start` deja `no_show` (descalificado) al que no se pesó."""
+    registrations = client.get("/api/v1/registrations", params={"tournament_id": tournament_id}).json()
+    for registration in registrations:
+        if registration["weigh_in_status"] == "pending":
+            url = f"/api/v1/registrations/{registration['id']}/weigh-in"
+            assert client.post(url, json={"weight_kg": registration["athlete"]["weight_kg"]}).status_code == 200
+
+
 @pytest.fixture()
 def set_tournament_status():
-    def _set(client, tournament_id, status):
+    """Lleva el torneo al estado pedido. Al iniciar pesa a todos (`weigh_everyone=False` para no pesar a nadie)."""
+
+    def _set(client, tournament_id, status, weigh_everyone=True):
         url = f"/api/v1/tournaments/{tournament_id}"
         stages = ["draft", "registration_open", "weigh_in", "in_progress", "finished"]
         actions = ["open-registration", "close-registration", "start", "finish"]
@@ -180,6 +191,8 @@ def set_tournament_status():
             deadline = (app_clock.utc_now() + timedelta(days=365)).isoformat()
             assert client.patch(url, json={"registration_deadline": deadline}).status_code == 200
         for action in pending:
+            if action == "start" and weigh_everyone:
+                weigh_pending_registrations(client, tournament_id)
             resp = client.post(f"{url}/{action}")
             assert resp.status_code == 200, resp.json()
 
@@ -195,6 +208,7 @@ def generate_bracket():
         if client.get(tournament_url).json()["status"] == "registration_open":
             assert client.post(f"{tournament_url}/close-registration").status_code == 200
         if client.get(tournament_url).json()["status"] == "weigh_in":
+            weigh_pending_registrations(client, category["tournament_id"])
             assert client.post(f"{tournament_url}/start").status_code == 200
         return client.post(f"/api/v1/categories/{category['id']}/bracket")
 

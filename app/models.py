@@ -56,11 +56,15 @@ class Grade(str, enum.Enum):
 
 class MatchStatus(str, enum.Enum):
     """Estado del combate: `pending` (pendiente: por jugar o esperando a sus atletas), `bye` (pase directo:
-    el atleta avanza sin pelear) y `finished` (terminado: ya tiene ganador)."""
+    el atleta avanza sin pelear), `finished` (terminado: ya tiene ganador), `walkover` (ganado sin pelear: un lado
+    quedó descalificado, o su rival vino de un combate sin ganador; gana el otro y avanza) y `no_contest` (sin
+    combate: los dos lados quedaron descalificados o sin atleta; no hay ganador y nadie avanza)."""
 
     PENDING = "pending"
     BYE = "bye"
     FINISHED = "finished"
+    WALKOVER = "walkover"
+    NO_CONTEST = "no_contest"
 
 
 class WeighInStatus(str, enum.Enum):

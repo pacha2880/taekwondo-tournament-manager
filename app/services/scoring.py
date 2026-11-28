@@ -2,7 +2,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import Match, MatchStatus, RoundScore
-from app.services.brackets import advance_winner
+from app.services.brackets import advance_winner, resolve_pending_walkovers
 
 
 class MatchNotReady(Exception):
@@ -10,6 +10,10 @@ class MatchNotReady(Exception):
 
 
 class MatchAlreadyFinished(Exception):
+    pass
+
+
+class MatchWithoutFight(Exception):
     pass
 
 
@@ -39,6 +43,8 @@ def record_round(db: Session, match: Match, round_number: int, red_points: int, 
         raise MatchNotReady("El combate todavía no tiene ambos atletas definidos")
     if match.status == MatchStatus.FINISHED:
         raise MatchAlreadyFinished("El combate ya está finalizado")
+    if match.status in (MatchStatus.BYE, MatchStatus.WALKOVER, MatchStatus.NO_CONTEST):
+        raise MatchWithoutFight("Este combate no se pelea (pase directo, ganado sin pelear o sin combate): no admite rounds")
     next_round = db.scalar(select(func.count()).select_from(RoundScore).where(RoundScore.match_id == match.id)) + 1
     if round_number != next_round:
         raise RoundOutOfOrder(f"El round que sigue es el {next_round}, no el {round_number}; recargá el combate")
@@ -63,6 +69,7 @@ def record_round(db: Session, match: Match, round_number: int, red_points: int, 
         match.status = MatchStatus.FINISHED
         match.winner_id = match.athlete_red_id if red_wins > blue_wins else match.athlete_blue_id
         advance_winner(db, match)
+        resolve_pending_walkovers(db, match.bracket_id)
 
     db.commit()
     db.refresh(round_score)
