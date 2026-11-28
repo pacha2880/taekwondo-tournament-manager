@@ -84,6 +84,8 @@ Al final, cuando todo el ciclo funcione con kyorugi.
       informa.
 - [ ] Endpoint que junte la página de detalle de categoría (categoría, inscritos y llave en un request), si el
       frontend externo lo pide.
+- [ ] `POST /tournaments/{id}/start` más rápido, si molesta: `close_weigh_in` (`app/services/registrants.py`) carga
+      atleta, club y categoría de a una inscripción (~1.000 consultas con 300 inscritos, unos segundos en Neon).
 
 ## Preguntas abiertas para Abel
 
