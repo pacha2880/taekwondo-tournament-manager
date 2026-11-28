@@ -79,7 +79,7 @@ def list_registrations(
         select(Registration)
         .options(
             selectinload(Registration.category).options(
-                selectinload(Category.bracket), selectinload(Category.grade_group)
+                selectinload(Category.bracket), selectinload(Category.grade_group), selectinload(Category.age_division)
             )
         )
         .order_by(Registration.id)
