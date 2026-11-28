@@ -671,7 +671,7 @@ para lo que venga. Consecuencia: sobre una base migrada ya no se puede volver a 
 
 ## 2026-11-26 — Ciclo del torneo de la 0.9.0: un solo camino, fecha límite y peso oficial en la inscripción
 
-Spec en `docs/BACKLOG.md` (0.9.0). Lo no obvio:
+Spec en `CHANGELOG.md` (0.9.0-alpha.1 y 0.9.0; estuvo en `docs/BACKLOG.md` hasta liberarse). Lo no obvio:
 
 **Siempre se pasa por el Pesaje.** `start` solo funciona desde Pesaje. Con un atajo desde Inscripciones abiertas habría
 dos caminos y el pesaje (con sus descalificaciones) se podría saltar sin querer. Para cerrar antes, el admin usa «Pasar a Pesaje»

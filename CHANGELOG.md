@@ -12,6 +12,10 @@ funcionando sobre una base ya migrada. Única excepción: la migración que borr
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-27
+
+Cierra la 0.9.0: pesaje (bloque 2) y llaves al iniciar (bloque 3), sobre el ciclo nuevo de la 0.9.0-alpha.1.
+
 ### Changed (incompatible)
 - `POST /api/v1/tournaments/{id}/start` sortea todas las llaves (salvo Festival, que no tiene llave) y
   `POST /api/v1/categories/{id}/bracket` ya no existe (`405`): la llave se lee con `GET`.
@@ -346,7 +350,8 @@ https://taekwondo-tournament-manager.onrender.com.
 - `pool_pre_ping=True` en la conexión a la base de datos: Neon suspende el cómputo por
   inactividad y la primera conexión tras un rato inactivo pudo fallar con un error 500.
 
-[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.9.0-alpha.1...HEAD
+[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.9.0-alpha.1...v0.9.0
 [0.9.0-alpha.1]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.8.2...v0.9.0-alpha.1
 [0.8.2]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.8.0...v0.8.1
