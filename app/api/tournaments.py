@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app import clock
@@ -15,7 +15,7 @@ from app.api.lifecycle import (
 from app.api_docs import TAG_TOURNAMENTS, errors
 from app.auth import ADMIN_ONLY, OPTIONAL_TOKEN, is_admin_request
 from app.database import get_db
-from app.models import Tournament, TournamentStatus
+from app.models import Category, Registration, Tournament, TournamentStatus
 from app.schemas import Int4, TournamentCreate, TournamentRead, TournamentStartRead, TournamentUpdate
 from app.services.brackets import generate_bracket
 from app.services.category_structure import add_default_structure, sync_categories
@@ -219,8 +219,17 @@ def start_tournament(tournament_id: Int4, db: Session = Depends(get_db)):
     tournament.stored_status = TournamentStatus.IN_PROGRESS
     not_weighed_in = close_weigh_in(db, tournament_id)
     db.flush()  # el sorteo lee los estados de pesaje desde la base
+    # Un solo conteo: un torneo tiene ~200 categorías y la mayoría quedan con 0 o 1 inscrito.
+    registrations_per_category = dict(
+        db.execute(
+            select(Registration.category_id, func.count())
+            .join(Category)
+            .where(Category.tournament_id == tournament_id)
+            .group_by(Registration.category_id)
+        ).all()
+    )
     for category in sorted(tournament.categories, key=lambda c: c.id):
-        if not category.is_festival and len(category.registrations) >= 2:
+        if not category.is_festival and registrations_per_category.get(category.id, 0) >= 2:
             generate_bracket(db, category)
     db.commit()
     db.refresh(tournament)
