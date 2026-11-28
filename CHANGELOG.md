@@ -15,6 +15,10 @@ funcionando sobre una base ya migrada. Única excepción: la migración que borr
 ### Changed (incompatible)
 - `POST /api/v1/tournaments/{id}/start` sortea todas las llaves (salvo Festival, que no tiene llave) y
   `POST /api/v1/categories/{id}/bracket` ya no existe (`405`): la llave se lee con `GET`.
+- `start` cierra el pesaje (ver Added): quien no se pesó queda `no_show` y pierde sin pelear. Un frontend que todavía
+  no pesa a nadie deja a todos descalificados: antes de iniciar hay que pesar a cada inscrito.
+- `status` de un combate suma `walkover` y `no_contest` (ver Added): un `no_contest` es final y no tiene `winner_id`.
+- `POST /api/v1/matches/{id}/rounds` en un combate `bye` responde `409` (antes `400`).
 
 ### Added
 - `is_festival` en las categorías (solo lectura). Festival no impide finalizar el torneo.
