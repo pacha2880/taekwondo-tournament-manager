@@ -1,21 +1,18 @@
-import pytest
+def test_the_bracket_can_no_longer_be_created_by_hand(client, category):
+    assert client.post(f"/api/v1/categories/{category['id']}/bracket").status_code == 405
 
 
-def test_generate_bracket_requires_existing_category(client):
-    resp = client.post("/api/v1/categories/999/bracket")
-    assert resp.status_code == 404
+def test_no_bracket_is_drawn_with_fewer_than_two_athletes(client, club, category, register_n_athletes, generate_bracket):
+    register_n_athletes(client, club, category, 1)
 
-
-def test_generate_bracket_requires_at_least_two_athletes(client, category, generate_bracket):
-    resp = generate_bracket(client, category)
-    assert resp.status_code == 400
+    assert generate_bracket(client, category).status_code == 404
 
 
 def test_generate_bracket_with_five_athletes_has_three_byes(client, club, category, register_n_athletes, generate_bracket):
     register_n_athletes(client, club, category, 5)
 
     resp = generate_bracket(client, category)
-    assert resp.status_code == 201
+    assert resp.status_code == 200
     bracket = resp.json()
 
     assert bracket["size"] == 8
@@ -47,14 +44,6 @@ def test_bye_winners_are_already_placed_in_round_two(client, club, category, reg
         assert bye_match["winner_id"] in (next_match["athlete_red_id"], next_match["athlete_blue_id"])
 
 
-def test_cannot_generate_bracket_twice(client, club, category, register_n_athletes, generate_bracket):
-    register_n_athletes(client, club, category, 4)
-    generate_bracket(client, category)
-
-    resp = generate_bracket(client, category)
-    assert resp.status_code == 409
-
-
 def test_get_bracket_before_generation_404(client, category):
     resp = client.get(f"/api/v1/categories/{category['id']}/bracket")
     assert resp.status_code == 404
@@ -67,18 +56,6 @@ def test_get_bracket_after_generation(client, club, category, register_n_athlete
     resp = client.get(f"/api/v1/categories/{category['id']}/bracket")
     assert resp.status_code == 200
     assert resp.json()["id"] == created["id"]
-
-
-@pytest.mark.parametrize("status", ["registration_open", "weigh_in", "finished"])
-def test_bracket_is_only_generated_with_the_tournament_in_progress(
-    client, category, tournament, set_tournament_status, status
-):
-    set_tournament_status(client, tournament["id"], status)
-
-    resp = client.post(f"/api/v1/categories/{category['id']}/bracket")
-
-    assert resp.status_code == 409
-    assert resp.json()["detail"] == "Solo se puede generar la llave con el torneo en curso"
 
 
 def test_bracket_api_returns_athlete_names_without_the_club(client, club, category, register_n_athletes, generate_bracket):

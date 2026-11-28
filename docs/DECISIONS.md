@@ -30,8 +30,8 @@ actualiza el estado acá.
 | 2026-10-25 | [`SECRET_KEY` corta: de aviso a error](#2026-10-25--secret_key-corta-de-aviso-a-error) | Vigente |
 | 2026-10-26 | [El servidor numera los rounds (0.5.0)](#2026-10-26--el-servidor-numera-los-rounds-050) | Numeración reemplazada en la 0.6.0: el cliente envía `round_number`, que tiene que ser el siguiente. Sigue vigente no corregir rounds |
 | 2026-10-27 | [Ciclo de vida del torneo, parte 1: el estado manda (0.6.0)](#2026-10-27--ciclo-de-vida-del-torneo-parte-1-el-estado-manda-060) | Vigente, salvo `create_category`, que ya no existe (0.8.0) |
-| 2026-10-29 | [Ciclo de vida del torneo, parte 2: llaves y resultados solo en curso (0.6.0)](#2026-10-29--ciclo-de-vida-del-torneo-parte-2-llaves-y-resultados-solo-en-curso-060) | Vigente |
-| 2026-11-02 | [Lista pública de inscritos en la API (0.6.0)](#2026-11-02--lista-pública-de-inscritos-en-la-api-060) | Vigente |
+| 2026-10-29 | [Ciclo de vida del torneo, parte 2: llaves y resultados solo en curso (0.6.0)](#2026-10-29--ciclo-de-vida-del-torneo-parte-2-llaves-y-resultados-solo-en-curso-060) | Reemplazada en parte por 2026-11-26: `start` sortea todas las llaves y `POST .../bracket` ya no existe; sigue vigente que los resultados solo se cargan en curso |
+| 2026-11-02 | [Lista pública de inscritos en la API (0.6.0)](#2026-11-02--lista-pública-de-inscritos-en-la-api-060) | Vigente; desde 2026-11-26 suma `weigh_in_status` (nunca los kilos) |
 | 2026-11-10 | [Listados de categorías e inscripciones siempre filtrados](#2026-11-10--listados-de-categorías-e-inscripciones-siempre-filtrados) | Revertida por 2026-11-12 |
 | 2026-11-12 | [Filtros de los listados otra vez opcionales](#2026-11-12--filtros-de-los-listados-otra-vez-opcionales) | Vigente |
 | 2026-11-13 | [Grado fijo del atleta y cómo se retira `belt_rank` (0.7.0)](#2026-11-13--grado-fijo-del-atleta-y-cómo-se-retira-belt_rank-070) | Reemplazada en parte por 2026-11-26: la columna `belt_rank` ya se borró |
@@ -671,7 +671,7 @@ para lo que venga. Consecuencia: sobre una base migrada ya no se puede volver a 
 
 ## 2026-11-26 — Ciclo del torneo de la 0.9.0: un solo camino, fecha límite y peso oficial en la inscripción
 
-Spec en `docs/BACKLOG.md` (0.9.0). Lo no obvio:
+Spec en `CHANGELOG.md` (0.9.0-alpha.1 y 0.9.0; estuvo en `docs/BACKLOG.md` hasta liberarse). Lo no obvio:
 
 **Siempre se pasa por el Pesaje.** `start` solo funciona desde Pesaje. Con un atajo desde Inscripciones abiertas habría
 dos caminos y el pesaje (con sus descalificaciones) se podría saltar sin querer. Para cerrar antes, el admin usa «Pasar a Pesaje»
@@ -701,6 +701,26 @@ endpoint con dos formas es fácil de romper»): la forma de la respuesta es la m
 **Pesaje sin tolerancia.** No se aplican los 100 g del Art. 9 de WT. Si el primer pesaje no entra, el admin elige
 segundo pesaje o descalificación; si el segundo no entra, queda descalificado.
 
+**`start` cierra el pesaje.** Los `pending` pasan a `no_show` (no se presentaron) y los que quedaron sin decidir
+(`failed_first`, `second_allowed`) a `disqualified`: pesaron fuera de la categoría y no pasaron un segundo pesaje. `start`
+devuelve a los `no_show` para que el frontend los muestre.
+
+**El pesaje se puede reiniciar mientras el torneo está en Pesaje.** `DELETE /registrations/{id}/weigh-in` vuelve la
+inscripción a `pending` y borra los pesos, para corregir un tipeo (decisión del usuario). Tras `start` ya no.
+
+**El estado del pesaje es público desde el Pesaje; los kilos nunca.** `GET /categories/{id}/registrants` suma
+`weigh_in_status`, pero los pesos solo salen con token (hay menores). En público tampoco se ve que alguien no entró en
+el primer pesaje: `failed_first` y `second_allowed` se muestran como `pending` hasta que haya resultado (habilitado o
+descalificado). «Descalificado» sí se ve: es el resultado final del pesaje, y desde `start` la llave lo muestra igual,
+perdiendo sin pelear.
+
+**Editar el peso declarado sigue dando 409 si deja de encajar.** En Pesaje o En curso el atleta no puede cambiar su
+`weight_kg` a uno que no encaje en su categoría, aunque el peso oficial ya sea el del pesaje. Se dejó como estaba por
+YAGNI.
+
+**La migración `a7c2e41d9b35` deja en `pending` las inscripciones de torneos en curso o finalizados.** No se convierten
+a `cleared`: no hay datos reales (producción vacía desde 2026-11-26, `dev` se recarga con el seed).
+
 **Los descalificados van en la llave y no ganan nada.** El sorteo los empareja primero con habilitados, para que el
 descalificado pierda contra alguien que sigue. Entre dos descalificados no avanza nadie (se descartó que avance uno
 al azar: un descalificado aparecería en rondas siguientes). Si todos quedan descalificados, no hay ganador ni puntos.
@@ -710,3 +730,26 @@ los combates se organizan en persona y no se registran (Abel, 2026-11-26). Todos
 ranking, como un oro. Las llaves de
 exhibición se arman a mano con atletas elegidos por el organizador, varias por torneo. A exhibición solo van los que
 se quedaron sin pelea; no suma al ranking, porque ya sumaron su punto de «sin pelea».
+
+**`start` sortea todas las llaves, con 2 o más inscritos y salvo Festival.** Con el sorteo en `start` se acaba el
+`POST /categories/{id}/bracket` (`405`): una sola acción, un solo momento, y nada que olvidar. Festival no tiene llave
+(`is_festival` en la categoría para que el frontend no deduzca nada).
+
+**El sorteo de la primera ronda, por prioridades.** (1) Los byes van a habilitados, primero a los de los clubes con más
+habilitados; (2) cada descalificado se empareja con un habilitado y solo los que sobran se enfrentan entre sí; (3) entre
+habilitados, el mínimo de choques de club; (4) el resto, al azar. Un método greedy alcanza: ordenar por club y emparejar
+el i-ésimo con el i-ésimo + m/2 da el mínimo posible de choques (solo el club más grande puede pasarse de la mitad).
+
+**`walkover` y `no_contest` son estados distintos de `finished`.** `walkover` es ganar sin pelear y `no_contest` es no
+haber combate ni ganador. Decisión del usuario: el frontend no deduce nada mirando ganadores nulos o lados
+descalificados. Cada combate además trae `athlete_red_disqualified` y `athlete_blue_disqualified`.
+
+**Un descalificado con pase directo queda `no_contest`, con un solo lado.** Se sigue de «un descalificado no gana
+nada»: el bye no puede darle un ganador. Su rival de la ronda siguiente gana por `walkover` (cascada). El sorteo evita
+esto: da los byes a habilitados mientras haya.
+
+**Las llaves no se re-sortean.** YAGNI, decisión del usuario: si un inscrito cambia, la llave sorteada queda como
+está (con el torneo en curso las inscripciones ya están cerradas).
+
+**Un torneo ya en curso antes de esta versión, con categorías sin llave, no tiene cómo sortearlas.** No se migra:
+producción está vacía y `dev` se recarga con el seed.

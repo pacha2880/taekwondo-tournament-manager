@@ -82,7 +82,7 @@ def test_finish_is_rejected_while_a_bracket_has_matches_to_play(
     register_n_athletes(client, club, category, 2)
     url = f"/api/v1/tournaments/{tournament['id']}"
     set_tournament_status(client, tournament["id"], "in_progress")
-    match = client.post(f"/api/v1/categories/{category['id']}/bracket").json()["matches"][0]
+    match = client.get(f"/api/v1/categories/{category['id']}/bracket").json()["matches"][0]
 
     before = client.post(f"{url}/finish")
     score_rounds(client, match["id"], (10, 5), (10, 5))
@@ -97,7 +97,7 @@ def test_finish_ignores_byes(client, club, category, tournament, register_n_athl
     register_n_athletes(client, club, category, 3)
     url = f"/api/v1/tournaments/{tournament['id']}"
     set_tournament_status(client, tournament["id"], "in_progress")
-    matches = client.post(f"/api/v1/categories/{category['id']}/bracket").json()["matches"]
+    matches = client.get(f"/api/v1/categories/{category['id']}/bracket").json()["matches"]
     [bye] = [m for m in matches if m["status"] == "bye"]
     [semifinal] = [m for m in matches if m["round_number"] == 1 and m["status"] == "pending"]
     [final] = [m for m in matches if m["next_match_id"] is None]
@@ -109,15 +109,65 @@ def test_finish_ignores_byes(client, club, category, tournament, register_n_athl
     assert client.post(f"{url}/finish").status_code == 200
 
 
-@pytest.mark.parametrize("athletes,expected_status", [(1, 200), (2, 409)])
-def test_a_category_without_bracket_blocks_finish_only_with_two_or_more_athletes(
-    client, club, category, tournament, register_n_athletes, set_tournament_status, athletes, expected_status
+def _festival_category(client, tournament):
+    categories = client.get("/api/v1/categories", params={"tournament_id": tournament["id"]}).json()
+    return next(c for c in categories if c["age_label"] == "Festival" and c["gender"] == "male")
+
+
+def _register_children(client, club, festival, n):
+    for i in range(n):
+        athlete = client.post(
+            "/api/v1/athletes",
+            json={
+                "name": f"Niño {i}", "ci": str(8000000 + i), "birth_date": "2018-03-01", "gender": "male",
+                "grade": "kup_10", "weight_kg": 20, "club_id": club["id"],
+            },
+        ).json()
+        resp = client.post("/api/v1/registrations", json={"athlete_id": athlete["id"], "category_id": festival["id"]})
+        assert resp.status_code == 201
+
+
+def test_start_draws_every_category_with_two_or_more_athletes_except_festival(
+    client, club, category, tournament, register_n_athletes, find_category, set_tournament_status
 ):
-    register_n_athletes(client, club, category, athletes)
-    url = f"/api/v1/tournaments/{tournament['id']}"
+    lone = find_category(tournament["id"], "male", "Cadete", "41.1–45 kg")
+    empty = find_category(tournament["id"], "male", "Cadete", "45.1–49 kg")
+    festival = _festival_category(client, tournament)
+    register_n_athletes(client, club, category, 2)
+    solo = client.post(
+        "/api/v1/athletes",
+        json={"name": "Solo", "ci": "9000000", "birth_date": "2012-01-01", "gender": "male", "grade": "kup_6",
+              "weight_kg": 43, "club_id": club["id"]},
+    ).json()
+    client.post("/api/v1/registrations", json={"athlete_id": solo["id"], "category_id": lone["id"]})
+    _register_children(client, club, festival, 2)
+
     set_tournament_status(client, tournament["id"], "in_progress")
 
-    assert client.post(f"{url}/finish").status_code == expected_status
+    listed = client.get("/api/v1/categories", params={"tournament_id": tournament["id"]}).json()
+    with_bracket = {c["id"] for c in listed if c["has_bracket"]}
+    assert with_bracket == {category["id"]}
+    assert {lone["id"], empty["id"], festival["id"]}.isdisjoint(with_bracket)
+
+
+def test_start_draws_with_the_disqualified_already_marked(
+    client, club, category, tournament, register_n_athletes, set_tournament_status
+):
+    register_n_athletes(client, club, category, 2)
+    set_tournament_status(client, tournament["id"], "in_progress", weigh_everyone=False)
+
+    [match] = client.get(f"/api/v1/categories/{category['id']}/bracket").json()["matches"]
+
+    assert match["status"] == "no_contest"  # los dos quedaron en no_show al iniciar
+
+
+def test_a_festival_with_registrants_does_not_block_finish(client, club, tournament, set_tournament_status):
+    festival = _festival_category(client, tournament)
+    _register_children(client, club, festival, 2)
+    set_tournament_status(client, tournament["id"], "in_progress")
+
+    assert client.get(f"/api/v1/categories/{festival['id']}/bracket").status_code == 404
+    assert client.post(f"/api/v1/tournaments/{tournament['id']}/finish").status_code == 200
 
 
 @pytest.mark.parametrize(

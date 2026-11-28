@@ -28,11 +28,21 @@ def test_registrants_are_public_sorted_by_name_and_only_with_name_and_club(
 
     assert resp.status_code == 200
     assert [r["name"] for r in resp.json()] == ["Atleta 0", "Atleta 1", "Juan Perez"]
-    assert resp.json()[-1] == {"athlete_id": athlete["id"], "name": "Juan Perez", "club": "Dojang Central"}
+    assert resp.json()[-1] == {
+        "athlete_id": athlete["id"], "name": "Juan Perez", "club": "Dojang Central", "weigh_in_status": "pending"
+    }
 
 
 def test_registrants_of_a_missing_category_is_404(anon_client):
     assert anon_client.get("/api/v1/categories/999/registrants").status_code == 404
+
+
+def test_is_festival_is_true_only_in_the_festival_categories(client, tournament, category):
+    listed = client.get("/api/v1/categories", params={"tournament_id": tournament["id"]}).json()
+
+    assert {c["is_festival"] for c in listed if c["age_label"] == "Festival"} == {True}
+    assert {c["is_festival"] for c in listed if c["age_label"] != "Festival"} == {False}
+    assert client.get(f"/api/v1/categories/{category['id']}").json()["is_festival"] is False
 
 
 def test_has_bracket_tells_whether_the_bracket_was_generated(client, club, category, register_n_athletes, generate_bracket):

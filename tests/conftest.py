@@ -78,19 +78,23 @@ def club(client):
 
 
 class FakeClock:
-    """Hora real más un desfase, para poder adelantarla sin dejar de avanzar."""
+    """Hora quieta: solo cambia con `advance` o `set`.
+
+    No sigue la hora real porque el reloj de WSL a veces retrocede al resincronizarse, y entonces un torneo recién
+    pasado a Pesaje (fecha límite = ahora) volvía a parecer abierto.
+    """
 
     def __init__(self, start):
-        self.offset = start - datetime.now(timezone.utc)
+        self.now = start
 
     def utc_now(self):
-        return datetime.now(timezone.utc) + self.offset
+        return self.now
 
     def advance(self, **delta):
-        self.offset += timedelta(**delta)
+        self.now += timedelta(**delta)
 
     def set(self, moment):
-        self.offset = moment - datetime.now(timezone.utc)
+        self.now = moment
 
 
 # Los tests corren con la hora de la app fija en esta fecha: así la fecha límite de 1 año del fixture `tournament`
@@ -165,9 +169,20 @@ def athlete(client, club):
     return resp.json()
 
 
+def weigh_pending_registrations(client, tournament_id):
+    """Pesa con su peso declarado a las inscripciones sin pesar: `start` deja `no_show` (descalificado) al que no se pesó."""
+    registrations = client.get("/api/v1/registrations", params={"tournament_id": tournament_id}).json()
+    for registration in registrations:
+        if registration["weigh_in_status"] == "pending":
+            url = f"/api/v1/registrations/{registration['id']}/weigh-in"
+            assert client.post(url, json={"weight_kg": registration["athlete"]["weight_kg"]}).status_code == 200
+
+
 @pytest.fixture()
 def set_tournament_status():
-    def _set(client, tournament_id, status):
+    """Lleva el torneo al estado pedido. Al iniciar pesa a todos (`weigh_everyone=False` para no pesar a nadie)."""
+
+    def _set(client, tournament_id, status, weigh_everyone=True):
         url = f"/api/v1/tournaments/{tournament_id}"
         stages = ["draft", "registration_open", "weigh_in", "in_progress", "finished"]
         actions = ["open-registration", "close-registration", "start", "finish"]
@@ -176,6 +191,8 @@ def set_tournament_status():
             deadline = (app_clock.utc_now() + timedelta(days=365)).isoformat()
             assert client.patch(url, json={"registration_deadline": deadline}).status_code == 200
         for action in pending:
+            if action == "start" and weigh_everyone:
+                weigh_pending_registrations(client, tournament_id)
             resp = client.post(f"{url}/{action}")
             assert resp.status_code == 200, resp.json()
 
@@ -184,15 +201,16 @@ def set_tournament_status():
 
 @pytest.fixture()
 def generate_bracket():
-    """Sortea la llave de la categoría, llevando antes el torneo a `in_progress` si todavía no está."""
+    """Lleva el torneo a `in_progress` (ahí se sortean las llaves) y devuelve el GET de la llave de la categoría."""
 
     def _generate(client, category):
         tournament_url = f"/api/v1/tournaments/{category['tournament_id']}"
         if client.get(tournament_url).json()["status"] == "registration_open":
             assert client.post(f"{tournament_url}/close-registration").status_code == 200
         if client.get(tournament_url).json()["status"] == "weigh_in":
+            weigh_pending_registrations(client, category["tournament_id"])
             assert client.post(f"{tournament_url}/start").status_code == 200
-        return client.post(f"/api/v1/categories/{category['id']}/bracket")
+        return client.get(f"/api/v1/categories/{category['id']}/bracket")
 
     return _generate
 

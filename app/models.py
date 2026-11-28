@@ -12,7 +12,7 @@ class TournamentStatus(str, enum.Enum):
     """Estado del torneo. El ciclo avanza en un solo sentido, sin volver atrás: `draft` (en preparación: se edita la
     estructura de categorías y la fecha límite de inscripción), `registration_open` (inscripciones abiertas hasta la
     fecha límite), `weigh_in` (pesaje: las inscripciones ya cerraron; se llega al vencer la fecha límite o con
-    `close-registration`), `in_progress` (en curso: se generan las llaves y se cargan resultados) y `finished`
+    `close-registration`), `in_progress` (en curso: las llaves ya están sorteadas y se cargan resultados) y `finished`
     (finalizado)."""
 
     DRAFT = "draft"
@@ -56,11 +56,34 @@ class Grade(str, enum.Enum):
 
 class MatchStatus(str, enum.Enum):
     """Estado del combate: `pending` (pendiente: por jugar o esperando a sus atletas), `bye` (pase directo:
-    el atleta avanza sin pelear) y `finished` (terminado: ya tiene ganador)."""
+    el atleta avanza sin pelear), `finished` (terminado: ya tiene ganador), `walkover` (ganado sin pelear: un lado
+    quedó descalificado, o su rival vino de un combate sin ganador; gana el otro y avanza) y `no_contest` (sin
+    combate: los dos lados quedaron descalificados o sin atleta; no hay ganador y nadie avanza)."""
 
     PENDING = "pending"
     BYE = "bye"
     FINISHED = "finished"
+    WALKOVER = "walkover"
+    NO_CONTEST = "no_contest"
+
+
+# Combates que ya no cambian: los que no se pelean y los jugados.
+FINAL_MATCH_STATUSES = (MatchStatus.BYE, MatchStatus.FINISHED, MatchStatus.WALKOVER, MatchStatus.NO_CONTEST)
+
+
+class WeighInStatus(str, enum.Enum):
+    """Estado del pesaje de una inscripción: `pending` (sin pesar), `failed_first` (no entró en el peso de su categoría
+    en el primer pesaje; espera la decisión del admin), `second_allowed` (segundo pesaje habilitado), `cleared`
+    (habilitado para competir), `disqualified` (descalificado por peso), `no_show` (no se presentó al pesaje) y
+    `not_required` (Festival: no se pesa)."""
+
+    PENDING = "pending"
+    FAILED_FIRST = "failed_first"
+    SECOND_ALLOWED = "second_allowed"
+    CLEARED = "cleared"
+    DISQUALIFIED = "disqualified"
+    NO_SHOW = "no_show"
+    NOT_REQUIRED = "not_required"
 
 
 def current_status(
@@ -156,6 +179,10 @@ class AgeDivision(Base):
         back_populates="age_division", cascade="all, delete-orphan", order_by="WeightLimit.position"
     )
 
+    @property
+    def is_festival(self) -> bool:
+        return self.position == 0
+
 
 class WeightLimit(Base):
     """Límite superior de una división de peso: hasta X kg. La última división de cada edad y género es
@@ -208,6 +235,10 @@ class Category(Base):
         return self.bracket is not None
 
     @property
+    def is_festival(self) -> bool:
+        return self.age_division.is_festival
+
+    @property
     def grade_group_name(self) -> str | None:
         return self.grade_group.name if self.grade_group else None
 
@@ -226,6 +257,11 @@ class Registration(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     athlete_id: Mapped[int] = mapped_column(ForeignKey("athletes.id"), nullable=False)
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"), nullable=False)
+    weigh_in_status: Mapped[WeighInStatus] = mapped_column(
+        Enum(WeighInStatus), nullable=False, default=WeighInStatus.PENDING, server_default=WeighInStatus.PENDING.name
+    )
+    first_weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
+    second_weight_kg: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     athlete: Mapped["Athlete"] = relationship(back_populates="registrations")
     category: Mapped["Category"] = relationship(back_populates="registrations")

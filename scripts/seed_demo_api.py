@@ -5,10 +5,15 @@
 - «Copa de Prueba (inscripciones abiertas)» (`registration_open`): fecha límite en 1 año y torneo después. 6 categorías
   con 23 inscritos, una con un solo inscrito, dos de Festival (niños sin CI) y un atleta sin inscribir.
 - «Copa de Prueba (pesaje)» (`weigh_in`): 6 categorías con 19 inscritos, una con un solo inscrito y dos de Festival.
-- «Copa de Prueba (en curso)» (`in_progress`): 7 categorías con 47 inscritos, todas con llave generada y en distintos
-  momentos: dos terminadas, cuatro a medias (con combates terminados y alguno con 1 o 2 rounds cargados) y una sin
-  empezar.
-- «Copa de Prueba (finalizado)» (`finished`): 5 categorías, cuatro con la llave jugada hasta el final (de 3, 4, 5 y 8
+  Los primeros inscritos no Festival quedan uno en cada estado del pesaje (sin pesar, no entró en el primer pesaje,
+  segundo pesaje habilitado, descalificado y habilitado en el segundo pesaje); el resto, habilitado. Festival no se pesa.
+- «Copa de Prueba (en curso)» (`in_progress`): 7 categorías con 47 inscritos, todos pesados y habilitados salvo uno
+  descalificado por peso y uno que no se presentó (los dos en la primera categoría, de 7: su llave muestra
+  `walkover`). `start` sortea todas las llaves y el seed las juega en distintos momentos: dos terminadas, cuatro a
+  medias (con combates terminados y alguno con 1 o 2 rounds cargados) y una sin empezar.
+- «Copa de Prueba (finalizado)» (`finished`): 5 categorías, todos los inscritos pesados y habilitados salvo, en la
+  primera (de 3), un descalificado y uno que no se presentó: se cruzan entre sí (`no_contest`) y el habilitado, que
+  tiene el pase directo, gana la final por `walkover`. Cuatro con la llave jugada hasta el final (de 3, 4, 5 y 8
   inscritos: dos con pases directos) y una con un solo inscrito, sin llave.
 El resto de las categorías de cada torneo (la estructura de la Copa Diamante) queda vacía.
 
@@ -53,7 +58,9 @@ ADVANCED = ["kup_1", "dan"]
 # La categoría no se crea: es la de la estructura del torneo en la que encajan esos atletas, así que sus grados, edades y
 # pesos tienen que caer todos en la misma (ver COPA_DIAMANTE_* en app/services/category_structure.py). Festival (hasta
 # 9 años) no tiene grupo de grado ni pesos; sus atletas van sin CI.
-# Una llave se sortea con 2 o más inscritos; con uno solo la categoría queda sin llave.
+# `start` sortea la llave con 2 o más inscritos (con uno solo la categoría queda sin llave) y el sorteo es del servidor,
+# al azar: el plan no puede asumir quién queda en cada lugar, solo juega los combates que estén listos. Toda categoría
+# de más de 3 atletas repite club (son 3 clubes), así que la separación de clubes se ve.
 IN_PROGRESS_SPECS = [
     ("male", "Cadete 41.1–45 kg", BEGINNERS, (12, 14), (41.1, 45), 7, 7, [("all",)]),
     ("male", "Cadete 49.1–53 kg", BEGINNERS, (12, 14), (49.1, 53), 6, 6, [("all",)]),
@@ -87,6 +94,14 @@ REGISTRATION_OPEN_SPECS = [
     ("female", "Festival", BEGINNERS, (5, 9), (20, 35), 3, 3, []),
 ]
 
+# Cómo queda el pesaje de los primeros inscritos no Festival del torneo en pesaje, en orden; el resto queda `cleared`.
+# `second_cleared`: no entró en el primer pesaje, se le habilitó el segundo y entró.
+WEIGH_IN_CASES = ["pending", "failed_first", "second_allowed", "disqualified", "second_cleared"]
+# Lo mismo para los torneos que se juegan (la primera categoría): un descalificado y uno sin pesar, que `start` pasa a
+# `no_show`. Los dos entran en la llave y pierden sin pelear.
+PLAYED_WEIGH_IN_CASES = ["disqualified", "pending"]
+OVERWEIGHT_KG = 0.6  # cuánto se pasa del máximo de su categoría quien no entra
+
 STAGES = ["draft", "registration_open", "weigh_in", "in_progress", "finished"]
 # `days_to_date`: cuántos días desde hoy es el torneo (negativo: ya se jugó). `deadline_days`: la fecha límite de
 # inscripción, en días desde hoy; desde el Pesaje se la adelanta a ahora con close-registration.
@@ -104,17 +119,20 @@ TOURNAMENTS = [
     {
         "name": "Copa de Prueba (pesaje)", "location": "Sucre, Bolivia", "stage": "weigh_in",
         "days_to_date": 14, "deadline_days": 7, "seed": 3, "specs": WEIGH_IN_SPECS,
-        "summary": "6 categorías, 19 inscritos (una con 1, dos de Festival sin CI), lista pública",
+        "summary": "6 categorías, 19 inscritos (una con 1, dos de Festival sin CI), lista pública; pesaje: 1 sin pesar, "
+        "1 no entró, 1 con segundo pesaje habilitado, 1 descalificado, 1 habilitado en el segundo y el resto habilitado",
     },
     {
         "name": "Copa de Prueba (en curso)", "location": "Cochabamba, Bolivia", "stage": "in_progress",
         "days_to_date": -11, "deadline_days": 7, "seed": 2026, "specs": IN_PROGRESS_SPECS,
-        "summary": "7 categorías, 47 inscritos: 2 llaves terminadas, 4 a medias y 1 sin empezar",
+        "summary": "7 categorías, 47 inscritos, todos pesados salvo 1 descalificado y 1 que no se presentó (`walkover` en la "
+        "llave): 2 llaves terminadas, 4 a medias y 1 sin empezar",
     },
     {
         "name": "Copa de Prueba (finalizado)", "location": "Tarija, Bolivia", "stage": "finished",
         "days_to_date": -60, "deadline_days": 7, "seed": 4, "specs": FINISHED_SPECS,
-        "summary": "5 categorías, 21 inscritos: 4 llaves terminadas (3, 4, 5 y 8 inscritos) y 1 categoría con 1 inscrito",
+        "summary": "5 categorías, 21 inscritos, todos pesados salvo, en la de 3, 1 descalificado y 1 que no se presentó "
+        "(`no_contest` y `walkover`): 4 llaves terminadas (3, 4, 5 y 8 inscritos) y 1 categoría con 1 inscrito",
     },
 ]
 
@@ -189,6 +207,29 @@ def load_category(api, tournament_id: int, club_ids: dict, entry: dict) -> int:
     return category_id
 
 
+def weigh_in_registrations(api, tournament_id: int, cases: list[str] = ()) -> None:
+    """Pesa a los inscritos no Festival con su peso declarado; a los primeros, según `cases` (ver WEIGH_IN_CASES)."""
+    registrations = api("GET", f"/api/v1/registrations?tournament_id={tournament_id}")
+    weighed = [r for r in registrations if r["weigh_in_status"] != "not_required"]
+    for registration, case in zip(weighed, [*cases, *["cleared"] * len(weighed)]):
+        path = f"/api/v1/registrations/{registration['id']}"
+        declared = {"weight_kg": registration["athlete"]["weight_kg"]}
+        if case == "pending":
+            continue
+        if case == "cleared":
+            api("POST", f"{path}/weigh-in", declared)
+            continue
+        max_weight = registration["category"]["max_weight"]
+        assert max_weight is not None, "Para forzar un pesaje fallido hace falta una categoría con peso máximo"
+        api("POST", f"{path}/weigh-in", {"weight_kg": round(max_weight + OVERWEIGHT_KG, 1)})
+        if case == "disqualified":
+            api("POST", f"{path}/disqualify")
+        elif case in ("second_allowed", "second_cleared"):
+            api("POST", f"{path}/second-weigh-in")
+            if case == "second_cleared":
+                api("POST", f"{path}/weigh-in", declared)
+
+
 def ready_matches(api, category_id: int, round_number: int) -> list[dict]:
     matches = api("GET", f"/api/v1/categories/{category_id}/bracket")["matches"]
     return sorted(
@@ -232,6 +273,8 @@ def leave_half_played(api, rng: random.Random, match: dict, rounds: int) -> None
 
 
 def play(api, rng: random.Random, category_id: int, plan: list[tuple]) -> None:
+    """Juega la llave que sorteó `start`. Solo toca combates `pending` con los dos lados definidos: un `bye`, un
+    `walkover` o un `no_contest` ya vienen resueltos y no admiten rounds."""
     for step in plan:
         if step[0] == "all":
             for round_number in range(1, total_rounds(api, category_id) + 1):
@@ -326,15 +369,15 @@ def seed(env: str) -> None:
         if provisional_date != tournament_date:
             api("PATCH", f"/api/v1/tournaments/{tournament_id}", {"date": tournament_date.isoformat()})
         if stage == STAGES.index("weigh_in"):
+            weigh_in_registrations(api, tournament_id, WEIGH_IN_CASES)
             continue
 
-        print("  Pasando el torneo a «en curso», sorteando las llaves y cargando resultados...")
+        print("  Pesando a los inscritos, iniciando el torneo (sortea las llaves) y cargando resultados...")
+        weigh_in_registrations(api, tournament_id, PLAYED_WEIGH_IN_CASES)
         api("POST", f"/api/v1/tournaments/{tournament_id}/start")
         match_rng = random.Random(7)
         for category_id, entry in zip(category_ids, entries):
-            if sum(a["register"] for a in entry["athletes"]) >= 2:
-                api("POST", f"/api/v1/categories/{category_id}/bracket")
-                play(api, match_rng, category_id, entry["plan"])
+            play(api, match_rng, category_id, entry["plan"])  # sin plan (sin llave) no hace nada
         if stage == STAGES.index("finished"):
             api("POST", f"/api/v1/tournaments/{tournament_id}/finish")
 

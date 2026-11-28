@@ -56,7 +56,9 @@ def list_categories(
             raise HTTPException(status_code=403, detail=REGISTRANTS_NOT_PUBLIC_YET)
     query = (
         select(Category)
-        .options(selectinload(Category.bracket), selectinload(Category.grade_group))
+        .options(
+            selectinload(Category.bracket), selectinload(Category.grade_group), selectinload(Category.age_division)
+        )
         .order_by(Category.id)
     )
     if not is_admin:
@@ -91,7 +93,7 @@ def get_category(category_id: Int4, is_admin: bool = Depends(is_admin_request), 
     response_model=list[RegistrantRead],
     summary="Listar los inscritos de una categoría",
     description="Devuelve los atletas inscritos en la categoría, ordenados por nombre, solo con datos públicos: "
-    "nombre y club (nunca CI, fecha de nacimiento ni peso). Mientras la categoría no tiene llave "
+    "nombre, club y estado del pesaje `weigh_in_status` (nunca CI, fecha de nacimiento ni peso). Mientras la categoría no tiene llave "
     "(`has_bracket: false`) es lo que se muestra al público. Es público desde el Pesaje (`weigh_in`): sin token, "
     "con las inscripciones abiertas responde 403 y con el torneo en preparación (`draft`), 404. Con token, siempre.",
     responses=errors(

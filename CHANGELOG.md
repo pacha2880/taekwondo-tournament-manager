@@ -12,6 +12,42 @@ funcionando sobre una base ya migrada. Única excepción: la migración que borr
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-27
+
+Cierra la 0.9.0: pesaje (bloque 2) y llaves al iniciar (bloque 3), sobre el ciclo nuevo de la 0.9.0-alpha.1.
+
+### Changed (incompatible)
+- `POST /api/v1/tournaments/{id}/start` sortea todas las llaves (salvo Festival, que no tiene llave) y
+  `POST /api/v1/categories/{id}/bracket` ya no existe (`405`): la llave se lee con `GET`.
+- `start` cierra el pesaje (ver Added): quien no se pesó queda `no_show` y pierde sin pelear. Un frontend que todavía
+  no pesa a nadie deja a todos descalificados: antes de iniciar hay que pesar a cada inscrito.
+- `status` de un combate suma `walkover` y `no_contest` (ver Added): un `no_contest` es final y no tiene `winner_id`.
+- `POST /api/v1/matches/{id}/rounds` en un combate `bye` responde `409` (antes `400`).
+
+### Added
+- `is_festival` en las categorías (solo lectura). Festival no impide finalizar el torneo.
+- **Pesaje oficial en la inscripción** (solo con el torneo en `weigh_in`, sin tolerancia): las inscripciones suman
+  `weigh_in_status`, `first_weight_kg` y `second_weight_kg`; el `weight_kg` del atleta queda como peso declarado.
+  `POST /api/v1/registrations/{id}/weigh-in` carga el primer o el segundo peso; si el primero no entra, el admin
+  elige `POST .../second-weigh-in` o `POST .../disqualify`; `DELETE .../weigh-in` borra el pesaje para corregir un
+  error. Festival no se pesa (`not_required`).
+- `POST /api/v1/tournaments/{id}/start` cierra el pesaje: las inscripciones en `pending` pasan a `no_show` y las que
+  quedaron en `failed_first` o `second_allowed`, a `disqualified`. La respuesta suma `not_weighed_in` (los que
+  quedaron en `no_show` con este inicio).
+- `GET /api/v1/categories/{id}/registrants` suma `weigh_in_status` (nunca los kilos); `failed_first` y
+  `second_allowed` se ven como `pending` hasta que haya resultado.
+- **Descalificados en la llave:** los combates suman los estados `walkover` (ganado sin pelear: un lado está
+  descalificado, o su rival viene de un combate sin ganador; el ganador avanza) y `no_contest` (sin combate: los dos
+  lados descalificados; no hay ganador y nadie avanza). Los combates suman `athlete_red_disqualified` y
+  `athlete_blue_disqualified`. `POST .../rounds` responde `409` en un combate `bye`, `walkover` o `no_contest`.
+- **Sorteo nuevo de la primera ronda:** separa a los del mismo club cuando se puede, da los pases directos a
+  habilitados (primero a los de los clubes con más atletas) y empareja a cada descalificado con un habilitado; solo
+  los que sobran se enfrentan entre sí. Si todos están descalificados, la categoría queda sin ganador.
+
+### Migración
+- `a7c2e41d9b35` agrega el estado y los pesos del pesaje a las inscripciones (las de Festival quedan `not_required`).
+- `b8d4f2a65c17` agrega `walkover` y `no_contest` al enum de estados del combate (en Postgres, `ALTER TYPE`).
+
 ## [0.9.0-alpha.1] - 2026-11-27
 
 Primera parte de la 0.9.0 (bloque 1 del BACKLOG): estados, fecha límite y visibilidad. El Pesaje (bloque 2) y las
@@ -314,7 +350,8 @@ https://taekwondo-tournament-manager.onrender.com.
 - `pool_pre_ping=True` en la conexión a la base de datos: Neon suspende el cómputo por
   inactividad y la primera conexión tras un rato inactivo pudo fallar con un error 500.
 
-[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.9.0-alpha.1...HEAD
+[Unreleased]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.9.0-alpha.1...v0.9.0
 [0.9.0-alpha.1]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.8.2...v0.9.0-alpha.1
 [0.8.2]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/pacha2880/taekwondo-tournament-manager/compare/v0.8.0...v0.8.1

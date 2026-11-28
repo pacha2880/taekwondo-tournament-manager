@@ -8,7 +8,7 @@ from typing import Annotated
 
 from pydantic import AfterValidator, AwareDatetime, BaseModel, ConfigDict, Field, field_validator
 
-from app.models import Discipline, Gender, Grade, MatchStatus, TournamentStatus
+from app.models import Discipline, Gender, Grade, MatchStatus, TournamentStatus, WeighInStatus
 
 
 # Postgres `Integer` (int4). SQLite doesn't enforce it, so a bigger number passed the tests and was a 500 in Postgres.
@@ -196,6 +196,26 @@ class TournamentRead(TournamentBase):
         return value.replace(tzinfo=datetime.timezone.utc) if value is not None and value.tzinfo is None else value
 
 
+class NotWeighedInRead(BaseModel):
+    """Inscripción que no se presentó al pesaje: solo datos públicos, sin CI, fecha de nacimiento ni peso."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    registration_id: int = Field(description="Id de la inscripción.")
+    athlete_id: int = Field(description="Id del atleta.")
+    name: str = Field(description="Nombre del atleta.", examples=["Mateo Quispe Mamani"])
+    club: str = Field(description="Nombre del club del atleta.", examples=["Dojang Central"])
+    category_id: int = Field(description="Id de la categoría en la que estaba inscrito.")
+    category_name: str = Field(description="Nombre completo de la categoría.", examples=["Principiantes · Cadete · Masculino · 37.1–41 kg"])
+
+
+class TournamentStartRead(TournamentRead):
+    not_weighed_in: list[NotWeighedInRead] = Field(
+        description="Inscripciones que no se presentaron al pesaje (`pending`) y quedaron en `no_show` con este "
+        "inicio, ordenadas por categoría y nombre. Vacía si todos se pesaron."
+    )
+
+
 class CategoryBase(BaseModel):
     tournament_id: Int4Id = Field(description="Id del torneo al que pertenece la categoría. El torneo debe existir.")
     discipline: Discipline = Field(
@@ -247,6 +267,10 @@ class CategoryRead(CategoryBase):
     has_bracket: bool = Field(
         description="Si la categoría ya tiene la llave generada. Mientras es `false`, lo que se muestra al público es "
         "la lista de inscritos (`GET /categories/{id}/registrants`)."
+    )
+    is_festival: bool = Field(
+        description="Si es de Festival: no se pesa ni tiene llave, y lo que se muestra es la lista de inscritos "
+        "(`GET /categories/{id}/registrants`)."
     )
 
 
@@ -365,13 +389,17 @@ class CategoryStructureResult(CategoryStructureRead):
 
 
 class RegistrantRead(BaseModel):
-    """Inscrito de una categoría, solo con datos públicos: sin CI, fecha de nacimiento ni peso."""
+    """Inscrito de una categoría, solo con datos públicos: sin CI, fecha de nacimiento ni peso (solo el estado del pesaje)."""
 
     model_config = ConfigDict(from_attributes=True)
 
     athlete_id: int = Field(description="Id del atleta.")
     name: str = Field(description="Nombre del atleta.", examples=["Mateo Quispe Mamani"])
     club: str = Field(description="Nombre del club del atleta.", examples=["Dojang Central"])
+    weigh_in_status: WeighInStatus = Field(
+        description="Estado del pesaje de la inscripción, nunca los kilos. Mientras se decide un pesaje que no entró "
+        "(`failed_first`, `second_allowed`) se muestra `pending`: en público solo se ve el resultado."
+    )
 
 
 class RoundScoreCreate(BaseModel):
@@ -412,6 +440,16 @@ class MatchRead(BaseModel):
         description="Id del atleta del lado azul. Es nulo si todavía no se definió o si es un pase directo."
     )
     athlete_blue_name: str | None = Field(default=None, description="Nombre del atleta del lado azul.")
+    athlete_red_disqualified: bool = Field(
+        default=False,
+        description="`true` si el atleta del lado rojo está descalificado (por peso o por no presentarse al pesaje). "
+        "Es `false` si el lado está vacío.",
+    )
+    athlete_blue_disqualified: bool = Field(
+        default=False,
+        description="`true` si el atleta del lado azul está descalificado (por peso o por no presentarse al pesaje). "
+        "Es `false` si el lado está vacío.",
+    )
     winner_id: int | None = Field(
         description="Id del ganador del combate. Es nulo mientras no termine; en un pase directo, es el atleta que pasa."
     )
@@ -419,7 +457,11 @@ class MatchRead(BaseModel):
     next_match_id: int | None = Field(
         description="Id del combate de la siguiente ronda al que avanza el ganador. Es nulo en la final."
     )
-    status: MatchStatus = Field(description="Estado del combate.")
+    status: MatchStatus = Field(
+        description="Estado del combate: `pending` (por jugar o esperando a sus atletas), `bye` (pase directo), "
+        "`finished` (jugado), `walkover` (ganado sin pelear: el rival está descalificado o no tiene atleta; el ganador "
+        "avanza) o `no_contest` (sin combate: nadie para pelear, no hay ganador y nadie avanza)."
+    )
     round_scores: list[RoundScoreRead] = Field(description="Resultado de cada round cargado, en orden.")
 
 
@@ -452,3 +494,12 @@ class RegistrationRead(RegistrationBase):
     id: int = Field(description="Identificador de la inscripción.")
     athlete: AthleteRead = Field(description="Datos del atleta inscrito.")
     category: CategoryRead = Field(description="Datos de la categoría.")
+    weigh_in_status: WeighInStatus = Field(description="Estado del pesaje de la inscripción.")
+    first_weight_kg: float | None = Field(description="Peso del primer pesaje en kg. `null` si todavía no se pesó.")
+    second_weight_kg: float | None = Field(description="Peso del segundo pesaje en kg. `null` si no hubo segundo pesaje.")
+
+
+class WeighInCreate(BaseModel):
+    weight_kg: WeightKg = Field(
+        gt=0, description="Peso medido en la balanza, en kilogramos, con un decimal como máximo.", examples=[48.3]
+    )

@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app import clock
@@ -15,9 +15,11 @@ from app.api.lifecycle import (
 from app.api_docs import TAG_TOURNAMENTS, errors
 from app.auth import ADMIN_ONLY, OPTIONAL_TOKEN, is_admin_request
 from app.database import get_db
-from app.models import Tournament, TournamentStatus
-from app.schemas import Int4, TournamentCreate, TournamentRead, TournamentUpdate
+from app.models import Category, Registration, Tournament, TournamentStatus
+from app.schemas import Int4, TournamentCreate, TournamentRead, TournamentStartRead, TournamentUpdate
+from app.services.brackets import generate_bracket
 from app.services.category_structure import add_default_structure, sync_categories
+from app.services.registrants import close_weigh_in
 
 router = APIRouter(prefix="/api/v1/tournaments", tags=[TAG_TOURNAMENTS])
 
@@ -198,11 +200,15 @@ def close_registration(tournament_id: Int4, db: Session = Depends(get_db)):
 
 @router.post(
     "/{tournament_id}/start",
-    response_model=TournamentRead,
+    response_model=TournamentStartRead,
     dependencies=ADMIN_ONLY,
     summary="Iniciar un torneo",
-    description="Pasa el torneo de `weigh_in` a `in_progress`: se pueden generar las llaves y cargar resultados. "
-    "Es irreversible. Requiere token.",
+    description="Pasa el torneo de `weigh_in` a `in_progress`: se cargan los resultados. "
+    "Cierra el pesaje: las inscripciones en `pending` pasan a `no_show` (no se presentaron) y las que quedaron en "
+    "`failed_first` o `second_allowed` pasan a `disqualified`; las demás no cambian. Después sortea las llaves de "
+    "todas las categorías con 2 o más inscritos, salvo Festival (que no tiene llave), con los descalificados ya "
+    "marcados: ganan sin pelear (`walkover`) los que los enfrentan. La respuesta suma `not_weighed_in`, los que "
+    "quedaron en `no_show` con este inicio, ordenados por categoría y nombre. Es irreversible. Requiere token.",
     responses=errors({404: "El torneo no existe.", 409: "El torneo no está en `weigh_in`."}, auth=True),
 )
 def start_tournament(tournament_id: Int4, db: Session = Depends(get_db)):
@@ -211,9 +217,24 @@ def start_tournament(tournament_id: Int4, db: Session = Depends(get_db)):
         raise HTTPException(status_code=409, detail="El torneo ya empezó")
     require_tournament_status(tournament, TournamentStatus.WEIGH_IN, "El torneo solo se inicia desde el pesaje")
     tournament.stored_status = TournamentStatus.IN_PROGRESS
+    not_weighed_in = close_weigh_in(db, tournament_id)
+    db.flush()  # el sorteo lee los estados de pesaje desde la base
+    # Un solo conteo: un torneo tiene ~200 categorías y la mayoría quedan con 0 o 1 inscrito.
+    registrations_per_category = dict(
+        db.execute(
+            select(Registration.category_id, func.count())
+            .join(Category)
+            .where(Category.tournament_id == tournament_id)
+            .group_by(Registration.category_id)
+        ).all()
+    )
+    for category in sorted(tournament.categories, key=lambda c: c.id):
+        if not category.is_festival and registrations_per_category.get(category.id, 0) >= 2:
+            generate_bracket(db, category)
     db.commit()
     db.refresh(tournament)
-    return tournament
+    started = TournamentRead.model_validate(tournament).model_dump()
+    return TournamentStartRead(**started, not_weighed_in=not_weighed_in)
 
 
 @router.post(
@@ -222,8 +243,7 @@ def start_tournament(tournament_id: Int4, db: Session = Depends(get_db)):
     dependencies=ADMIN_ONLY,
     summary="Finalizar un torneo",
     description="Pasa el torneo de `in_progress` a `finished`: sus resultados quedan como definitivos. Exige que "
-    "no queden combates por jugar: toda llave terminada, y toda categoría con 2 o más inscritos con su llave "
-    "generada. Es irreversible. Requiere token.",
+    "no queden combates por jugar: toda llave terminada. Festival no tiene llave y no lo impide. Es irreversible. Requiere token.",
     responses=errors(
         {404: "El torneo no existe.", 409: "El torneo no está en curso, o quedan combates por jugar."}, auth=True
     ),

@@ -27,7 +27,7 @@ están en `.claude/rules/` y se cargan solas al tocar esos archivos.
 
 ## Reusar, no duplicar
 
-- Nombres de atletas de una llave o combate: `resolve_athlete_names` (`app/services/brackets.py`).
+- Nombres de atletas de una llave o combate, y si cada lado está descalificado: `fill_athlete_details` (`app/services/brackets.py`).
 - Regla de encaje de un atleta en una categoría (género, peso, edad, grado): `category_mismatch` (`app/services/eligibility.py`).
 - Reglas de estado del torneo: `app/api/lifecycle.py`. El estado cambia solo con las acciones `POST .../open-registration`,
   `.../close-registration`, `.../start` y `.../finish`, nunca con `PATCH`. `weigh_in` no se guarda: lo calcula

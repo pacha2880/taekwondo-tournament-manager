@@ -52,10 +52,6 @@ def add_default_structure(tournament: Tournament) -> None:
         tournament.age_divisions.append(division)
 
 
-def is_festival(division: AgeDivision) -> bool:
-    return division.position == 0
-
-
 def grade_range(groups: list[GradeGroup], index: int) -> tuple[Grade, Grade]:
     """Primer y último grado del grupo en `index` (los grupos van ordenados por `position`)."""
     if index + 1 < len(groups):
@@ -109,7 +105,7 @@ def describe_structure(tournament: Tournament) -> dict:
                 "name": division.name,
                 "from_age": age_range(divisions, i)[0],
                 "to_age": age_range(divisions, i)[1],
-                "has_weight_divisions": not is_festival(division),
+                "has_weight_divisions": not division.is_festival,
                 "weight_limits": {gender.value: weight_limits(division, gender) for gender in Gender},
             }
             for i, division in enumerate(divisions)
@@ -125,7 +121,7 @@ def _desired_categories(tournament: Tournament) -> dict[tuple, dict]:
     for d, division in enumerate(divisions):
         min_age, max_age = age_range(divisions, d)
         # Festival es una lista general por género: sin grupos de grado ni pesos.
-        division_groups = [None] if is_festival(division) else groups
+        division_groups = [None] if division.is_festival else groups
         for group in division_groups:
             for gender in Gender:
                 limits = weight_limits(division, gender)

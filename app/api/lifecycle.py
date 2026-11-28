@@ -1,9 +1,7 @@
 from fastapi import HTTPException
 
 from app import clock
-from app.models import Category, MatchStatus, Tournament, TournamentStatus
-
-FINAL_MATCH_STATUSES = (MatchStatus.FINISHED, MatchStatus.BYE)
+from app.models import FINAL_MATCH_STATUSES, Category, Tournament, TournamentStatus
 
 
 # Un torneo en preparación solo lo ve el admin. La misma regla en Python y como condición SQL para las listas.
@@ -34,9 +32,9 @@ def require_tournament_status(
 
 
 def _has_matches_to_play(category: Category) -> bool:
-    if category.bracket is None:
-        return len(category.registrations) >= 2
-    return any(match.status not in FINAL_MATCH_STATUSES for match in category.bracket.matches)
+    return category.bracket is not None and any(
+        match.status not in FINAL_MATCH_STATUSES for match in category.bracket.matches
+    )
 
 
 def require_all_matches_played(tournament: Tournament) -> None:
